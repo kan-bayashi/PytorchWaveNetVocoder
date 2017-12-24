@@ -1,0 +1,5 @@
+*.pyc
+slurm-*.out
+.DS_Store
+exp/
+snippet.sh
