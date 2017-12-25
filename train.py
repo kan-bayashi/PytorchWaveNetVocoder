@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import division
 import numpy as np
 import torch
@@ -6,9 +7,8 @@ import soundfile as sf
 import time
 import six
 import argparse
-import threading
 import os
-import Queue
+import sys
 from torch import nn
 from torchvision import transforms
 from torch.autograd import Variable
@@ -115,33 +115,6 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
     logging.info("%d-iter checkpoint created." % iterations)
 
 
-class BackgroundGenerator(threading.Thread):
-    """BACKGROUND GENERATOR"""
-    def __init__(self, generator, max_size=16):
-        super(BackgroundGenerator, self).__init__()
-        self.queue = Queue.Queue(max_size)
-        self.generator = generator
-        self.stop = False
-        self.setDaemon(True)
-        self.start()
-
-    def run(self):
-        for item in self.generator:
-            if self.stop:
-                break
-            self.queue.put(item)
-        self.queue.put(None)
-
-    def next(self):
-        next_item = self.queue.get()
-        if next_item is None:
-            raise StopIteration
-        return next_item
-
-    def __next__(self):
-        return self.next()
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--wav_dir", required=True,
@@ -198,13 +171,20 @@ if __name__ == "__main__":
                     kernel_size=args.kernel_size)
     logging.info(model)
     model.apply(initialize)
-    model.cuda()
 
     # define loss and optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
 
-    # define generator
+    # send to gpu
+    if torch.cuda.is_available():
+        model.cuda()
+        criterion.cuda()
+    else:
+        logging.error("gpu is not available. please check the setting.")
+        sys.exit(1)
+
+    # define transforms
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/mean")
     scaler.scale_ = read_hdf5(args.stats, "/scale")
@@ -214,14 +194,11 @@ if __name__ == "__main__":
     feat_transform = transforms.Compose([
         lambda x: scaler.transform(x),
         lambda x: Variable(torch.from_numpy(x).float().cuda())])
+
+    # define generator
     generator = custom_generator(
         args.wav_dir, args.feat_dir, model.receptive_field, args.batch_size,
         wav_transform, feat_transform, True, False)
-    bg_generator = BackgroundGenerator(generator, 16)
-
-    # train
-    iterations = 0
-    loss = 0
 
     # resume
     if args.resume is not None:
@@ -230,29 +207,38 @@ if __name__ == "__main__":
         optimizer.load_state_dict(checkpoint["optimizer"])
         iterations = checkpoint["iterations"]
         logging.info("restored from %d-iter checkpoint." % iterations)
+    else:
+        iterations = 0
 
-    start = time.time()
+    # train
+    loss = 0
+    total = 0
     for i in six.moves.range(iterations, args.n_iters):
-        batch = bg_generator.next()
-        batch_input, batch_target = batch
-        batch_x, batch_h = batch_input
+        batch_start = time.time()
+        (batch_x, batch_h), batch_target = generator.next()
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(batch_output[model.receptive_field:],
                                batch_target[model.receptive_field:])
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
+        logging.info("batch loss = %.3f (time = %.3f / batch)" % (
+            batch_loss.data[0], time.time()-batch_start))
+        total += time.time() - batch_start
         loss += batch_loss.data[0]
 
         # report progress
         if (i + 1) % args.interval == 0:
             logging.info("(iter:%d) loss = %.6f (%.3f sec / batch)" % (
-                i + 1, loss / args.interval, (time.time() - start) / (i + 1)))
-            logging.info("estimated required time = {0.hours:02}:{0.minutes:02}:{0.seconds:02}".format(
-                relativedelta(seconds=int((args.n_iters - (i + 1)) * ((time.time() - start) / (i + 1))))))
+                i + 1, loss / args.interval, total / args.interval))
+            logging.info("estimated required time = "
+                         "{0.days:02}:{0.hours:02}:{0.minutes:02}:{0.seconds:02}"
+                         .format(relativedelta(
+                             seconds=int((args.n_iters - (i + 1)) * (total / args.interval)))))
+            total = 0
             loss = 0
 
-        # save model
+        # save intermidiate model
         if (i + 1) % args.checkpoint == 0:
             save_checkpoint(args.exp_dir, model, optimizer, i + 1)
 
