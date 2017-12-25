@@ -5,6 +5,8 @@ import h5py
 import numpy as np
 import sys
 import fnmatch
+import threading
+import Queue
 
 
 def check_hdf5(hdf5_name, hdf5_dir):
@@ -87,3 +89,41 @@ def find_files(directory, pattern='*.wav', use_dir_name=True):
     if not use_dir_name:
         files = [file_.replace(directory + '/', '') for file_ in files]
     return files
+
+
+class BackgroundGenerator(threading.Thread):
+    """BACKGROUND GENERATOR"""
+    def __init__(self, generator, max_prefetch=1):
+        threading.Thread.__init__(self)
+        self.queue = Queue.Queue(max_prefetch)
+        self.generator = generator
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        for item in self.generator:
+            self.queue.put(item)
+        self.queue.put(None)
+
+    def next(self):
+        next_item = self.queue.get()
+        if next_item is None:
+            raise StopIteration
+        return next_item
+
+    def __next__(self):
+        return self.next()
+
+    def __iter__(self):
+        return self
+
+
+class background:
+    """BACKGROUND GENERATOR DECORATOR"""
+    def __init__(self, max_prefetch=1):
+        self.max_prefetch = max_prefetch
+
+    def __call__(self, gen):
+        def bg_generator(*args, **kwargs):
+            return BackgroundGenerator(gen(*args, **kwargs))
+        return bg_generator

@@ -66,28 +66,28 @@ class CausalConv1d(nn.Module):
 class WaveNet(nn.Module):
     """CONDITIONAL WAVENET"""
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
-                 dilation_depth=10, n_repeat=3, kernel_size=2):
+                 dilation_depth=10, dilation_repeat=3, kernel_size=2):
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
         self.kernel_size = kernel_size
         self.dilation_depth = dilation_depth
-        dilations = self.dilations = [2**i for i in range(dilation_depth)] * n_repeat
+        self.dilations = [2**i for i in range(dilation_depth)] * dilation_repeat
         self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
         self.onehot = OneHot(n_quantize)
         self.causal = CausalConv1d(n_quantize, n_resch, kernel_size)
         self.dil_sigmoid = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d)
-                                          for d in dilations])
+                                          for d in self.dilations])
         self.dil_tanh = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d)
-                                       for d in dilations])
+                                       for d in self.dilations])
         self.aux_1x1_sigmoid = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1)
-                                              for d in dilations])
+                                              for d in self.dilations])
         self.aux_1x1_tanh = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1)
-                                           for d in dilations])
+                                           for d in self.dilations])
         self.skip_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_skipch, 1)
-                                       for d in dilations])
+                                       for d in self.dilations])
         self.res_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_resch, 1)
-                                      for d in dilations])
+                                      for d in self.dilations])
         self.conv_post_1 = nn.Conv1d(n_skipch, n_skipch, 1)
         self.conv_post_2 = nn.Conv1d(n_skipch, n_quantize, 1)
 
@@ -124,7 +124,8 @@ class WaveNet(nn.Module):
         output_tanh = dil_tanh(x)
         aux_output_sigmoid = aux_1x1_sigmoid(h)
         aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * F.tanh(output_tanh + aux_output_tanh)
+        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            F.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
         output = output + x
@@ -147,7 +148,8 @@ class WaveNet(nn.Module):
         start = time.time()
         for i in range(n_samples):
             current_idx = len(res)
-            x = Variable(torch.LongTensor(res[-self.receptive_field:]).view(1, -1).cuda(), volatile=True)
+            x = Variable(torch.LongTensor(res[-self.receptive_field:]).view(1, -1).cuda(),
+                         volatile=True)
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
             output = self.forward(x, h_)
             posterior = F.softmax(output[-1], dim=0)
