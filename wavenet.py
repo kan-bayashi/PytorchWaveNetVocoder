@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+
+import logging
+import time
+
 import numpy as np
 import torch
-import time
 import torch.nn.functional as F
-import logging
 from torch import nn
 from torch.autograd import Variable
 

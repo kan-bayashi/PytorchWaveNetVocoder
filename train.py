@@ -1,22 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import division
-import numpy as np
-import soundfile as sf
-import torch
-import logging
-import time
-import six
+
 import argparse
+import logging
 import os
 import sys
-from torch import nn
-from torchvision import transforms
-from torch.autograd import Variable
-from wavenet import WaveNet, initialize, encode_mu_law
-from utils import find_files, read_hdf5, background
-from sklearn.preprocessing import StandardScaler
+import time
+
+import numpy as np
+import six
+import soundfile as sf
+import torch
 from dateutil.relativedelta import relativedelta
+from sklearn.preprocessing import StandardScaler
+from torch import nn
+from torch.autograd import Variable
+from torchvision import transforms
+
+from utils import background, find_files, read_hdf5
+from wavenet import WaveNet, encode_mu_law, initialize
 
 
 def validate_length(x, y):
@@ -198,7 +201,8 @@ if __name__ == "__main__":
 
     # define loss and optimizer
     optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=args.lr, weight_decay=args.weight_decay)
+                                 lr=args.lr,
+                                 weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
 
     # send to gpu

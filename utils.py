@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+from __future__ import division, print_function
+
+import fnmatch
 import os
+import Queue
+import sys
+import threading
+
 import h5py
 import numpy as np
-import sys
-import fnmatch
-import threading
-import Queue
 
 
 def check_hdf5(hdf5_name, hdf5_dir):
