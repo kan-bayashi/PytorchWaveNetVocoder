@@ -66,7 +66,18 @@ class CausalConv1d(nn.Module):
 
 
 class WaveNet(nn.Module):
-    """CONDITIONAL WAVENET"""
+    """CONDITIONAL WAVENET
+
+    Args:
+        n_quantize (int): number of quantization
+        n_aux (int): number of aux feature dimension
+        n_resch (int): number of filter channels for residual block
+        n_skipch (int): number of filter channels for skip connection
+        dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2**(10-1))
+        dilation_repeat (int): number of dilation repeat
+        kernel_size (int): filter size of dilated causal convolution
+
+    """
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
                  dilation_depth=10, dilation_repeat=3, kernel_size=2):
         super(WaveNet, self).__init__()

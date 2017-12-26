@@ -23,7 +23,17 @@ from wavenet import WaveNet, encode_mu_law, initialize
 
 
 def validate_length(x, y):
-    """VALIDATE LENGTH"""
+    """FUNCTION TO VALIDATE LENGTH
+
+    Args:
+        x (ndarray): numpy.ndarray with x.shape[0] = len_x
+        y (ndarray): numpy.ndarray with y.shape[0] = len_y
+
+    Returns:
+        x with x.shape[0] = min(len_x, len_y)
+        y with y.shape[0] = min(len_x, len_y)
+
+    """
     if x.shape[0] < y.shape[0]:
         y = y[:x.shape[0]]
     if x.shape[0] > y.shape[0]:
@@ -37,7 +47,21 @@ def validate_length(x, y):
 def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
                      wav_transform=None, feat_transform=None, shuffle=True,
                      use_speaker_code=False):
-    """TRAINING BATCH GENERATOR"""
+    """TRAINING BATCH GENERATOR
+
+    Args:
+        wavdir (str): directory including wav files
+        featdir (str): directory including feat files
+        receptive_field (int): size of receptive filed
+        batch_size (int): batch size
+        wav_transform (func): preprocessing function for waveform
+        feat_transform (func): preprocessing function for aux feats
+        shuffle (bool): whether to do shuffle of the file list
+        use_speaker_code (bool): whether to use speaker code
+
+    Return: generator instance
+
+    """
     # get file list
     filenames = sorted(find_files(wavdir, "*.wav", use_dir_name=False))
     wav_list = [wavdir + "/" + filename for filename in filenames]
@@ -109,7 +133,15 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
 
 
 def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
-    """FUNCTION TO SAVE CHECKPOINT"""
+    """FUNCTION TO SAVE CHECKPOINT
+
+    Args:
+        checkpoint_dir (str): directory to save checkpoint
+        model (torch.nn.Module): pytorch model instance
+        optimizer (Optimizer): pytorch optimizer instance
+        iterations (int): number of current iterations
+
+    """
     checkpoint = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
@@ -120,7 +152,7 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
     logging.info("%d-iter checkpoint created." % iterations)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     # path setting
     parser.add_argument("--wavdir", required=True,
@@ -273,3 +305,7 @@ if __name__ == "__main__":
 
     # save final model
     save_checkpoint(args.expdir, model, optimizer, args.n_iter)
+
+
+if __name__ == "__main__":
+    main()
