@@ -89,8 +89,9 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
 
             # cut utterance into small batch
             if batch_size is not None:
-                x_buffer = np.empty((0), dtype=np.float32)
-                h_buffer = np.empty((0, h.shape[1]), dtype=np.float32)
+                if "x_buffer" not in locals():
+                    x_buffer = np.empty((0), dtype=np.float32)
+                    h_buffer = np.empty((0, h.shape[1]), dtype=np.float32)
                 x_buffer = np.concatenate([x_buffer, x], axis=0)
                 h_buffer = np.concatenate([h_buffer, h], axis=0)
 
