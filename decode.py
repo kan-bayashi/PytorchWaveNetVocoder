@@ -5,20 +5,19 @@ from __future__ import division
 import argparse
 import logging
 import os
-import sys
 
 import numpy as np
 import soundfile as sf
 import torch
+import torch.multiprocessing as mp
 from sklearn.preprocessing import StandardScaler
 from torch.autograd import Variable
 from torchvision import transforms
 
-from utils import background, find_files, read_hdf5, read_txt
+from utils import find_files, read_hdf5, read_txt
 from wavenet import WaveNet, decode_mu_law, encode_mu_law
 
 
-@background(max_prefetch=1)
 def decode_generator(feat_list, wav_transform=None, feat_transform=None, use_speaker_code=False):
     """DECODE BATCH GENERATOR
 
@@ -54,9 +53,9 @@ def decode_generator(feat_list, wav_transform=None, feat_transform=None, use_spe
         yield feat_id, (x, h, n_samples)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
-    # path setting
+    # decode setting
     parser.add_argument("--feats", required=True,
                         type=str, help="list or directory of aux feat files")
     parser.add_argument("--checkpoint", required=True,
@@ -69,6 +68,10 @@ if __name__ == "__main__":
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
+    parser.add_argument("--n_jobs", default=6,
+                        type=int, help="number of parallel jobs per gpu")
+    parser.add_argument("--n_gpus", default=3,
+                        type=int, help="number of gpus")
     # other setting
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
@@ -99,23 +102,6 @@ if __name__ == "__main__":
     # load config
     config = torch.load(args.config)
 
-    # define network
-    model = WaveNet(n_quantize=config.n_quantize,
-                    n_aux=config.n_aux,
-                    n_resch=config.n_resch,
-                    n_skipch=config.n_skipch,
-                    dilation_depth=config.dilation_depth,
-                    dilation_repeat=config.dilation_repeat,
-                    kernel_size=config.kernel_size)
-    logging.info(model)
-
-    # send to gpu
-    if torch.cuda.is_available():
-        model.cuda()
-    else:
-        logging.error("gpu is not available. please check the setting.")
-        sys.exit(1)
-
     # define transforms
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/mean")
@@ -129,20 +115,60 @@ if __name__ == "__main__":
         lambda x: torch.from_numpy(x).float().cuda(),
         lambda x: Variable(x, volatile=True)])
 
-    # define generator
+    # get file list
     if os.path.isdir(args.feats):
         feat_list = sorted(find_files(args.feats, "*.h5"))
     else:
         feat_list = read_txt(args.feats)
-    generator = decode_generator(feat_list, wav_transform, feat_transform, False)
 
     # check directory existence
-    if os.path.exists(args.outdir):
+    if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
 
-    # decode
-    for feat_id, (x, h, n_samples) in generator:
-        logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-        samples = model.fast_generate(x, h, n_samples)
-        wav = decode_mu_law(samples, config.n_quantize)
-        sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+    # parallel decode
+    feat_lists = np.array_split(feat_list, args.n_jobs * args.n_gpus)
+    feat_lists = [f_list.tolist() for f_list in feat_lists]
+
+    # decode function
+    def decode(feat_list, gpu):
+        with torch.cuda.device(gpu):
+            # define model and load parameters
+            model = WaveNet(n_quantize=config.n_quantize,
+                            n_aux=config.n_aux,
+                            n_resch=config.n_resch,
+                            n_skipch=config.n_skipch,
+                            dilation_depth=config.dilation_depth,
+                            dilation_repeat=config.dilation_repeat,
+                            kernel_size=config.kernel_size)
+            checkpoint = torch.load(args.checkpoint)
+            model.load_state_dict(checkpoint["model"])
+            model.cuda()
+
+            # define generator
+            generator = decode_generator(feat_list, wav_transform, feat_transform, False)
+
+            # decode
+            for feat_id, (x, h, n_samples) in generator:
+                logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
+                samples = model.fast_generate(x, h, n_samples)
+                wav = decode_mu_law(np.array(samples), config.n_quantize)
+                sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+
+    # parallel decode
+    processes = []
+    gpu = 0
+    for i, feat_list in enumerate(feat_lists):
+        p = mp.Process(target=decode, args=(feat_list, gpu,))
+        p.start()
+        processes.append(p)
+        gpu += 1
+        if (i + 1) % args.n_gpus == 0:
+            gpu = 0
+
+    # wait for all process
+    for p in processes:
+        p.join()
+
+
+if __name__ == "__main__":
+    main()

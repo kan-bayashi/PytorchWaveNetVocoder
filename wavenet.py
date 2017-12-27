@@ -144,11 +144,11 @@ class WaveNet(nn.Module):
         output = output + x
         return output, skip
 
-    def generate(self, x, h, n_samples=100, interval=100):
-        # for debug
-        logging.debug("seed wav length = %d" % x.size(1))
-        logging.debug("seed aux length = %d" % h.size(2))
-        logging.debug("sample length = %d" % n_samples)
+    def generate(self, x, h, n_samples, interval=5000):
+        # show info
+        logging.info("seed wav length = %d" % x.size(1))
+        logging.info("seed aux length = %d" % h.size(2))
+        logging.info("sample length = %d" % n_samples)
 
         # padding if the length less than receptive field size
         n_pad = self.receptive_field - x.size(1)
@@ -179,11 +179,11 @@ class WaveNet(nn.Module):
 
         return res[-n_samples:]
 
-    def fast_generate(self, x, h, n_samples=100, interval=100):
-        # for debug
-        logging.debug("seed wav length = %d" % x.size(1))
-        logging.debug("seed aux length = %d" % h.size(2))
-        logging.debug("sample length = %d" % n_samples)
+    def fast_generate(self, x, h, n_samples, interval=5000):
+        # show info
+        logging.info("seed wav length = %d" % x.size(1))
+        logging.info("seed aux length = %d" % h.size(2))
+        logging.info("sample length = %d" % n_samples)
 
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
@@ -241,7 +241,7 @@ class WaveNet(nn.Module):
             res.append(sample)
 
             # show progress
-            if interval is not None and i % interval == 0:
+            if interval is not None and (i + 1) % interval == 0:
                 logging.info("%d/%d estimated time = %.3f (%.3f / sample)" % (
                     i + 1, n_samples,
                     (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
