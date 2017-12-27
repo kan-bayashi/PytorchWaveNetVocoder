@@ -93,6 +93,12 @@ def find_files(directory, pattern='*.wav', use_dir_name=True):
     return files
 
 
+def read_txt(file_list):
+    with open(file_list, "r") as f:
+        filenames = f.readlines()
+    return [filename.replace("\n", "") for filename in filenames]
+
+
 class BackgroundGenerator(threading.Thread):
     """BACKGROUND GENERATOR"""
     def __init__(self, generator, max_prefetch=1):

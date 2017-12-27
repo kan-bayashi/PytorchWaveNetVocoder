@@ -18,7 +18,7 @@ from torch import nn
 from torch.autograd import Variable
 from torchvision import transforms
 
-from utils import background, find_files, read_hdf5
+from utils import background, find_files, read_hdf5, read_txt
 from wavenet import WaveNet, encode_mu_law, initialize
 
 
@@ -44,14 +44,14 @@ def validate_length(x, y):
 
 
 @background(max_prefetch=16)
-def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
-                     wav_transform=None, feat_transform=None, shuffle=True,
-                     use_speaker_code=False):
+def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
+                    wav_transform=None, feat_transform=None, shuffle=True,
+                    use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
-        wavdir (str): directory including wav files
-        featdir (str): directory including feat files
+        wav_list (str): list of wav files
+        feat_list (str): list of feat files
         receptive_field (int): size of receptive filed
         batch_size (int): batch size
         wav_transform (func): preprocessing function for waveform
@@ -62,11 +62,6 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
     Return: generator instance
 
     """
-    # get file list
-    filenames = sorted(find_files(wavdir, "*.wav", use_dir_name=False))
-    wav_list = [wavdir + "/" + filename for filename in filenames]
-    feat_list = [featdir + "/" + filename.replace(".wav", ".h5") for filename in filenames]
-
     # shuffle list
     if shuffle:
         n_files = len(wav_list)
@@ -74,8 +69,8 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
         wav_list = [wav_list[i] for i in idx]
         feat_list = [feat_list[i] for i in idx]
 
-    # generator part
     while True:
+        # process over all of files
         for wavfile, featfile in zip(wav_list, feat_list):
             x, fs = sf.read(wavfile, dtype=np.float32)
             h = read_hdf5(featfile, "/feat")
@@ -99,11 +94,13 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
                     x_ = x_buffer[:receptive_field + batch_size]
                     h_ = h_buffer[:receptive_field + batch_size]
 
+                    # perform pre-processing
                     if wav_transform is not None:
                         x_ = wav_transform(x_)
                     if feat_transform is not None:
                         h_ = feat_transform(h_)
 
+                    # remove the last and first sample for training
                     batch_x = x_[:-1].unsqueeze(0)
                     batch_h = h_[:-1].transpose(0, 1).unsqueeze(0)
                     batch_target = x_[1:]
@@ -115,11 +112,13 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
 
             # utterance batch
             else:
+                # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
                 if feat_transform is not None:
                     h = feat_transform(h)
 
+                # remove the last and first sample for training
                 batch_x = x[:-1].unsqueeze(0)
                 batch_h = h[:-1].transpose(0, 1).unsqueeze(0)
                 batch_target = x[1:]
@@ -156,10 +155,10 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
 def main():
     parser = argparse.ArgumentParser()
     # path setting
-    parser.add_argument("--wavdir", required=True,
-                        type=str, help="directory including wav files")
-    parser.add_argument("--featdir", required=True,
-                        type=str, help="directory including aux feat files")
+    parser.add_argument("--waveforms", required=True,
+                        type=str, help="directory or list of wav files")
+    parser.add_argument("--feats", required=True,
+                        type=str, help="directory or list of aux feat files")
     parser.add_argument("--expdir", required=True,
                         type=str, help="directory to save the model")
     parser.add_argument("--stats", required=True,
@@ -180,18 +179,18 @@ def main():
     parser.add_argument("--kernel_size", default=2,
                         type=int, help="kerne size of dilated causal convolution")
     # network training setting
-    parser.add_argument("--lr", default=1e-3,
+    parser.add_argument("--lr", default=1e-4,
                         type=float, help="learning rate")
     parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
     parser.add_argument("--batch_size", default=20000,
                         type=int, help="number of iterations")
-    parser.add_argument("--n_iter", default=200000,
+    parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
     # other setting
-    parser.add_argument("--n_checkpoint", default=25000,
+    parser.add_argument("--checkpoints", default=10000,
                         type=int, help="how frequent saving model")
-    parser.add_argument("--n_interval", default=1000,
+    parser.add_argument("--intervals", default=100,
                         type=int, help="log interval")
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
@@ -215,6 +214,11 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
+
+    # fix seed
+    os.environ['PYTHONHASHSEED'] = str(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     # show arguments and save args as conf
     if not os.path.exists(args.expdir):
@@ -258,9 +262,18 @@ def main():
         lambda x: Variable(torch.from_numpy(x).float().cuda())])
 
     # define generator
-    generator = custom_generator(
-        args.wavdir, args.featdir, model.receptive_field, args.batch_size,
+    if os.path.isdir(args.waveforms):
+        filenames = sorted(find_files(args.waveforms, "*.wav", use_dir_name=False))
+        wav_list = [args.waveforms + "/" + filename for filename in filenames]
+        feat_list = [args.feats + "/" + filename.replace(".wav", ".h5") for filename in filenames]
+    else:
+        wav_list = read_txt(args.waveforms)
+        feat_list = read_txt(args.feats)
+    generator = train_generator(
+        wav_list, feat_list, model.receptive_field, args.batch_size,
         wav_transform, feat_transform, True, False)
+    while not generator.queue.full():
+        time.sleep(0.1)
 
     # resume
     if args.resume is not None:
@@ -275,8 +288,8 @@ def main():
     # train
     loss = 0
     total = 0
-    for i in six.moves.range(iterations, args.n_iter):
-        batch_start = time.time()
+    for i in six.moves.range(iterations, args.iters):
+        start = time.time()
         (batch_x, batch_h), batch_target = generator.next()
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(batch_output[model.receptive_field:],
@@ -284,28 +297,28 @@ def main():
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
-        logging.info("batch loss = %.3f (time = %.3f / batch)" % (
-            batch_loss.data[0], time.time()-batch_start))
-        total += time.time() - batch_start
         loss += batch_loss.data[0]
+        total += time.time() - start
+        logging.info("batch loss = %.3f (%.3f sec / batch)" % (
+            batch_loss.data[0], time.time()-start))
 
         # report progress
-        if (i + 1) % args.n_interval == 0:
-            logging.info("(iter:%d) loss = %.6f (%.3f sec / batch)" % (
-                i + 1, loss / args.n_interval, total / args.n_interval))
+        if (i + 1) % args.intervals == 0:
+            logging.info("(iter:%d) average loss = %.6f (%.3f sec / batch)" % (
+                i + 1, loss / args.intervals, total / args.intervals))
             logging.info("estimated required time = "
                          "{0.days:02}:{0.hours:02}:{0.minutes:02}:{0.seconds:02}"
                          .format(relativedelta(
-                             seconds=int((args.n_iter - (i + 1)) * (total / args.n_interval)))))
-            total = 0
+                             seconds=int((args.iters - (i + 1)) * (total / args.intervals)))))
             loss = 0
+            total = 0
 
         # save intermidiate model
-        if (i + 1) % args.n_checkpoint == 0:
+        if (i + 1) % args.checkpoints == 0:
             save_checkpoint(args.expdir, model, optimizer, i + 1)
 
     # save final model
-    save_checkpoint(args.expdir, model, optimizer, args.n_iter)
+    save_checkpoint(args.expdir, model, optimizer, args.iters)
 
 
 if __name__ == "__main__":

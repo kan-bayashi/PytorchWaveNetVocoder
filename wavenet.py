@@ -214,7 +214,7 @@ class WaveNet(nn.Module):
             output = Variable(torch.LongTensor(res[-self.kernel_size * 2 - 1:]).view(1, -1).cuda(),
                               volatile=True)
             output = self._preprocess(output)
-            h_ = h_[:, :, len(res) - 1].contiguous().view(1, h.size(1), 1)
+            h_ = h[:, :, len(res) - 1].contiguous().view(1, h.size(1), 1)
             output_buffer_next = []
             skip_connections = []
             for l, d in enumerate(self.dilations):
