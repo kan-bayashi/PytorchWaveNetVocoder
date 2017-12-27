@@ -44,14 +44,14 @@ def validate_length(x, y):
 
 
 @background(max_prefetch=16)
-def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
+def custom_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                      wav_transform=None, feat_transform=None, shuffle=True,
                      use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
-        wavdir (str): directory including wav files
-        featdir (str): directory including feat files
+        wav_list (list): list of wav filenames
+        feat_list (list): list of aux feat filenames
         receptive_field (int): size of receptive filed
         batch_size (int): batch size
         wav_transform (func): preprocessing function for waveform
@@ -62,11 +62,6 @@ def custom_generator(wavdir, featdir, receptive_field=None, batch_size=None,
     Return: generator instance
 
     """
-    # get file list
-    filenames = sorted(find_files(wavdir, "*.wav", use_dir_name=False))
-    wav_list = [wavdir + "/" + filename for filename in filenames]
-    feat_list = [featdir + "/" + filename.replace(".wav", ".h5") for filename in filenames]
-
     # shuffle list
     if shuffle:
         n_files = len(wav_list)
@@ -185,14 +180,14 @@ def main():
     parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
     parser.add_argument("--batch_size", default=20000,
-                        type=int, help="number of iterations")
-    parser.add_argument("--n_iter", default=200000,
-                        type=int, help="number of iterations")
+                        type=int, help="batch size")
+    parser.add_argument("--iters", default=None,
+                        type=int, help="number of iterations (if set None, epochs have priority")
+    parser.add_argument("--epochs", default=100,
+                        type=int, help="number of epochs (if iters is set, it has priority")
     # other setting
-    parser.add_argument("--n_checkpoint", default=25000,
+    parser.add_argument("--checkpoints", default=10000,
                         type=int, help="how frequent saving model")
-    parser.add_argument("--n_interval", default=1000,
-                        type=int, help="log interval")
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
     parser.add_argument("--resume", default=None,
@@ -238,14 +233,6 @@ def main():
                                  weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
 
-    # send to gpu
-    if torch.cuda.is_available():
-        model.cuda()
-        criterion.cuda()
-    else:
-        logging.error("gpu is not available. please check the setting.")
-        sys.exit(1)
-
     # define transforms
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/mean")
@@ -257,10 +244,38 @@ def main():
         lambda x: scaler.transform(x),
         lambda x: Variable(torch.from_numpy(x).float().cuda())])
 
+    # get file list
+    filenames = sorted(find_files(args.wavdir, "*.wav", use_dir_name=False))
+    wav_list = [args.wavdir + "/" + filename for filename in filenames]
+    feat_list = [args.featdir + "/" + filename.replace(".wav", ".h5") for filename in filenames]
+    if args.batch_size is not None:
+        n_samples = 0
+        for wavfile in wav_list:
+            with sf.SoundFile(wavfile, "r") as f:
+                n_samples += len(f)
+        epoch_size = n_samples // args.batch_size
+    else:
+        epoch_size = len(wav_list)
+    logging.info("epoch size = %d iterations" % epoch_size)
+
+    if args.iters is None:
+        args.iters = epoch_size * args.epochs
+
     # define generator
     generator = custom_generator(
-        args.wavdir, args.featdir, model.receptive_field, args.batch_size,
+        wav_list, feat_list, model.receptive_field, args.batch_size,
         wav_transform, feat_transform, True, False)
+    while not generator.queue.full():
+        time.sleep(1)
+
+    # send to gpu
+    if torch.cuda.is_available():
+        model.cuda()
+        criterion.cuda()
+        torch.backends.cudnn.benchmark = True
+    else:
+        logging.error("gpu is not available. please check the setting.")
+        sys.exit(1)
 
     # resume
     if args.resume is not None:
@@ -275,8 +290,8 @@ def main():
     # train
     loss = 0
     total = 0
-    for i in six.moves.range(iterations, args.n_iter):
-        batch_start = time.time()
+    for i in six.moves.range(iterations, args.iters):
+        start = time.time()
         (batch_x, batch_h), batch_target = generator.next()
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(batch_output[model.receptive_field:],
@@ -284,28 +299,28 @@ def main():
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
-        logging.info("batch loss = %.3f (time = %.3f / batch)" % (
-            batch_loss.data[0], time.time()-batch_start))
-        total += time.time() - batch_start
         loss += batch_loss.data[0]
+        logging.info("(iter:%d) batch loss = %.3f (%.3f sec / batch)" % (
+            (i + 1), batch_loss.data[0], time.time() - start))
+        total += time.time() - start
 
         # report progress
-        if (i + 1) % args.n_interval == 0:
-            logging.info("(iter:%d) loss = %.6f (%.3f sec / batch)" % (
-                i + 1, loss / args.n_interval, total / args.n_interval))
+        if (i + 1) % epoch_size == 0:
+            logging.info("(epoch:%d) loss = %.6f (%.3f sec / epoch)" % (
+                i + 1, loss / epoch_size, total))
             logging.info("estimated required time = "
                          "{0.days:02}:{0.hours:02}:{0.minutes:02}:{0.seconds:02}"
                          .format(relativedelta(
-                             seconds=int((args.n_iter - (i + 1)) * (total / args.n_interval)))))
+                             seconds=int((args.iters - (i + 1)) * (total / epoch_size)))))
             total = 0
             loss = 0
 
         # save intermidiate model
-        if (i + 1) % args.n_checkpoint == 0:
+        if (i + 1) % args.checkpoints == 0:
             save_checkpoint(args.expdir, model, optimizer, i + 1)
 
     # save final model
-    save_checkpoint(args.expdir, model, optimizer, args.n_iter)
+    save_checkpoint(args.expdir, model, optimizer, args.iters)
 
 
 if __name__ == "__main__":
