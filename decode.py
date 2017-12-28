@@ -5,6 +5,7 @@ from __future__ import division
 import argparse
 import logging
 import os
+import sys
 
 import numpy as np
 import soundfile as sf
@@ -68,9 +69,9 @@ def main():
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
-    parser.add_argument("--n_jobs", default=6,
+    parser.add_argument("--n_jobs", default=5,
                         type=int, help="number of parallel jobs per gpu")
-    parser.add_argument("--n_gpus", default=3,
+    parser.add_argument("--n_gpus", default=2,
                         type=int, help="number of gpus")
     # other setting
     parser.add_argument("--seed", default=1,
@@ -102,24 +103,14 @@ def main():
     # load config
     config = torch.load(args.config)
 
-    # define transforms
-    scaler = StandardScaler()
-    scaler.mean_ = read_hdf5(args.stats, "/mean")
-    scaler.scale_ = read_hdf5(args.stats, "/scale")
-    wav_transform = transforms.Compose([
-        lambda x: encode_mu_law(x, config.n_quantize),
-        lambda x: torch.from_numpy(x).long().cuda(),
-        lambda x: Variable(x, volatile=True)])
-    feat_transform = transforms.Compose([
-        lambda x: scaler.transform(x),
-        lambda x: torch.from_numpy(x).float().cuda(),
-        lambda x: Variable(x, volatile=True)])
-
     # get file list
     if os.path.isdir(args.feats):
         feat_list = sorted(find_files(args.feats, "*.h5"))
-    else:
+    elif os.path.isfile(args.feats):
         feat_list = read_txt(args.feats)
+    else:
+        logging.error("--feats should be directory or list.")
+        sys.exit(1)
 
     # check directory existence
     if not os.path.exists(args.outdir):
@@ -142,17 +133,31 @@ def main():
                             kernel_size=config.kernel_size)
             checkpoint = torch.load(args.checkpoint)
             model.load_state_dict(checkpoint["model"])
+            model.eval()
             model.cuda()
+            torch.backends.cudnn.benchmark = True
 
             # define generator
+            scaler = StandardScaler()
+            scaler.mean_ = read_hdf5(args.stats, "/mean")
+            scaler.scale_ = read_hdf5(args.stats, "/scale")
+            wav_transform = transforms.Compose([
+                lambda x: encode_mu_law(x, config.n_quantize),
+                lambda x: torch.from_numpy(x).long().cuda(),
+                lambda x: Variable(x, volatile=True)])
+            feat_transform = transforms.Compose([
+                lambda x: scaler.transform(x),
+                lambda x: torch.from_numpy(x).float().cuda(),
+                lambda x: Variable(x, volatile=True)])
             generator = decode_generator(feat_list, wav_transform, feat_transform, False)
 
             # decode
             for feat_id, (x, h, n_samples) in generator:
                 logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                samples = model.fast_generate(x, h, n_samples)
+                samples = model.faster_generate(x, h, n_samples, 5000)
                 wav = decode_mu_law(np.array(samples), config.n_quantize)
                 sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+                logging.info("wrote %d.wav" % feat_id)
 
     # parallel decode
     processes = []

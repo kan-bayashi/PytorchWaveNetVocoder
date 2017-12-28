@@ -235,6 +235,7 @@ def main():
                     kernel_size=args.kernel_size)
     logging.info(model)
     model.apply(initialize)
+    model.train()
 
     # define loss and optimizer
     optimizer = torch.optim.Adam(model.parameters(),
@@ -266,9 +267,12 @@ def main():
         filenames = sorted(find_files(args.waveforms, "*.wav", use_dir_name=False))
         wav_list = [args.waveforms + "/" + filename for filename in filenames]
         feat_list = [args.feats + "/" + filename.replace(".wav", ".h5") for filename in filenames]
-    else:
+    elif os.path.isfile(args.waveforms):
         wav_list = read_txt(args.waveforms)
         feat_list = read_txt(args.feats)
+    else:
+        logging.error("--waveforms should be directory or list.")
+        sys.exit(1)
     generator = train_generator(
         wav_list, feat_list, model.receptive_field, args.batch_size,
         wav_transform, feat_transform, True, False)

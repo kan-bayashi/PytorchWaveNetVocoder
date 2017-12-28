@@ -34,16 +34,18 @@ def initialize(m):
 
 
 class OneHot(nn.Module):
-    """CONVERT TO ONE-HOT"""
+    """CONVERT TO ONE-HOT VECTOR"""
     def __init__(self, depth):
         super(OneHot, self).__init__()
         self.depth = depth
+        self.ones = torch.eye(depth).cuda()
 
     def forward(self, x):
-        x = x % self.depth
-        x = torch.unsqueeze(x, 2)
-        x_onehot = Variable(torch.FloatTensor(x.size(0), x.size(1), self.depth).zero_().cuda())
-        return x_onehot.scatter_(2, x, 1)
+        x_onehot = self.ones.index_select(0, x.data[0]).unsqueeze(0)
+        if self.training:
+            return Variable(x_onehot)
+        else:
+            return Variable(x_onehot, volatile=True)
 
 
 class CausalConv1d(nn.Module):
@@ -83,24 +85,21 @@ class WaveNet(nn.Module):
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
+        self.n_resch = n_resch
+        self.n_skipch = n_skipch
         self.kernel_size = kernel_size
         self.dilation_depth = dilation_depth
-        self.dilations = [2**i for i in range(dilation_depth)] * dilation_repeat
-        self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
+        self.dilation_repeat = dilation_repeat
+        self.dilations = dilations = [2**i for i in range(dilation_depth)] * dilation_repeat
+        self.receptive_field = (kernel_size - 1) * sum(dilations) + 1
         self.onehot = OneHot(n_quantize)
         self.causal = CausalConv1d(n_quantize, n_resch, kernel_size)
-        self.dil_sigmoid = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d)
-                                          for d in self.dilations])
-        self.dil_tanh = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d)
-                                       for d in self.dilations])
-        self.aux_1x1_sigmoid = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1)
-                                              for d in self.dilations])
-        self.aux_1x1_tanh = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1)
-                                           for d in self.dilations])
-        self.skip_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_skipch, 1)
-                                       for d in self.dilations])
-        self.res_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_resch, 1)
-                                      for d in self.dilations])
+        self.dil_sigmoid = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d) for d in dilations])
+        self.dil_tanh = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d) for d in dilations])
+        self.aux_1x1_sigmoid = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1) for d in dilations])
+        self.aux_1x1_tanh = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1) for d in dilations])
+        self.skip_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_skipch, 1) for d in dilations])
+        self.res_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_resch, 1) for d in dilations])
         self.conv_post_1 = nn.Conv1d(n_skipch, n_skipch, 1)
         self.conv_post_2 = nn.Conv1d(n_skipch, n_quantize, 1)
 
@@ -144,7 +143,7 @@ class WaveNet(nn.Module):
         output = output + x
         return output, skip
 
-    def generate(self, x, h, n_samples, interval=5000):
+    def generate(self, x, h, n_samples, intervals=None):
         # show info
         logging.info("seed wav length = %d" % x.size(1))
         logging.info("seed aux length = %d" % h.size(2))
@@ -157,29 +156,29 @@ class WaveNet(nn.Module):
             h = F.pad(h, (n_pad, 0), "replicate")
 
         # generate
-        res = x.data[0].tolist()
+        samples = x.data[0].tolist()
         start = time.time()
         for i in range(n_samples):
-            current_idx = len(res)
-            x = Variable(torch.LongTensor(res[-self.receptive_field:]).view(1, -1).cuda(),
+            current_idx = len(samples)
+            x = Variable(torch.LongTensor(samples[-self.receptive_field:]).view(1, -1).cuda(),
                          volatile=True)
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
             output = self.forward(x, h_)
             posterior = F.softmax(output[-1], dim=0)
             dist = torch.distributions.Categorical(posterior)
-            sample = dist.sample().data.cpu().numpy()[0]
-            res.append(sample)
+            sample = dist.sample().data[0]
+            samples.append(sample)
 
             # show progress
-            if interval is not None and (i + 1) % interval == 0:
-                logging.info("%d/%d estimated time = %.3f (%.3f / sample)" % (
+            if intervals is not None and (i + 1) % intervals == 0:
+                logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
                     i + 1, n_samples,
                     (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
                     (time.time() - start) / (i + 1)))
 
-        return res[-n_samples:]
+        return np.array(samples[-n_samples:])
 
-    def fast_generate(self, x, h, n_samples, interval=5000):
+    def fast_generate(self, x, h, n_samples, intervals=None):
         # show info
         logging.info("seed wav length = %d" % x.size(1))
         logging.info("seed aux length = %d" % h.size(2))
@@ -208,13 +207,13 @@ class WaveNet(nn.Module):
             output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
 
         # generate
-        res = x.data[0].tolist()
+        samples = x.data[0].tolist()
         start = time.time()
         for i in range(n_samples):
-            output = Variable(torch.LongTensor(res[-self.kernel_size * 2 - 1:]).view(1, -1).cuda(),
+            output = Variable(torch.LongTensor(samples[-self.kernel_size * 2 - 1:]).view(1, -1).cuda(),
                               volatile=True)
             output = self._preprocess(output)
-            h_ = h[:, :, len(res) - 1].contiguous().view(1, h.size(1), 1)
+            h_ = h[:, :, len(samples) - 1].contiguous().view(1, h.size(1), 1)
             output_buffer_next = []
             skip_connections = []
             for l, d in enumerate(self.dilations):
@@ -238,13 +237,94 @@ class WaveNet(nn.Module):
             # perform sampling
             dist = torch.distributions.Categorical(posterior)
             sample = dist.sample().data.cpu().numpy()[0]
-            res.append(sample)
+            samples.append(sample)
 
             # show progress
-            if interval is not None and (i + 1) % interval == 0:
-                logging.info("%d/%d estimated time = %.3f (%.3f / sample)" % (
+            if intervals is not None and (i + 1) % intervals == 0:
+                logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
                     i + 1, n_samples,
                     (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
                     (time.time() - start) / (i + 1)))
 
-        return res[-n_samples:]
+        return np.array(samples[-n_samples:])
+
+    def faster_generate(self, x, h, n_samples, intervals=None):
+        # show info
+        logging.info("seed wav length = %d" % x.size(1))
+        logging.info("seed aux length = %d" % h.size(2))
+        logging.info("sample length = %d" % n_samples)
+
+        # padding if the length less than
+        n_pad = self.receptive_field - x.size(1)
+        if n_pad > 0:
+            x = F.pad(x, (n_pad, 0), "constant", self.n_quantize // 2)
+            h = F.pad(h, (n_pad, 0), "replicate")
+
+        # prepare buffer
+        output = self._preprocess(x)
+        h_ = h[:, :, :x.size(1)]
+        output_buffer = []
+        buffer_size = []
+        for l, d in enumerate(self.dilations):
+            output, _ = self._residual_forward(
+                output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
+                self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
+                self.skip_1x1[l], self.res_1x1[l])
+            if d == 2**(self.dilation_depth - 1):
+                buffer_size.append(self.kernel_size - 1)
+            else:
+                buffer_size.append(d * 2 * (self.kernel_size - 1))
+            output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
+
+        # generate
+        samples = x.data[0]
+        start = time.time()
+        for i in range(n_samples):
+            output = Variable(samples[-self.kernel_size * 2 - 1:].unsqueeze(0), volatile=True)
+            output = self._preprocess(output)
+            h_ = h[:, :, len(samples) - 1].contiguous().view(1, self.n_aux, 1)
+            output_buffer_next = []
+            skip_connections = []
+            for l, d in enumerate(self.dilations):
+                output, skip = self._generate_residual_forward(
+                    output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
+                    self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
+                    self.skip_1x1[l], self.res_1x1[l])
+                output = torch.cat([output_buffer[l], output], dim=2)
+                output_buffer_next.append(output[:, :, -buffer_size[l]:])
+                skip_connections.append(skip)
+
+            # update buffer
+            output_buffer = output_buffer_next
+
+            # calculate posterior
+            output = sum(skip_connections)
+            output = self._postprocess(output)
+            posterior = F.softmax(output[-1], dim=0)
+
+            # perform sampling
+            dist = torch.distributions.Categorical(posterior)
+            sample = dist.sample().data
+            samples = torch.cat([samples, sample], dim=0)
+
+            # show progress
+            if intervals is not None and (i + 1) % intervals == 0:
+                logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
+                    i + 1, n_samples,
+                    (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
+                    (time.time() - start) / (i + 1)))
+
+        return samples[-n_samples:].cpu().numpy()
+
+    def _generate_residual_forward(self, x, h, dil_sigmoid, dil_tanh,
+                                   aux_1x1_sigmoid, aux_1x1_tanh, skip_1x1, res_1x1):
+        output_sigmoid = dil_sigmoid(x)[:, :, -1:]
+        output_tanh = dil_tanh(x)[:, :, -1:]
+        aux_output_sigmoid = aux_1x1_sigmoid(h)
+        aux_output_tanh = aux_1x1_tanh(h)
+        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            F.tanh(output_tanh + aux_output_tanh)
+        skip = skip_1x1(output)
+        output = res_1x1(output)
+        output = output + x[:, :, -1:]
+        return output, skip
