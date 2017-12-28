@@ -112,6 +112,19 @@ def main():
         logging.error("--feats should be directory or list.")
         sys.exit(1)
 
+    # define transform
+    scaler = StandardScaler()
+    scaler.mean_ = read_hdf5(args.stats, "/mean")
+    scaler.scale_ = read_hdf5(args.stats, "/scale")
+    wav_transform = transforms.Compose([
+        lambda x: encode_mu_law(x, config.n_quantize),
+        lambda x: torch.from_numpy(x).long().cuda(),
+        lambda x: Variable(x, volatile=True)])
+    feat_transform = transforms.Compose([
+        lambda x: scaler.transform(x),
+        lambda x: torch.from_numpy(x).float().cuda(),
+        lambda x: Variable(x, volatile=True)])
+
     # check directory existence
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
@@ -138,26 +151,18 @@ def main():
             torch.backends.cudnn.benchmark = True
 
             # define generator
-            scaler = StandardScaler()
-            scaler.mean_ = read_hdf5(args.stats, "/mean")
-            scaler.scale_ = read_hdf5(args.stats, "/scale")
-            wav_transform = transforms.Compose([
-                lambda x: encode_mu_law(x, config.n_quantize),
-                lambda x: torch.from_numpy(x).long().cuda(),
-                lambda x: Variable(x, volatile=True)])
-            feat_transform = transforms.Compose([
-                lambda x: scaler.transform(x),
-                lambda x: torch.from_numpy(x).float().cuda(),
-                lambda x: Variable(x, volatile=True)])
             generator = decode_generator(feat_list, wav_transform, feat_transform, False)
 
             # decode
             for feat_id, (x, h, n_samples) in generator:
-                logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                samples = model.faster_generate(x, h, n_samples, 5000)
-                wav = decode_mu_law(np.array(samples), config.n_quantize)
-                sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
-                logging.info("wrote %d.wav" % feat_id)
+                if os.path.exists(args.outdir + "/" + feat_id + ".wav"):
+                    logging.info("%s already exists." % feat_id)
+                else:
+                    logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
+                    samples = model.faster_generate(x, h, n_samples, 5000)
+                    wav = decode_mu_law(np.array(samples), config.n_quantize)
+                    sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+                    logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
 
     # parallel decode
     processes = []
