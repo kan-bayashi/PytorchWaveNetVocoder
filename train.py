@@ -142,6 +142,7 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
         iterations (int): number of current iterations
 
     """
+    model.cpu()
     checkpoint = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
@@ -149,6 +150,7 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     torch.save(checkpoint, checkpoint_dir + "/checkpoint-%d.pkl" % iterations)
+    model.cuda()
     logging.info("%d-iter checkpoint created." % iterations)
 
 
@@ -243,14 +245,6 @@ def main():
                                  weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
 
-    # send to gpu
-    if torch.cuda.is_available():
-        model.cuda()
-        criterion.cuda()
-    else:
-        logging.error("gpu is not available. please check the setting.")
-        sys.exit(1)
-
     # define transforms
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/mean")
@@ -288,6 +282,14 @@ def main():
         logging.info("restored from %d-iter checkpoint." % iterations)
     else:
         iterations = 0
+
+    # send to gpu
+    if torch.cuda.is_available():
+        model.cuda()
+        criterion.cuda()
+    else:
+        logging.error("gpu is not available. please check the setting.")
+        sys.exit(1)
 
     # train
     loss = 0
