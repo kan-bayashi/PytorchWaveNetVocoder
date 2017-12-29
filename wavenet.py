@@ -38,7 +38,10 @@ class OneHot(nn.Module):
     def __init__(self, depth):
         super(OneHot, self).__init__()
         self.depth = depth
-        self.ones = torch.eye(depth).cuda()
+        if torch.cuda.is_available():
+            self.ones = torch.eye(depth).cuda()
+        else:
+            self.ones = torch.eye(depth)
 
     def forward(self, x):
         x_onehot = self.ones.index_select(0, x.data[0]).unsqueeze(0)
@@ -144,11 +147,6 @@ class WaveNet(nn.Module):
         return output, skip
 
     def generate(self, x, h, n_samples, intervals=None):
-        # show info
-        logging.info("seed wav length = %d" % x.size(1))
-        logging.info("seed aux length = %d" % h.size(2))
-        logging.info("sample length = %d" % n_samples)
-
         # padding if the length less than receptive field size
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -179,11 +177,6 @@ class WaveNet(nn.Module):
         return np.array(samples[-n_samples:])
 
     def fast_generate(self, x, h, n_samples, intervals=None):
-        # show info
-        logging.info("seed wav length = %d" % x.size(1))
-        logging.info("seed aux length = %d" % h.size(2))
-        logging.info("sample length = %d" % n_samples)
-
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -249,11 +242,6 @@ class WaveNet(nn.Module):
         return np.array(samples[-n_samples:])
 
     def faster_generate(self, x, h, n_samples, intervals=None):
-        # show info
-        logging.info("seed wav length = %d" % x.size(1))
-        logging.info("seed aux length = %d" % h.size(2))
-        logging.info("sample length = %d" % n_samples)
-
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
