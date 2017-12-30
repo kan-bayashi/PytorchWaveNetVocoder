@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import time
+from distutils.utl import strtobool
 
 import numpy as np
 import six
@@ -180,6 +181,8 @@ def main():
                         type=int, help="number of repeating of dilation")
     parser.add_argument("--kernel_size", default=2,
                         type=int, help="kerne size of dilated causal convolution")
+    parser.add_argument("--use_speaker_code", default=False,
+                        type=strtobool, help="flag to use speaker code")
     # network training setting
     parser.add_argument("--lr", default=1e-4,
                         type=float, help="learning rate")
@@ -269,7 +272,7 @@ def main():
         sys.exit(1)
     generator = train_generator(
         wav_list, feat_list, model.receptive_field, args.batch_size,
-        wav_transform, feat_transform, True, False)
+        wav_transform, feat_transform, True, args.use_speaker_code)
     while not generator.queue.full():
         time.sleep(0.1)
 
