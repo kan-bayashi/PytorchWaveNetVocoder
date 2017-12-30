@@ -82,19 +82,29 @@ def main():
                         type=int, help="log level")
     args = parser.parse_args()
 
+    # check directory existence
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
+
     # set log level
     if args.verbose > 0:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.outdir + "/decode.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
     elif args.verbose > 1:
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.outdir + "/decode.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
     else:
         logging.basicConfig(level=logging.WARN,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.outdir + "/decode.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
         logging.warn("logging is disabled.")
 
     # fix seed
@@ -113,10 +123,6 @@ def main():
     else:
         logging.error("--feats should be directory or list.")
         sys.exit(1)
-
-    # check directory existence
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
 
     # prepare the file list for parallel decoding
     if args.n_gpus > 0:

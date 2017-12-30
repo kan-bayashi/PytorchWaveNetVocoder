@@ -7,7 +7,7 @@ import logging
 import os
 import sys
 import time
-from distutils.utl import strtobool
+from distutils.util import strtobool
 
 import numpy as np
 import six
@@ -205,19 +205,29 @@ def main():
                         type=int, help="log level")
     args = parser.parse_args()
 
+    # make experimental directory
+    if not os.path.exists(args.expdir):
+        os.makedirs(args.expdir)
+
     # set log level
     if args.verbose > 0:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.expdir + "/train.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
     elif args.verbose > 1:
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.expdir + "/train.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
     else:
         logging.basicConfig(level=logging.WARN,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S')
+                            datefmt='%m/%d/%Y %I:%M:%S',
+                            filename=args.expdir + "/train.log")
+        logging.getLogger().addHandler(logging.StreamHandler())
         logging.warn("logging is disabled.")
 
     # fix seed
@@ -225,9 +235,7 @@ def main():
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    # show arguments and save args as conf
-    if not os.path.exists(args.expdir):
-        os.makedirs(args.expdir)
+    # save args as conf
     torch.save(args, args.expdir + "/model.conf")
 
     # define network
@@ -270,6 +278,8 @@ def main():
     else:
         logging.error("--waveforms should be directory or list.")
         sys.exit(1)
+    assert len(wav_list) == len(feat_list)
+    logging.info("number of training data = %d." % len(wav_list))
     generator = train_generator(
         wav_list, feat_list, model.receptive_field, args.batch_size,
         wav_transform, feat_transform, True, args.use_speaker_code)
@@ -328,7 +338,7 @@ def main():
 
     # save final model
     model.cpu()
-    torch.save({"model": model.state_dict()}, "checkpoint-final.pkl")
+    torch.save({"model": model.state_dict()}, args.expdir + "/checkpoint-final.pkl")
     logging.info("final checkpoint created.")
 
 
