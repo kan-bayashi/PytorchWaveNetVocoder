@@ -324,7 +324,9 @@ def main():
             save_checkpoint(args.expdir, model, optimizer, i + 1)
 
     # save final model
-    save_checkpoint(args.expdir, model, optimizer, args.iters)
+    model.cpu()
+    torch.save({"model": model.state_dict()}, "checkpoint-final.pkl")
+    logging.info("final checkpoint created.")
 
 
 if __name__ == "__main__":

@@ -59,12 +59,12 @@ def main():
     # decode setting
     parser.add_argument("--feats", required=True,
                         type=str, help="list or directory of aux feat files")
+    parser.add_argument("--stats", required=True,
+                        type=str, help="hdf5 file including statistics")
     parser.add_argument("--checkpoint", required=True,
                         type=str, help="model file")
     parser.add_argument("--config", required=True,
                         type=str, help="configure file")
-    parser.add_argument("--stats", required=True,
-                        type=str, help="hdf5 file including statistics")
     parser.add_argument("--outdir", required=True,
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
@@ -119,10 +119,10 @@ def main():
         os.makedirs(args.outdir)
 
     # prepare the file list for parallel decoding
-    if args.n_gpus == 0:
-        feat_lists = np.array_split(feat_list, args.n_jobs)
-    else:
+    if args.n_gpus > 0:
         feat_lists = np.array_split(feat_list, args.n_jobs * args.n_gpus)
+    else:
+        feat_lists = np.array_split(feat_list, args.n_jobs)
     feat_lists = [f_list.tolist() for f_list in feat_lists]
 
     # define gpu decode function
@@ -136,8 +136,7 @@ def main():
                             dilation_depth=config.dilation_depth,
                             dilation_repeat=config.dilation_repeat,
                             kernel_size=config.kernel_size)
-            checkpoint = torch.load(args.checkpoint)
-            model.load_state_dict(checkpoint["model"])
+            model.load_state_dict(torch.load(args.checkpoint)["model"])
             model.eval()
             model.cuda()
             torch.backends.cudnn.benchmark = True
@@ -156,7 +155,7 @@ def main():
                 lambda x: Variable(x, volatile=True)])
 
             # define generator
-            generator = decode_generator(feat_list, wav_transform, feat_transform, False)
+            generator = decode_generator(feat_list, wav_transform, feat_transform, config.use_speaker_code)
 
             # decode
             for feat_id, (x, h, n_samples) in generator:
@@ -164,7 +163,7 @@ def main():
                     logging.info("%s already exists." % feat_id)
                 else:
                     logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                    samples = model.faster_generate(x, h, n_samples, 10)
+                    samples = model.faster_generate(x, h, n_samples, args.intervals)
                     wav = decode_mu_law(samples, config.n_quantize)
                     sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
                     logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
@@ -179,8 +178,7 @@ def main():
                         dilation_depth=config.dilation_depth,
                         dilation_repeat=config.dilation_repeat,
                         kernel_size=config.kernel_size)
-        checkpoint = torch.load(args.checkpoint)
-        model.load_state_dict(checkpoint["model"])
+        model.load_state_dict(torch.load(args.checkpoint)["model"])
         model.eval()
         model.cpu()
 
@@ -198,7 +196,7 @@ def main():
             lambda x: Variable(x, volatile=True)])
 
         # define generator
-        generator = decode_generator(feat_list, wav_transform, feat_transform, False)
+        generator = decode_generator(feat_list, wav_transform, feat_transform, config.use_speaker_code)
 
         # decode
         for feat_id, (x, h, n_samples) in generator:
@@ -212,14 +210,7 @@ def main():
                 logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
 
     # parallel decode
-    if args.n_gpus == 0:
-        logging.info("cpu decoding")
-        processes = []
-        for i, feat_list in enumerate(feat_lists):
-            p = mp.Process(target=cpu_decode, args=(feat_list,))
-            p.start()
-            processes.append(p)
-    else:
+    if args.n_gpus > 0:
         logging.info("gpu decoding")
         processes = []
         gpu = 0
@@ -230,6 +221,13 @@ def main():
             gpu += 1
             if (i + 1) % args.n_gpus == 0:
                 gpu = 0
+    else:
+        logging.info("cpu decoding")
+        processes = []
+        for i, feat_list in enumerate(feat_lists):
+            p = mp.Process(target=cpu_decode, args=(feat_list,))
+            p.start()
+            processes.append(p)
 
     # wait for all process
     for p in processes:
