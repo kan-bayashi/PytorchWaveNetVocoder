@@ -29,7 +29,6 @@ net = WaveNet(256, 28, 512, 256, 10, 3, 2)
 net.apply(initialize)
 net.cuda()
 net.eval()
-torch.backends.cudnn.benchmark = True
 
 # forward test
 generator = sine_generator(100)
@@ -41,9 +40,9 @@ y = net(batch_input, batch_aux)
 # generation test
 length = 100
 batch_aux = Variable(torch.FloatTensor(1, 28, batch_input.size(1) + length).fill_(0.0).cuda(), volatile=True)
-gen1 = net.generate(batch_input, batch_aux, length, 1)
-gen2 = net.fast_generate(batch_input, batch_aux, length, 1)
-gen3 = net.faster_generate(batch_input, batch_aux, length, 1)
+gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
+gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+gen3 = net.faster_generate(batch_input, batch_aux, length, 1, "argmax")
 np.testing.assert_array_equal(gen1, gen2)
 np.testing.assert_array_equal(gen2, gen3)
 np.testing.assert_array_equal(gen1, gen3)

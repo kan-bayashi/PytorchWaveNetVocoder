@@ -2,6 +2,7 @@
 from __future__ import division
 
 import logging
+import sys
 import time
 
 import numpy as np
@@ -146,7 +147,7 @@ class WaveNet(nn.Module):
         output = output + x
         return output, skip
 
-    def generate(self, x, h, n_samples, intervals=None):
+    def generate(self, x, h, n_samples, intervals=None, mode="sampling"):
         # padding if the length less than receptive field size
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -162,21 +163,28 @@ class WaveNet(nn.Module):
                          volatile=True)
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
             output = self.forward(x, h_)
-            posterior = F.softmax(output[-1], dim=0)
-            dist = torch.distributions.Categorical(posterior)
-            sample = dist.sample().data[0]
+            if mode == "sampling":
+                posterior = F.softmax(output[-1], dim=0)
+                dist = torch.distributions.Categorical(posterior)
+                sample = dist.sample().data[0]
+            elif mode == "argmax":
+                sample = output.max(1)[-1].data[-1]
+            else:
+                logging.error("mode should be sampling or argmax")
+                sys.exit(1)
             samples.append(sample)
 
             # show progress
             if intervals is not None and (i + 1) % intervals == 0:
                 logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
                     i + 1, n_samples,
-                    (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
-                    (time.time() - start) / (i + 1)))
+                    (n_samples - i - 1) * ((time.time() - start) / intervals),
+                    (time.time() - start) / intervals))
+                start = time.time()
 
         return np.array(samples[-n_samples:])
 
-    def fast_generate(self, x, h, n_samples, intervals=None):
+    def fast_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -222,26 +230,31 @@ class WaveNet(nn.Module):
             # update buffer
             output_buffer = output_buffer_next
 
-            # calculate posterior
+            # get predicted sample
             output = sum(skip_connections)
             output = self._postprocess(output)
-            posterior = F.softmax(output[-1], dim=0)
-
-            # perform sampling
-            dist = torch.distributions.Categorical(posterior)
-            sample = dist.sample().data.cpu().numpy()[0]
+            if mode == "sampling":
+                posterior = F.softmax(output[-1], dim=0)
+                dist = torch.distributions.Categorical(posterior)
+                sample = dist.sample().data[0]
+            elif mode == "argmax":
+                sample = output.max(1)[-1].data[-1]
+            else:
+                logging.error("mode should be sampling or argmax")
+                sys.exit(1)
             samples.append(sample)
 
             # show progress
             if intervals is not None and (i + 1) % intervals == 0:
                 logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
                     i + 1, n_samples,
-                    (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
-                    (time.time() - start) / (i + 1)))
+                    (n_samples - i - 1) * ((time.time() - start) / intervals),
+                    (time.time() - start) / intervals))
+                start = time.time()
 
         return np.array(samples[-n_samples:])
 
-    def faster_generate(self, x, h, n_samples, intervals=None):
+    def faster_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -285,14 +298,18 @@ class WaveNet(nn.Module):
             # update buffer
             output_buffer = output_buffer_next
 
-            # calculate posterior
+            # get predicted sample
             output = sum(skip_connections)
             output = self._postprocess(output)
-            posterior = F.softmax(output[-1], dim=0)
-
-            # perform sampling
-            dist = torch.distributions.Categorical(posterior)
-            sample = dist.sample().data
+            if mode == "sampling":
+                posterior = F.softmax(output[-1], dim=0)
+                dist = torch.distributions.Categorical(posterior)
+                sample = dist.sample().data
+            elif mode == "argmax":
+                sample = output.max(1)[-1].data
+            else:
+                logging.error("mode should be sampling or argmax")
+                sys.exit(1)
             samples = torch.cat([samples, sample], dim=0)
 
             # show progress
