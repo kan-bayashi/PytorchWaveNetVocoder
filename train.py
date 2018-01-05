@@ -162,10 +162,10 @@ def main():
                         type=str, help="directory or list of wav files")
     parser.add_argument("--feats", required=True,
                         type=str, help="directory or list of aux feat files")
-    parser.add_argument("--expdir", required=True,
-                        type=str, help="directory to save the model")
     parser.add_argument("--stats", required=True,
                         type=str, help="hdf5 file including statistics")
+    parser.add_argument("--expdir", required=True,
+                        type=str, help="directory to save the model")
     # network structure setting
     parser.add_argument("--n_quantize", default=256,
                         type=int, help="number of quantization")

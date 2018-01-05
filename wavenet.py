@@ -299,8 +299,9 @@ class WaveNet(nn.Module):
             if intervals is not None and (i + 1) % intervals == 0:
                 logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
                     i + 1, n_samples,
-                    (n_samples - i - 1) * ((time.time() - start) / (i + 1)),
-                    (time.time() - start) / (i + 1)))
+                    (n_samples - i - 1) * ((time.time() - start) / intervals),
+                    (time.time() - start) / intervals))
+                start = time.time()
 
         return samples[-n_samples:].cpu().numpy()
 
