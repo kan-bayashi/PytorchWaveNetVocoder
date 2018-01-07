@@ -94,18 +94,31 @@ class WaveNet(nn.Module):
         self.kernel_size = kernel_size
         self.dilation_depth = dilation_depth
         self.dilation_repeat = dilation_repeat
-        self.dilations = dilations = [2**i for i in range(dilation_depth)] * dilation_repeat
-        self.receptive_field = (kernel_size - 1) * sum(dilations) + 1
-        self.onehot = OneHot(n_quantize)
-        self.causal = CausalConv1d(n_quantize, n_resch, kernel_size)
-        self.dil_sigmoid = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d) for d in dilations])
-        self.dil_tanh = nn.ModuleList([CausalConv1d(n_resch, n_resch, kernel_size, d) for d in dilations])
-        self.aux_1x1_sigmoid = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1) for d in dilations])
-        self.aux_1x1_tanh = nn.ModuleList([nn.Conv1d(n_aux, n_resch, 1) for d in dilations])
-        self.skip_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_skipch, 1) for d in dilations])
-        self.res_1x1 = nn.ModuleList([nn.Conv1d(n_resch, n_resch, 1) for d in dilations])
-        self.conv_post_1 = nn.Conv1d(n_skipch, n_skipch, 1)
-        self.conv_post_2 = nn.Conv1d(n_skipch, n_quantize, 1)
+        self.dilations = [2**i for i in range(self.dilation_depth)] * self.dilation_repeat
+        self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
+
+        # for preprocessing
+        self.onehot = OneHot(self.n_quantize)
+        self.causal = CausalConv1d(self.n_quantize, self.n_resch, self.kernel_size)
+
+        # for residual blocks
+        self.dil_sigmoid = nn.ModuleList()
+        self.dil_tanh = nn.ModuleList()
+        self.aux_1x1_sigmoid = nn.ModuleList()
+        self.aux_1x1_tanh = nn.ModuleList()
+        self.skip_1x1 = nn.ModuleList()
+        self.res_1x1 = nn.ModuleList()
+        for d in self.dilations:
+            self.dil_sigmoid += [CausalConv1d(self.n_resch, self.n_resch, self.kernel_size, d)]
+            self.dil_tanh += [CausalConv1d(self.n_resch, self.n_resch, self.kernel_size, d)]
+            self.aux_1x1_sigmoid += [nn.Conv1d(self.n_aux, self.n_resch, 1)]
+            self.aux_1x1_tanh += [nn.Conv1d(self.n_aux, self.n_resch, 1)]
+            self.skip_1x1 += [nn.Conv1d(self.n_resch, self.n_skipch, 1)]
+            self.res_1x1 += [nn.Conv1d(self.n_resch, self.n_resch, 1)]
+
+        # for postprocessing
+        self.conv_post_1 = nn.Conv1d(self.n_skipch, self.n_skipch, 1)
+        self.conv_post_2 = nn.Conv1d(self.n_skipch, self.n_quantize, 1)
 
     def forward(self, x, h):
         output = self._preprocess(x)
