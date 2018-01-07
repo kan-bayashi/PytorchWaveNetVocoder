@@ -7,6 +7,10 @@ This repository is the conditional wavenet implementation with pytorch.
 ```bash
 cd tools
 make -j
-source tools/venv/activate
 ```
 
+## Run example
+```
+cd egs/arctic/sd
+./run.sh
+```
