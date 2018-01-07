@@ -3,7 +3,6 @@ from __future__ import division, print_function
 
 import fnmatch
 import os
-import Queue
 import sys
 import threading
 
@@ -103,7 +102,11 @@ class BackgroundGenerator(threading.Thread):
     """BACKGROUND GENERATOR"""
     def __init__(self, generator, max_prefetch=1):
         threading.Thread.__init__(self)
-        self.queue = Queue.Queue(max_prefetch)
+        if sys.version_info.major == 2:
+            from Queue import Queue
+        else:
+            from queue import Queue
+        self.queue = Queue(max_prefetch)
         self.generator = generator
         self.daemon = True
         self.start()
