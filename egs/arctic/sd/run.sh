@@ -26,14 +26,9 @@ stage=0123456
 #            PATH SETTING             #
 #######################################
 # {{{
-# train_wavdir: directory including training wav files
-# train_hdf5dir: directory to write training hdf5 files
-# eval_wavdir: directory including evaluation wav files
-# eval_hdf5dir: directory to write evaluation hdf5 files
-# noise_shaped_wavdir: directory to write noise shaped wav files
-# json_file: wavenet parameter json file
-# tag: experiment name (you can set your favorite name)
-# f0_list: list of f0 setting (each line containes <spk_name> <min_f0> <max_f0>)
+# train: train directory name tag
+# eval: eval directory name tag
+# tag: experiment name tag (if empty, automatically set)
 # }}}
 ARCTIC_DB_ROOT=downloads
 spk=bdl
@@ -71,15 +66,11 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
-# silence_thres: thereshold to cut silence (if 0.0, will not cut)
-# learning_rate: learning rate
-# decay_steps: learning rate will decay per this number
-# decay_rate: learning rate decay rate
-# num_iters: number of iterations
-# sample_size: almost same as batchsize
-# checkpoint: save model per this number
+# lr: learning rate
+# iters: number of iterations
+# batch_size: batch size
+# checkpoints: save model per this number
 # use_speaker_code: true or false
-# is_preprocess: true or false
 # is_noise_shaping: true or false
 # }}}
 lr=1e-4
