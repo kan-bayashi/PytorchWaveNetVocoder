@@ -10,3 +10,4 @@ egs/*/*/exp/
 egs/*/*/wav/
 egs/*/*/wav_ns/
 egs/*/*/hdf5/
+egs/*/*/downloads/

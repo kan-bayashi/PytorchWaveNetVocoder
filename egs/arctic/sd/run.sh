@@ -12,14 +12,15 @@
 #           STAGE SETTING             #
 #######################################
 # {{{
-# 0: feature extraction step
-# 1: statistics calculation step
-# 2: apply noise shaping step
-# 3: training step
-# 4: decoding step
-# 5: restore noise shaping step
+# 0: data preparation step
+# 1: feature extraction step
+# 2: statistics calculation step
+# 3: apply noise shaping step
+# 4: training step
+# 5: decoding step
+# 6: restore noise shaping step
 # }}}
-stage=012345
+stage=0123456
 
 #######################################
 #            PATH SETTING             #
@@ -34,6 +35,7 @@ stage=012345
 # tag: experiment name (you can set your favorite name)
 # f0_list: list of f0 setting (each line containes <spk_name> <min_f0> <max_f0>)
 # }}}
+ARCTIC_DB_ROOT=downloads
 spk=bdl
 train=tr_${spk}
 eval=ev_${spk}
@@ -117,11 +119,36 @@ set -eo pipefail
 # STAGE 0 {{{
 if [ `echo ${stage} | grep 0` ];then
     echo "###########################################################"
+    echo "#                 DATA PREPARATION STEP                   #"
+    echo "###########################################################"
+    if [ ! -e ${ARCTIC_DB_ROOT} ];then
+        mkdir -p ${ARCTIC_DB_ROOT}
+        cd ${ARCTIC_DB_ROOT}
+        for id in bdl slt rms clb jmk ksp awb;do
+            wget http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_${id}_arctic-0.95-release.tar.bz2
+            tar xf cmu_us_${id}*.tar.bz2
+        done
+        rm *.tar.bz2
+        cd ../
+    fi
+    mkdir -p data/${train}
+    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
+        | sort | head -n 1028 > data/${train}/wav.scp
+    mkdir -p data/${eval}
+    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
+        | sort | tail -n 104 > data/${eval}/wav.scp
+fi
+# }}}
+
+
+# STAGE 1 {{{
+if [ `echo ${stage} | grep 1` ];then
+    echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
     for set in ${train} ${eval};do
         # training data feature extraction
-        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/${set}.log \
+        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.log \
             feature_extract.py \
                 --waveforms data/${set}/wav.scp \
                 --wavdir wav/${set} \
@@ -149,12 +176,12 @@ fi
 # }}}
 
 
-# STAGE 1 {{{
-if [ `echo ${stage} | grep 1` ] && ${is_noise_shaping};then
+# STAGE 2 {{{
+if [ `echo ${stage} | grep 2` ] && ${is_noise_shaping};then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
-    ${train_cmd} exp/calculate_statistics/log \
+    ${train_cmd} exp/calculate_statistics/calc_stats_${train}.log \
         calc_stats.py \
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5
@@ -163,12 +190,12 @@ fi
 # }}}
 
 
-# STAGE 2 {{{
-if [ `echo ${stage} | grep 2` ] && ${is_noise_shaping};then
+# STAGE 3 {{{
+if [ `echo ${stage} | grep 3` ] && ${is_noise_shaping};then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/apply.log \
+    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_apply_${train}.log \
         noise_shaping.py \
             --waveforms data/${train}/wav_filtered.scp \
             --stats data/${train}/stats.h5 \
@@ -192,15 +219,15 @@ if [ `echo ${stage} | grep 2` ] && ${is_noise_shaping};then
     find wav_ns/${train} -name "*.wav" | sort > data/${train}/wav_ns.scp
 fi # }}}
 
+
+# STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
     expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_bs${batch_size}
 else
     expdir=exp/${tag}
 fi
-
-# STAGE 3 {{{
-if [ `echo ${stage} | grep 3` ];then
+if [ `echo ${stage} | grep 4` ];then
     echo "###########################################################"
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
@@ -224,8 +251,8 @@ fi
 # }}}
 
 
-# STAGE 4 {{{
-if [ `echo ${stage} | grep 4` ];then
+# STAGE 5 {{{
+if [ `echo ${stage} | grep 5` ];then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
     echo "###########################################################"
@@ -247,14 +274,14 @@ fi
 # }}}
 
 
-# STAGE 5 {{{
-if [ `echo ${stage} | grep 5` ] && ${is_noise_shaping};then
+# STAGE 6 {{{
+if [ `echo ${stage} | grep 6` ] && ${is_noise_shaping};then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
     find ${outdir} -name "*.wav" | sort > data/${eval}/wav_generated.scp
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/restore.log \
+    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_restore_${eval}.log \
         noise_shaping.py \
             --waveforms data/${eval}/wav_generated.scp \
             --stats data/${train}/stats.h5 \
