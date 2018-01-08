@@ -32,8 +32,6 @@ stage=0123456
 # }}}
 ARCTIC_DB_ROOT=downloads
 spk=bdl
-train=tr_${spk}
-eval=ev_${spk}
 tag=
 
 #######################################
@@ -52,15 +50,12 @@ tag=
 # }}}
 shiftms=5
 fftl=1024
-minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
-maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
 highpass_cutoff=70
-# for 16 kHz setting
 fs=16000
 mcep_dim=24
 mcep_alpha=0.410
 mag=0.5
-n_jobs=10
+n_jobs=1
 
 #######################################
 #          TRAINING SETTING           #
@@ -74,7 +69,7 @@ n_jobs=10
 # is_noise_shaping: true or false
 # }}}
 lr=1e-4
-iters=100
+iters=10
 batch_size=20000
 checkpoints=10000
 use_speaker_code=false
@@ -98,12 +93,14 @@ n_gpus=1
 # parse options
 . parse_options.sh
 
+# set params
+train=tr_${spk}
+eval=ev_${spk}
+minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
+maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
+
 # stop when error occured
-set -eo pipefail
-
-
-# make temp directory
-[ ! -e .tmp ] && mkdir .tmp
+set -e
 # }}}
 
 
@@ -122,12 +119,12 @@ if [ `echo ${stage} | grep 0` ];then
         rm *.tar.bz2
         cd ../
     fi
-    mkdir -p data/${train}
+    [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 1028 > data/${train}/wav.scp
-    mkdir -p data/${eval}
+        | sort | head -n 10 > data/${train}/wav.scp
+    [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | tail -n 104 > data/${eval}/wav.scp
+       | sort | tail -n 1 > data/${eval}/wav.scp
 fi
 # }}}
 
