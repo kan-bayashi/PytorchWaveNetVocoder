@@ -1,6 +1,6 @@
-# PYTORCH-WAVENET
+# PYTORCH-WAVENET-VOCODER
 
-This repository is the conditional wavenet implementation with pytorch.
+This repository is the wavenet-vocoder implementation with pytorch.
 
 ## Setup
 

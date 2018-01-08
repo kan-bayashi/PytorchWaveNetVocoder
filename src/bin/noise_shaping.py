@@ -66,13 +66,11 @@ def main():
         "--verbose", default=1,
         type=int, help="log message level")
     parser.add_argument(
-        '--inv', type=strtobool,
-        help="if True, inverse filtering will be performed")
+        '--n_jobs', default=1,
+        type=int, help="number of parallel jobs")
     parser.add_argument(
-        '--n_jobs', type=int,
-        help="number of parallel jobs")
-    parser.set_defaults(inv=False)
-
+        '--inv', default=False, type=strtobool,
+        help="if True, inverse filtering will be performed")
     args = parser.parse_args()
 
     # read list

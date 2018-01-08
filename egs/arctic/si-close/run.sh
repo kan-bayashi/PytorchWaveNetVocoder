@@ -1,6 +1,6 @@
 #!/bin/bash
 ############################################################
-#           SCRIPT TO BUILD SD WAVENET VOCODER             #
+#        SCRIPT TO BUILD SI-CLOSE WAVENET VOCODER          #
 ############################################################
 # Edited by Tomoki Hayashi @ Nagoya University
 
@@ -30,8 +30,8 @@ stage=0123456
 # eval: eval directory name tag
 # tag: experiment name tag (if empty, automatically set)
 # }}}
-ARCTIC_DB_ROOT=downloads
-spk=bdl
+ARCTIC_DB_ROOT=../sd/downloads
+spks=(bdl rms clb slt ksp jmk)
 tag=
 
 #######################################
@@ -94,10 +94,8 @@ n_gpus=1
 . parse_options.sh
 
 # set params
-train=tr_${spk}
-eval=ev_${spk}
-minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
-maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
+train=tr_"$(IFS=_; echo "${spks[*]}")"
+eval=ev_"$(IFS=_; echo "${spks[*]}")"
 
 # stop when error occured
 set -e
@@ -120,11 +118,15 @@ if [ `echo ${stage} | grep 0` ];then
         cd ../
     fi
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 10 > data/${train}/wav.scp
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | tail -n 1 > data/${eval}/wav.scp
+    [ -e data/${train}/wav.scp ] && rm data/${train}/wav.scp
+    [ -e data/${eval}/wav.scp ] && rm data/${eval}/wav.scp
+    for spk in ${spks[@]};do
+        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
+            | sort | head -n 10 >> data/${train}/wav.scp
+        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
+           | sort | tail -n 1 >> data/${eval}/wav.scp
+    done
 fi
 # }}}
 
@@ -135,27 +137,34 @@ if [ `echo ${stage} | grep 1` ];then
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
     for set in ${train} ${eval};do
-        # training data feature extraction
-        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.log \
-            feature_extract.py \
-                --waveforms data/${set}/wav.scp \
-                --wavdir wav/${set} \
-                --hdf5dir hdf5/${set} \
-                --fs ${fs} \
-                --shiftms ${shiftms} \
-                --minf0 ${minf0} \
-                --maxf0 ${maxf0} \
-                --mcep_dim ${mcep_dim} \
-                --mcep_alpha ${mcep_alpha} \
-                --highpass_cutoff ${highpass_cutoff} \
-                --fftl ${fftl} \
-                --n_jobs ${n_jobs}
-
-        # check the number of feature files
-        n_wavs=`cat data/${set}/wav.scp | wc -l`
-        n_feats=`find hdf5/${set} -name "*.h5" | wc -l`
-        echo "${n_feats}/${n_wavs} files are successfully processed."
-
+        for spk in ${spks[@]};do
+            [ ! -e exp/feature_extract/${set} ] && mkdir -p exp/feature_extract/${set}
+            # make scp of each speaker
+            scp=exp/feature_extract/${set}/wav.${spk}.scp
+            cat data/${set}/wav.scp | grep ${spk} > ${scp}
+            # set f0 range 
+            minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
+            maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
+            # feature extract
+            ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.${spk}.log \
+                feature_extract.py \
+                    --waveforms ${scp} \
+                    --wavdir wav/${set}/${spk} \
+                    --hdf5dir hdf5/${set}/${spk} \
+                    --fs ${fs} \
+                    --shiftms ${shiftms} \
+                    --minf0 ${minf0} \
+                    --maxf0 ${maxf0} \
+                    --mcep_dim ${mcep_dim} \
+                    --mcep_alpha ${mcep_alpha} \
+                    --highpass_cutoff ${highpass_cutoff} \
+                    --fftl ${fftl} \
+                    --n_jobs ${n_jobs}
+            # check the number of feature files
+            n_wavs=`cat ${scp} | wc -l`
+            n_feats=`find hdf5/${set}/${spk} -name "*.h5" | wc -l`
+            echo "${n_feats}/${n_wavs} files are successfully processed."
+        done
         # make scp files
         find wav/${set} -name "*.wav" | sort > data/${set}/wav_filtered.scp
         find hdf5/${set} -name "*.h5" | sort > data/${set}/feats.scp
@@ -183,26 +192,30 @@ if [ `echo ${stage} | grep 3` ] && ${is_noise_shaping};then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_apply_${train}.log \
-        noise_shaping.py \
-            --waveforms data/${train}/wav_filtered.scp \
-            --stats data/${train}/stats.h5 \
-            --writedir wav_ns/${train} \
-            --fs ${fs} \
-            --shiftms ${shiftms} \
-            --fftl ${fftl} \
-            --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-            --mcep_alpha ${mcep_alpha} \
-            --mag ${mag} \
-            --inv true \
-            --n_jobs ${n_jobs}
-
-    # check the number of feature files
-    n_wavs=`cat data/${train}/wav_filtered.scp | wc -l`
-    n_ns=`find wav_ns/${train} -name "*.wav" | wc -l`
-    echo "${n_ns}/${n_wavs} files are successfully processed."
-
+    [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
+    for spk in ${spks[@]};do
+        # make scp of each speaker
+        scp=exp/noise_shaping/wav_filtered.${spk}.scp
+        cat data/${train}/wav_filtered.scp | grep ${spk} > ${scp}
+        ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_apply.${spk}.log \
+            noise_shaping.py \
+                --waveforms ${scp} \
+                --stats data/${train}/stats.h5 \
+                --writedir wav_ns/${train}/${spk} \
+                --fs ${fs} \
+                --shiftms ${shiftms} \
+                --fftl ${fftl} \
+                --mcep_dim_start 2 \
+                --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+                --mcep_alpha ${mcep_alpha} \
+                --mag ${mag} \
+                --inv true \
+                --n_jobs ${n_jobs}
+        # check the number of feature files
+        n_wavs=`cat ${scp} | wc -l`
+        n_ns=`find wav_ns/${train}/${spk} -name "*.wav" | wc -l`
+        echo "${n_ns}/${n_wavs} files are successfully processed."
+    done
     # make scp files
     find wav_ns/${train} -name "*.wav" | sort > data/${train}/wav_ns.scp
 fi # }}}
@@ -211,7 +224,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_si_close_lr${lr}_bs${batch_size}
 else
     expdir=exp/${tag}
 fi
@@ -224,7 +237,7 @@ if [ `echo ${stage} | grep 4` ];then
     else
         waveforms=data/${train}/wav_filtered.scp
     fi
-    ${cuda_cmd} ${expdir}/log/${train}.log \
+    ${cuda_cmd} exp/training/train_${train}.log \
         train.py \
             --waveforms ${waveforms} \
             --feats data/${train}/feats.scp \
@@ -248,16 +261,22 @@ if [ `echo ${stage} | grep 5` ];then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    ${cuda_cmd} --num-threads ${n_jobs} ${expdir}/log/decode.log \
-        decode.py \
-            --feats ${feats} \
-            --stats data/${train}/stats.h5 \
-            --outdir ${outdir} \
-            --checkpoint ${checkpoint} \
-            --config ${expdir}/model.conf \
-            --fs ${fs} \
-            --n_jobs ${n_jobs} \
-            --n_gpus ${n_gpus}
+    [ ! -e exp/decoding ] && mkdir -p exp/decoding
+    for spk in ${spks[@]};do
+        scp=exp/decoding/feats.${spk}.scp
+        cat $feats | grep ${spk} > ${scp}
+        ${cuda_cmd} --num-threads ${n_jobs} exp/decoding/decode_${eval}.${spk}.log \
+            decode.py \
+                --feats ${scp} \
+                --stats data/${train}/stats.h5 \
+                --outdir ${outdir}/${spk} \
+                --checkpoint ${checkpoint} \
+                --config ${expdir}/model.conf \
+                --fs ${fs} \
+                --n_jobs ${n_jobs} \
+                --n_gpus ${n_gpus} &
+    done
+    wait
 fi
 # }}}
 
@@ -268,20 +287,24 @@ if [ `echo ${stage} | grep 6` ] && ${is_noise_shaping};then
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    find ${outdir} -name "*.wav" | sort > data/${eval}/wav_generated.scp
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_restore_${eval}.log \
-        noise_shaping.py \
-            --waveforms data/${eval}/wav_generated.scp \
-            --stats data/${train}/stats.h5 \
-            --writedir ${outdir}_restored \
-            --fs ${fs} \
-            --shiftms ${shiftms} \
-            --fftl ${fftl} \
-            --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-            --mcep_alpha ${mcep_alpha} \
-            --mag ${mag} \
-            --n_jobs ${n_jobs} \
-            --inv false
+    for spk in ${spks[@]};do
+        scp=exp/noise_shaping/wav_generated.${spk}.scp
+        find ${outdir}/${spk} -name "*.wav" | sort > ${scp}
+        ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_restore.${spk}.log \
+            noise_shaping.py \
+                --waveforms ${scp} \
+                --stats data/${train}/stats.h5 \
+                --writedir ${outdir}_restored/${spk} \
+                --fs ${fs} \
+                --shiftms ${shiftms} \
+                --fftl ${fftl} \
+                --mcep_dim_start 2 \
+                --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+                --mcep_alpha ${mcep_alpha} \
+                --mag ${mag} \
+                --inv false \
+                --n_jobs ${n_jobs} &
+    done
+    wait
 fi
 # }}}
