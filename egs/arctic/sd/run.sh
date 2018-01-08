@@ -31,7 +31,7 @@ stage=0123456
 # tag: experiment name tag (if empty, automatically set)
 # }}}
 ARCTIC_DB_ROOT=downloads
-spk=bdl
+spk=slt
 tag=
 
 #######################################
@@ -55,7 +55,7 @@ fs=16000
 mcep_dim=24
 mcep_alpha=0.410
 mag=0.5
-n_jobs=1
+n_jobs=10
 
 #######################################
 #          TRAINING SETTING           #
@@ -69,7 +69,7 @@ n_jobs=1
 # is_noise_shaping: true or false
 # }}}
 lr=1e-4
-iters=10
+iters=200000
 batch_size=20000
 checkpoints=10000
 use_speaker_code=false
@@ -121,10 +121,10 @@ if [ `echo ${stage} | grep 0` ];then
     fi
     [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 10 > data/${train}/wav.scp
+        | sort | head -n 1028 > data/${train}/wav.scp
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | tail -n 1 > data/${eval}/wav.scp
+       | sort | tail -n 104 > data/${eval}/wav.scp
 fi
 # }}}
 

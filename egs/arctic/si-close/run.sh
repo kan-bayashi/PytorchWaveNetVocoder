@@ -55,7 +55,7 @@ fs=16000
 mcep_dim=24
 mcep_alpha=0.410
 mag=0.5
-n_jobs=1
+n_jobs=10
 
 #######################################
 #          TRAINING SETTING           #
@@ -69,7 +69,7 @@ n_jobs=1
 # is_noise_shaping: true or false
 # }}}
 lr=1e-4
-iters=10
+iters=400000
 batch_size=20000
 checkpoints=10000
 use_speaker_code=false
@@ -123,9 +123,9 @@ if [ `echo ${stage} | grep 0` ];then
     [ -e data/${eval}/wav.scp ] && rm data/${eval}/wav.scp
     for spk in ${spks[@]};do
         find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-            | sort | head -n 10 >> data/${train}/wav.scp
+            | sort | head -n 1028 >> data/${train}/wav.scp
         find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-           | sort | tail -n 1 >> data/${eval}/wav.scp
+           | sort | tail -n 104 >> data/${eval}/wav.scp
     done
 fi
 # }}}
