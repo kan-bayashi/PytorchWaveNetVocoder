@@ -30,7 +30,7 @@ stage=0123456
 # eval: eval directory name tag
 # tag: experiment name tag (if empty, automatically set)
 # }}}
-ARCTIC_DB_ROOT=../sd/downloads
+ARCTIC_DB_ROOT=downloads
 train_spks=(rms clb slt ksp jmk)
 eval_spks=(bdl)
 tag=

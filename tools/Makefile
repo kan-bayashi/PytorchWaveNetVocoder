@@ -3,7 +3,7 @@
 all: venv/bin/activate venv/lib/python3.6/site-packages/sprocket venv/lib/python3.6/site-packages/torch
 
 venv/bin/activate:
-	test -d venv || virtualenv -p /usr/bin/python3.6 venv
+	test -d venv || virtualenv -p python3.6 venv
 	. venv/bin/activate; pip install -r requirements.txt; pip install matplotlib;
 	touch venv/bin/activate
 

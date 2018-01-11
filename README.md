@@ -6,7 +6,7 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ## Requirements
 - cuda 8.0
-- python3.6 (/usr/bin/python3.6 will be used to make virtualenv)
+- python3.6
 - virtualenv
 
 Recommend to use the GPU with 10GB> memory.  
@@ -46,10 +46,10 @@ Generated examples are available from [here](https://github.com/kan-bayashi/Wave
   journal={電子情報通信学会技術研究報告},
   year={2018}
 }
-@article{hayashi2017multi,
+@inproceedings{hayashi2017multi,
   title={An Investigation of Multi-Speaker Training for WaveNet Vocoder},
   author={Hayashi, Tomoki and Tamamori, Akira and Kobayashi, Kazuhiro and Takeda, Kazuya and Toda, Tomoki},
-  journal={Proc. ASRU 2017},
+  booktitle={Proc. ASRU 2017},
   year={2017}
 }
 @inproceedings{tamamori2017speaker,
