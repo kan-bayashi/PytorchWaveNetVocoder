@@ -36,7 +36,7 @@ cd egs/arctic/si-open
 
 ## Results
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/mos.bmp)
-Generated examples are available from [here](https://github.com/kan-bayashi/WaveNetVocoderSamples)  
+Generated examples are available from [here](https://kan-bayashi.github.io/WaveNetVocoderSamples)  
 
 ## References
 ```
