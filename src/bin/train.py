@@ -293,7 +293,7 @@ def main():
                         type=int, help="seed number")
     parser.add_argument("--resume", default=None,
                         type=str, help="model path to restart training")
-    parser.add_argument("--verbose", default=2,
+    parser.add_argument("--verbose", default=1,
                         type=int, help="log level")
     args = parser.parse_args()
 
