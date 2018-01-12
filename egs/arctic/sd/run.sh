@@ -23,25 +23,11 @@
 stage=0123456
 
 #######################################
-#            PATH SETTING             #
-#######################################
-# {{{
-# train: train directory name tag
-# eval: eval directory name tag
-# tag: experiment name tag (if empty, automatically set)
-# }}}
-ARCTIC_DB_ROOT=downloads
-spk=slt
-tag=
-
-#######################################
 #          FEATURE SETTING            #
 #######################################
 # {{{
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
-# min_f0: minimum f0
-# max_f0: maximum f0
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
 # mcep_dim: dimension of mel-cepstrum
 # mcep_alpha: alpha value of mel-cepstrum
@@ -61,19 +47,39 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
+# spk: target spekaer in arctic
+# n_quantize: number of quantization
+# n_aux: number of aux features
+# n_resch: number of residual channels
+# n_skipch: number of skip channels
+# dilation_depth: dilation depth (e.g. if set 10, max dilation = 2^(10-1))
+# dilation_repeat: number of dilation repeats
+# kernel_size: kernel size of dilated convolution
 # lr: learning rate
+# weight_decay: weight decay coef
 # iters: number of iterations
 # batch_size: batch size
 # checkpoints: save model per this number
+# use_upsampling: true or false
+# use_noise_shaping: true or false
 # use_speaker_code: true or false
-# is_noise_shaping: true or false
 # }}}
+spk=slt
+n_quantize=256
+n_aux=28
+n_resch=512
+n_skipch=256
+dilation_depth=10
+dilation_repeat=3
+kernel_size=2
 lr=1e-4
+weight_decay=0.0
 iters=200000
 batch_size=20000
 checkpoints=10000
+use_upsampling=true
+use_noise_shaping=true
 use_speaker_code=false
-is_noise_shaping=true
 
 #######################################
 #          DECODING SETTING           #
@@ -83,6 +89,7 @@ is_noise_shaping=true
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
 # feats: list or directory of feature files 
+# n_gpus: number of gpus to decode
 # }}}
 outdir= 
 checkpoint=
@@ -90,14 +97,18 @@ config=
 feats=
 n_gpus=1
 
+#######################################
+#            OHTER SETTING            #
+#######################################
+ARCTIC_DB_ROOT=downloads
+tag=
+
 # parse options
 . parse_options.sh
 
 # set params
 train=tr_${spk}
 eval=ev_${spk}
-minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
-maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
 
 # stop when error occured
 set -e
@@ -134,6 +145,8 @@ if [ `echo ${stage} | grep 1` ];then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
+    minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
+    maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
     for set in ${train} ${eval};do
         # training data feature extraction
         ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.log \
@@ -165,7 +178,7 @@ fi
 
 
 # STAGE 2 {{{
-if [ `echo ${stage} | grep 2` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 2` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
@@ -179,7 +192,7 @@ fi
 
 
 # STAGE 3 {{{
-if [ `echo ${stage} | grep 3` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
@@ -211,18 +224,29 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bs${batch_size}
+    if ${use_noise_shaping};then
+        expdir=${expdir}_ns
+    fi
+    if ${use_upsampling};then
+        expdir=${expdir}_up
+    fi
 else
-    expdir=exp/${tag}
+    expdir=exp/tr_arctic_${tag}
 fi
 if [ `echo ${stage} | grep 4` ];then
     echo "###########################################################"
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
-    if ${is_noise_shaping};then
+    if ${use_noise_shaping};then
         waveforms=data/${train}/wav_ns.scp
     else
         waveforms=data/${train}/wav_filtered.scp
+    fi
+    if ${use_upsampling};then
+        upsampling_factor=`echo "${shiftms} * ${fs} / 1000" | bc`
+    else
+        upsampling_factor=0
     fi
     ${cuda_cmd} ${expdir}/log/${train}.log \
         train.py \
@@ -230,11 +254,19 @@ if [ `echo ${stage} | grep 4` ];then
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
             --expdir ${expdir} \
+            --n_quantize ${n_quantize} \
+            --n_aux ${n_aux} \
+            --n_resch ${n_resch} \
+            --n_skipch ${n_skipch} \
+            --dilation_depth ${dilation_depth} \
+            --dilation_repeat ${dilation_repeat} \
             --lr ${lr} \
+            --weight_decay ${weight_decay} \
             --iters ${iters} \
             --batch_size ${batch_size} \
             --checkpoints ${checkpoints} \
-            --use_speaker_code ${use_speaker_code}
+            --use_speaker_code ${use_speaker_code} \
+            --upsampling_factor ${upsampling_factor}
 fi
 # }}}
 
@@ -263,7 +295,7 @@ fi
 
 
 # STAGE 6 {{{
-if [ `echo ${stage} | grep 6` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"

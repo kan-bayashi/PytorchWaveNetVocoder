@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from __future__ import division
+from __future__ import print_function, division
 
 import argparse
 import logging
@@ -23,31 +23,45 @@ from utils import background, find_files, read_hdf5, read_txt
 from wavenet import WaveNet, encode_mu_law, initialize
 
 
-def validate_length(x, y):
+def validate_length(x, y, upsampling_factor=None):
     """FUNCTION TO VALIDATE LENGTH
 
     Args:
         x (ndarray): numpy.ndarray with x.shape[0] = len_x
         y (ndarray): numpy.ndarray with y.shape[0] = len_y
+        upsampling_factor (int): upsampling factor
 
     Returns:
-        x with x.shape[0] = min(len_x, len_y)
-        y with y.shape[0] = min(len_x, len_y)
-
+        upsampling_factor = None:
+            x with x.shape[0] = min(len_x, len_y)
+            y with y.shape[0] = min(len_x, len_y)
+        upsampling_factor != None:
+            x with x.shape[0] = min(len_x, len_y*upsampling_factor)
+            y with y.shape[0] = min(len_x, len_y*upsampling_factor)
     """
-    if x.shape[0] < y.shape[0]:
-        y = y[:x.shape[0]]
-    if x.shape[0] > y.shape[0]:
-        x = x[:y.shape[0]]
-    assert len(x) == len(y)
+    if upsampling_factor is None:
+        if x.shape[0] < y.shape[0]:
+            y = y[:x.shape[0]]
+        if x.shape[0] > y.shape[0]:
+            x = x[:y.shape[0]]
+        assert len(x) == len(y)
+    else:
+        if x.shape[0] > y.shape[0] * upsampling_factor:
+            x = x[:y.shape[0] * upsampling_factor]
+        if x.shape[0] < y.shape[0] * upsampling_factor:
+            mod_y = y.shape[0] * upsampling_factor - x.shape[0]
+            mod_y_frame = mod_y // upsampling_factor + 1
+            y = y[:-mod_y_frame]
+            x = x[:y.shape[0] * upsampling_factor]
+        assert len(x) == len(y) * upsampling_factor
 
     return x, y
 
 
 @background(max_prefetch=16)
-def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
+def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     wav_transform=None, feat_transform=None, shuffle=True,
-                    use_speaker_code=False):
+                    upsampling_factor=0, use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
@@ -58,10 +72,11 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
         shuffle (bool): whether to do shuffle of the file list
+        upsampling_factor (int): upsampling factor
         use_speaker_code (bool): whether to use speaker code
 
-    Return: generator instance
-
+    Return:
+        (object): generator instance
     """
     # shuffle list
     if shuffle:
@@ -70,21 +85,37 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
         wav_list = [wav_list[i] for i in idx]
         feat_list = [feat_list[i] for i in idx]
 
+    # check batch_size
+    if batch_size != 0 and upsampling_factor != 0:
+        batch_mod = (receptive_field + batch_size) % upsampling_factor
+        logging.warn("batch size is decreased due to upsampling (%d -> %d)" % (
+            batch_size, batch_size - batch_mod))
+        batch_size -= batch_mod
+
     while True:
         # process over all of files
         for wavfile, featfile in zip(wav_list, feat_list):
+            # load wavefrom and aux feature
             x, fs = sf.read(wavfile, dtype=np.float32)
-            h = read_hdf5(featfile, "/feat")
+            if upsampling_factor is not None:
+                h = read_hdf5(featfile, "/feat_org")
+            else:
+                h = read_hdf5(featfile, "/feat")
             if use_speaker_code:
                 sc = read_hdf5(featfile, "/speaker_code")
                 sc = np.tile(sc, [h.shape[0], 1])
                 h = np.concatenate([h, sc], axis=1)
 
             # check both lengths are same
-            x, h = validate_length(x, h)
+            logging.debug("before x length = %d" % x.shape[0])
+            logging.debug("before h length = %d" % h.shape[0])
+            x, h = validate_length(x, h, upsampling_factor)
+            logging.debug("after x length = %d" % x.shape[0])
+            logging.debug("after h length = %d" % h.shape[0])
 
-            # cut utterance into small batch
-            if batch_size is not None:
+            # use mini batch without upsampling
+            if batch_size is not None and upsampling_factor is None:
+                # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
                     h_buffer = np.empty((0, h.shape[1]), dtype=np.float32)
@@ -92,6 +123,7 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                 h_buffer = np.concatenate([h_buffer, h], axis=0)
 
                 while len(x_buffer) > receptive_field + batch_size:
+                    # get pieces
                     x_ = x_buffer[:receptive_field + batch_size]
                     h_ = h_buffer[:receptive_field + batch_size]
 
@@ -104,15 +136,55 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                     # remove the last and first sample for training
                     batch_x = x_[:-1].unsqueeze(0)
                     batch_h = h_[:-1].transpose(0, 1).unsqueeze(0)
-                    batch_target = x_[1:]
+                    batch_t = x_[1:]
 
-                    yield (batch_x, batch_h), batch_target
+                    yield (batch_x, batch_h), batch_t
 
+                    # update buffer
                     x_buffer = x_buffer[batch_size:]
                     h_buffer = h_buffer[batch_size:]
 
-            # utterance batch
-            else:
+            # use mini batch with upsampling
+            elif batch_size != 0 and upsampling_factor > 0:
+                # make buffer array
+                if "x_buffer" not in locals():
+                    x_buffer = np.empty((0), dtype=np.float32)
+                    h_buffer = np.empty((0, h.shape[1]), dtype=np.float32)
+                x_buffer = np.concatenate([x_buffer, x], axis=0)
+                h_buffer = np.concatenate([h_buffer, h], axis=0)
+
+                while len(h_buffer) > (receptive_field + batch_size) // upsampling_factor:
+                    # set batch size
+                    h_bs = (receptive_field + batch_size) // upsampling_factor
+                    x_bs = h_bs * upsampling_factor + 1
+
+                    # get pieces
+                    h_ = h_buffer[:h_bs]
+                    x_ = x_buffer[:x_bs]
+
+                    # perform pre-processing
+                    if wav_transform is not None:
+                        x_ = wav_transform(x_)
+                    if feat_transform is not None:
+                        h_ = feat_transform(h_)
+
+                    # remove the last and first sample for training
+                    batch_h = h_.transpose(0, 1).unsqueeze(0)
+                    batch_x = x_[:-1].unsqueeze(0)
+                    batch_t = x_[1:]
+
+                    yield (batch_x, batch_h), batch_t
+
+                    # set shift size
+                    h_ss = batch_size // upsampling_factor
+                    x_ss = h_ss * upsampling_factor
+
+                    # update buffer
+                    h_buffer = h_buffer[h_ss:]
+                    x_buffer = x_buffer[x_ss:]
+
+            # use utterance batch without upsampling
+            elif batch_size == 0 and upsampling_factor == 0:
                 # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
@@ -122,9 +194,28 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                 # remove the last and first sample for training
                 batch_x = x[:-1].unsqueeze(0)
                 batch_h = h[:-1].transpose(0, 1).unsqueeze(0)
-                batch_target = x[1:]
+                batch_t = x[1:]
 
-                yield (batch_x, batch_h), batch_target
+                yield (batch_x, batch_h), batch_t
+
+            # use utterance batch with upsampling
+            else:
+                # remove last frame
+                h = h[:-1]
+                x = x[:-upsampling_factor+1]
+
+                # perform pre-processing
+                if wav_transform is not None:
+                    x = wav_transform(x)
+                if feat_transform is not None:
+                    h = feat_transform(h)
+
+                # remove the last and first sample for training
+                batch_h = h.transpose(0, 1).unsqueeze(0)
+                batch_x = x[:-1].unsqueeze(0)
+                batch_t = x[1:]
+
+                yield (batch_x, batch_h), batch_t
 
         # re-shuffle
         if shuffle:
@@ -141,7 +232,6 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
         model (torch.nn.Module): pytorch model instance
         optimizer (Optimizer): pytorch optimizer instance
         iterations (int): number of current iterations
-
     """
     model.cpu()
     checkpoint = {
@@ -177,10 +267,13 @@ def main():
                         type=int, help="number of channels of skip output")
     parser.add_argument("--dilation_depth", default=10,
                         type=int, help="depth of dilation")
-    parser.add_argument("--dilation_repeat", default=3,
+    parser.add_argument("--dilation_repeat", default=1,
                         type=int, help="number of repeating of dilation")
     parser.add_argument("--kernel_size", default=2,
-                        type=int, help="kerne size of dilated causal convolution")
+                        type=int, help="kernel size of dilated causal convolution")
+    parser.add_argument("--upsampling_factor", default=0,
+                        type=int, help="upsampling factor of aux features"
+                                       "(if set 0, do not apply)")
     parser.add_argument("--use_speaker_code", default=False,
                         type=strtobool, help="flag to use speaker code")
     # network training setting
@@ -189,7 +282,7 @@ def main():
     parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
     parser.add_argument("--batch_size", default=20000,
-                        type=int, help="number of iterations")
+                        type=int, help="batch size (if set 0, utterance batch will be used)")
     parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
     # other setting
@@ -210,7 +303,7 @@ def main():
         os.makedirs(args.expdir)
 
     # set log level
-    if args.verbose > 0:
+    if args.verbose == 1:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S',
@@ -238,14 +331,16 @@ def main():
     # save args as conf
     torch.save(args, args.expdir + "/model.conf")
 
-    # define network
-    model = WaveNet(n_quantize=args.n_quantize,
-                    n_aux=args.n_aux,
-                    n_resch=args.n_resch,
-                    n_skipch=args.n_skipch,
-                    dilation_depth=args.dilation_depth,
-                    dilation_repeat=args.dilation_repeat,
-                    kernel_size=args.kernel_size)
+    # # define network
+    model = WaveNet(
+        n_quantize=args.n_quantize,
+        n_aux=args.n_aux,
+        n_resch=args.n_resch,
+        n_skipch=args.n_skipch,
+        dilation_depth=args.dilation_depth,
+        dilation_repeat=args.dilation_repeat,
+        kernel_size=args.kernel_size,
+        upsampling_factor=args.upsampling_factor)
     logging.info(model)
     model.apply(initialize)
     model.train()
@@ -281,8 +376,14 @@ def main():
     assert len(wav_list) == len(feat_list)
     logging.info("number of training data = %d." % len(wav_list))
     generator = train_generator(
-        wav_list, feat_list, model.receptive_field, args.batch_size,
-        wav_transform, feat_transform, True, args.use_speaker_code)
+            wav_list, feat_list,
+            receptive_field=model.receptive_field,
+            batch_size=args.batch_size,
+            wav_transform=wav_transform,
+            feat_transform=feat_transform,
+            shuffle=True,
+            upsampling_factor=args.upsampling_factor,
+            use_speaker_code=args.use_speaker_code)
     while not generator.queue.full():
         time.sleep(0.1)
 
@@ -309,16 +410,16 @@ def main():
     total = 0
     for i in six.moves.range(iterations, args.iters):
         start = time.time()
-        (batch_x, batch_h), batch_target = generator.next()
+        (batch_x, batch_h), batch_t = generator.next()
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(batch_output[model.receptive_field:],
-                               batch_target[model.receptive_field:])
+                               batch_t[model.receptive_field:])
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
         loss += batch_loss.data[0]
         total += time.time() - start
-        logging.info("batch loss = %.3f (%.3f sec / batch)" % (
+        logging.debug("batch loss = %.3f (%.3f sec / batch)" % (
             batch_loss.data[0], time.time()-start))
 
         # report progress
