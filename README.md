@@ -6,14 +6,15 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ## Requirements
 - cuda 8.0
-- python3.6
+- python 3.6
 - virtualenv
 
 Recommend to use the GPU with 10GB> memory.  
 
 ## Setup
 ```bash
-cd tools
+git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
+cd PytorchWaveNetVocoder/tools
 make -j
 ```
 
@@ -21,24 +22,32 @@ make -j
 All examples are based on kaldi-style recipe.  
 If you are using Slurm, you can change cmd.sh in the recipe.  
 ```
-# run SD model
+# build SD model
 cd egs/arctic/sd
-./run.sh
+./run.sh 
 
-# run SI-CLOSE model
+# build SI-CLOSE model
 cd egs/arctic/si-close
 ./run.sh 
 
-# run SI-OPEN model
+# build SI-OPEN model
 cd egs/arctic/si-open
 ./run.sh
 ```
 
+## Use pre-trained model
+
+Under construction.
+
 ## Results
+
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/mos.bmp)
-Generated examples are available from [here](https://kan-bayashi.github.io/WaveNetVocoderSamples)  
+Generated examples are available from [here](https://kan-bayashi.github.io/WaveNetVocoderSamples).
 
 ## References
+
+Please cite the following articles.  
+
 ```
 @article{hayashi2018sp,
   title={複数話者WaveNetボコーダに関する調査}.
