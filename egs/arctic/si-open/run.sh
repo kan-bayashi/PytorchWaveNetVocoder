@@ -194,6 +194,10 @@ if [ `echo ${stage} | grep 1` ];then
     n_feats=`find hdf5/${train} -name "*.h5" | wc -l`
     echo "${n_feats}/${n_wavs} files are successfully processed."
 
+    # make scp files
+    find wav/${train} -name "*.wav" | sort > data/${train}/wav_filtered.scp
+    find hdf5/${train} -name "*.h5" | sort > data/${train}/feats.scp
+
     nj=0
     for spk in ${eval_spks[@]};do
         [ ! -e exp/feature_extract/${eval} ] && mkdir -p exp/feature_extract/${eval}
