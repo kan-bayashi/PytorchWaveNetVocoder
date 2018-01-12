@@ -44,10 +44,10 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
     """WRITE DATASET TO HDF5
 
     Args :
-        hdf5_name    : hdf5 dataset filename
-        hdf5_dir     : dataset path in hdf5
-        write_data   : data to write
-        is_overwrite : flag to decide whether to overwrite dataset
+        hdf5_name (str): hdf5 dataset filename
+        hdf5_dir (str): dataset path in hdf5
+        write_data (ndarray): data to write
+        is_overwrite (bool): flag to decide whether to overwrite dataset
     """
     # convert to numpy array
     write_data = np.array(write_data)
@@ -81,14 +81,13 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
     hdf5_file.close()
 
 
-def find_files(directory, pattern='*.wav', use_dir_name=True):
-    '''Recursively finds all files matching the pattern.'''
+def find_files(directory, pattern="*.wav", use_dir_name=True):
     files = []
     for root, dirnames, filenames in os.walk(directory, followlinks=True):
         for filename in fnmatch.filter(filenames, pattern):
             files.append(os.path.join(root, filename))
     if not use_dir_name:
-        files = [file_.replace(directory + '/', '') for file_ in files]
+        files = [file_.replace(directory + "/", "") for file_ in files]
     return files
 
 
