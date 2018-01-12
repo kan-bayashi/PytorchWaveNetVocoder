@@ -377,7 +377,7 @@ def main():
     generator = train_generator(
             wav_list, feat_list,
             receptive_field=model.receptive_field,
-            batch_size=None,
+            batch_size=args.batch_size,
             wav_transform=wav_transform,
             feat_transform=feat_transform,
             shuffle=True,
