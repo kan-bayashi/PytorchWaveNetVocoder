@@ -23,26 +23,11 @@
 stage=0123456
 
 #######################################
-#            PATH SETTING             #
-#######################################
-# {{{
-# train: train directory name tag
-# eval: eval directory name tag
-# tag: experiment name tag (if empty, automatically set)
-# }}}
-ARCTIC_DB_ROOT=../sd/downloads
-train_spks=(rms clb slt ksp jmk)
-eval_spks=(bdl)
-tag=
-
-#######################################
 #          FEATURE SETTING            #
 #######################################
 # {{{
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
-# min_f0: minimum f0
-# max_f0: maximum f0
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
 # mcep_dim: dimension of mel-cepstrum
 # mcep_alpha: alpha value of mel-cepstrum
@@ -62,19 +47,41 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
+# training_spks: training spekaers in arctic
+# eval_spks: evaluation spekaers in arctic
+# n_quantize: number of quantization
+# n_aux: number of aux features
+# n_resch: number of residual channels
+# n_skipch: number of skip channels
+# dilation_depth: dilation depth (e.g. if set 10, max dilation = 2^(10-1))
+# dilation_repeat: number of dilation repeats
+# kernel_size: kernel size of dilated convolution
 # lr: learning rate
+# weight_decay: weight decay coef
 # iters: number of iterations
 # batch_size: batch size
 # checkpoints: save model per this number
+# use_upsampling: true or false
+# use_noise_shaping: true or false
 # use_speaker_code: true or false
-# is_noise_shaping: true or false
 # }}}
+train_spks=(rms clb slt ksp jmk)
+eval_spks=(bdl)
+n_quantize=256
+n_aux=28
+n_resch=512
+n_skipch=256
+dilation_depth=10
+dilation_repeat=3
+kernel_size=2
 lr=1e-4
-iters=350000
+weight_decay=0.0
+iters=200000
 batch_size=20000
 checkpoints=10000
+use_upsampling=true
+use_noise_shaping=true
 use_speaker_code=false
-is_noise_shaping=true
 
 #######################################
 #          DECODING SETTING           #
@@ -90,6 +97,12 @@ checkpoint=
 config=
 feats=
 n_gpus=1
+
+#######################################
+#            OHTER SETTING            #
+#######################################
+ARCTIC_DB_ROOT=downloads
+tag=
 
 # parse options
 . parse_options.sh
@@ -207,7 +220,7 @@ fi
 
 
 # STAGE 2 {{{
-if [ `echo ${stage} | grep 2` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 2` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
@@ -221,7 +234,7 @@ fi
 
 
 # STAGE 3 {{{
-if [ `echo ${stage} | grep 3` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
@@ -257,30 +270,66 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_si_open_"$(IFS=_; echo "${eval_spks[*]}")"_lr${lr}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_si_oen_"$(IFS=_; echo "${eval_spks[*]}")"lr${lr}_wd${weight_decay}_bs${batch_size}
+    if ${use_noise_shaping};then
+        expdir=${expdir}_ns
+    fi
+    if ${use_upsampling};then
+        expdir=${expdir}_up
+    fi
 else
-    expdir=exp/${tag}
+    expdir=exp/tr_arctic_${tag}
 fi
 if [ `echo ${stage} | grep 4` ];then
     echo "###########################################################"
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
-    if ${is_noise_shaping};then
+    if ${use_noise_shaping};then
         waveforms=data/${train}/wav_ns.scp
     else
         waveforms=data/${train}/wav_filtered.scp
     fi
-    ${cuda_cmd} exp/training/train_${train}.log \
-        train.py \
-            --waveforms ${waveforms} \
-            --feats data/${train}/feats.scp \
-            --stats data/${train}/stats.h5 \
-            --expdir ${expdir} \
-            --lr ${lr} \
-            --iters ${iters} \
-            --batch_size ${batch_size} \
-            --checkpoints ${checkpoints} \
-            --use_speaker_code ${use_speaker_code}
+    if ${use_upsampling};then
+        upsampling_factor=`echo "${shiftms} * ${fs} / 1000" | bc`
+        ${cuda_cmd} ${expdir}/log/${train}.log \
+            train.py \
+                --waveforms ${waveforms} \
+                --feats data/${train}/feats.scp \
+                --stats data/${train}/stats.h5 \
+                --expdir ${expdir} \
+                --n_quantize ${n_quantize} \
+                --n_aux ${n_aux} \
+                --n_resch ${n_resch} \
+                --n_skipch ${n_skipch} \
+                --dilation_depth ${dilation_depth} \
+                --dilation_repeat ${dilation_repeat} \
+                --lr ${lr} \
+                --weight_decay ${weight_decay} \
+                --iters ${iters} \
+                --batch_size ${batch_size} \
+                --checkpoints ${checkpoints} \
+                --use_speaker_code ${use_speaker_code} \
+                --upsampling_factor ${upsampling_factor}
+    else
+        ${cuda_cmd} ${expdir}/log/${train}.log \
+            train.py \
+                --waveforms ${waveforms} \
+                --feats data/${train}/feats.scp \
+                --stats data/${train}/stats.h5 \
+                --expdir ${expdir} \
+                --n_quantize ${n_quantize} \
+                --n_aux ${n_aux} \
+                --n_resch ${n_resch} \
+                --n_skipch ${n_skipch} \
+                --dilation_depth ${dilation_depth} \
+                --dilation_repeat ${dilation_repeat} \
+                --lr ${lr} \
+                --weight_decay ${weight_decay} \
+                --iters ${iters} \
+                --batch_size ${batch_size} \
+                --checkpoints ${checkpoints} \
+                --use_speaker_code ${use_speaker_code}
+    fi
 fi
 # }}}
 
@@ -298,24 +347,25 @@ if [ `echo ${stage} | grep 5` ];then
     for spk in ${eval_spks[@]};do
         scp=exp/decoding/feats.${spk}.scp
         cat $feats | grep ${spk} > ${scp}
-        ${cuda_cmd} --num-threads ${n_jobs} exp/decoding/decode_${eval}.${spk}.log \
-            decode.py \
-                --feats ${scp} \
-                --stats data/${train}/stats.h5 \
-                --outdir ${outdir}/${spk} \
-                --checkpoint ${checkpoint} \
-                --config ${expdir}/model.conf \
-                --fs ${fs} \
-                --n_jobs ${n_jobs} \
-                --n_gpus ${n_gpus} &
     done
-    wait
+    nj=echo $(( ${#eval_spks[@]} - 1 ))
+    ${cuda_cmd} JOB=0:$nj --num-threads ${n_jobs} \
+        exp/decoding/decode_${eval}.${eval_spks[JOB]}.log \
+        decode.py \
+            --feats ${scp} \
+            --stats data/${train}/stats.h5 \
+            --outdir ${outdir}/${eval_spk[JOB]} \
+            --checkpoint ${checkpoint} \
+            --config ${expdir}/model.conf \
+            --fs ${fs} \
+            --n_jobs ${n_jobs} \
+            --n_gpus ${n_gpus} 
 fi
 # }}}
 
 
 # STAGE 6 {{{
-if [ `echo ${stage} | grep 6` ] && ${is_noise_shaping};then
+if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
@@ -323,21 +373,22 @@ if [ `echo ${stage} | grep 6` ] && ${is_noise_shaping};then
     for spk in ${eval_spks[@]};do
         scp=exp/noise_shaping/wav_generated.${spk}.scp
         find ${outdir}/${spk} -name "*.wav" | sort > ${scp}
-        ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_restore.${spk}.log \
-            noise_shaping.py \
-                --waveforms ${scp} \
-                --stats data/${train}/stats.h5 \
-                --writedir ${outdir}_restored/${spk} \
-                --fs ${fs} \
-                --shiftms ${shiftms} \
-                --fftl ${fftl} \
-                --mcep_dim_start 2 \
-                --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-                --mcep_alpha ${mcep_alpha} \
-                --mag ${mag} \
-                --inv false \
-                --n_jobs ${n_jobs} &
     done
-    wait
+    nj=echo $(( ${#eval_spks[@]} - 1 ))
+    ${train_cmd} JOB=0:$nj --num-threads ${n_jobs} \
+        exp/noise_shaping/noise_shaping_restore.${eval_spk[JOB]}.log \
+        noise_shaping.py \
+            --waveforms ${scp} \
+            --stats data/${train}/stats.h5 \
+            --writedir ${outdir}_restored/${eval_spks[JOB]} \
+            --fs ${fs} \
+            --shiftms ${shiftms} \
+            --fftl ${fftl} \
+            --mcep_dim_start 2 \
+            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+            --mcep_alpha ${mcep_alpha} \
+            --mag ${mag} \
+            --inv false \
+            --n_jobs ${n_jobs}
 fi
 # }}}

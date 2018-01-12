@@ -28,8 +28,6 @@ stage=0123456
 # {{{
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
-# min_f0: minimum f0
-# max_f0: maximum f0
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
 # mcep_dim: dimension of mel-cepstrum
 # mcep_alpha: alpha value of mel-cepstrum
@@ -49,6 +47,7 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
+# spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -65,6 +64,7 @@ n_jobs=10
 # use_noise_shaping: true or false
 # use_speaker_code: true or false
 # }}}
+spk=slt
 n_quantize=256
 n_aux=28
 n_resch=512
@@ -101,7 +101,6 @@ n_gpus=1
 #            OHTER SETTING            #
 #######################################
 ARCTIC_DB_ROOT=downloads
-spk=slt
 tag=
 
 # parse options

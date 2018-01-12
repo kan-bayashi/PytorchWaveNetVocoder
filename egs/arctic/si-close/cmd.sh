@@ -10,7 +10,10 @@
 # conf/queue.conf in http://kaldi-asr.org/doc/queue.html for more information,
 # or search for the string 'default_config' in utils/queue.pl or utils/slurm.pl.
 
-# export train_cmd="run.pl"
-# export cuda_cmd="run.pl --gpu 1"
-export train_cmd="slurm.pl --config conf/slurm.conf"
-export cuda_cmd="slurm.pl --hpc_gpu 1 --config conf/slurm.conf"
+# for local
+export train_cmd="run.pl"
+export cuda_cmd="run.pl --gpu 1"
+
+# for slurm (you can change configuration file "conf/slurm.conf")
+# export train_cmd="slurm.pl --config conf/slurm.conf"
+# export cuda_cmd="slurm.pl --hpc_gpu 1 --config conf/slurm.conf"
