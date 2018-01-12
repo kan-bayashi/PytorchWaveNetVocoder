@@ -314,9 +314,8 @@ if [ `echo ${stage} | grep 5` ];then
         scp=exp/decoding/feats.${spk}.scp
         cat $feats | grep ${spk} > ${scp}
     done
-    nj=echo $(( ${#spks[@]} - 1 ))
-    ${cuda_cmd} JOB=0:${nj} --num-threads ${n_jobs} \
-        exp/decoding/decode_${eval}.${spks[JOB]}.log \
+    ${cuda_cmd} --num-threads ${n_jobs} JOB=1:${#spks[@]} \
+        exp/decoding/decode_${eval}.JOB.log \
         decode.py \
             --feats ${scp} \
             --stats data/${train}/stats.h5 \
@@ -340,9 +339,8 @@ if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
         scp=exp/noise_shaping/wav_generated.${spk}.scp
         find ${outdir}/${spk} -name "*.wav" | sort > ${scp}
     done
-    nj=echo $(( ${#spks[@]} - 1 ))
-    ${train_cmd} JOB=0:$nj --num-threads ${n_jobs} \
-        exp/noise_shaping/noise_shaping_restore.${spks[JOB]}.log \
+    ${train_cmd} --num-threads ${n_jobs} JOB=1:${#spks[@]} \
+        exp/noise_shaping/noise_shaping_restore.JOB.log \
         noise_shaping.py \
             --waveforms ${scp} \
             --stats data/${train}/stats.h5 \

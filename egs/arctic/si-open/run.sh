@@ -270,7 +270,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_si_oen_"$(IFS=_; echo "${eval_spks[*]}")"lr${lr}_wd${weight_decay}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_si_open_"$(IFS=_; echo "${eval_spks[*]}")"_lr${lr}_wd${weight_decay}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
@@ -348,13 +348,12 @@ if [ `echo ${stage} | grep 5` ];then
         scp=exp/decoding/feats.${spk}.scp
         cat $feats | grep ${spk} > ${scp}
     done
-    nj=echo $(( ${#eval_spks[@]} - 1 ))
-    ${cuda_cmd} JOB=0:$nj --num-threads ${n_jobs} \
-        exp/decoding/decode_${eval}.${eval_spks[JOB]}.log \
+    ${cuda_cmd} --num-threads ${n_jobs} JOB=1:${#eval_spks[@]} \
+        exp/decoding/decode_${eval}.JOB.log \
         decode.py \
             --feats ${scp} \
             --stats data/${train}/stats.h5 \
-            --outdir ${outdir}/${eval_spk[JOB]} \
+            --outdir ${outdir}/${eval_spks[JOB]} \
             --checkpoint ${checkpoint} \
             --config ${expdir}/model.conf \
             --fs ${fs} \
@@ -374,9 +373,8 @@ if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
         scp=exp/noise_shaping/wav_generated.${spk}.scp
         find ${outdir}/${spk} -name "*.wav" | sort > ${scp}
     done
-    nj=echo $(( ${#eval_spks[@]} - 1 ))
-    ${train_cmd} JOB=0:$nj --num-threads ${n_jobs} \
-        exp/noise_shaping/noise_shaping_restore.${eval_spk[JOB]}.log \
+    ${train_cmd} --num-threads ${n_jobs} JOB=1:${#eval_spks[@]} \
+        exp/noise_shaping/noise_shaping_restore.JOB.log \
         noise_shaping.py \
             --waveforms ${scp} \
             --stats data/${train}/stats.h5 \

@@ -185,7 +185,7 @@ def main():
                     logging.info("%s already exists." % feat_id)
                 else:
                     logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                    samples = model.faster_generate(x, h, n_samples, args.intervals)
+                    samples = model.fast_generate(x, h, n_samples, args.intervals)
                     wav = decode_mu_law(samples, config.n_quantize)
                     sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
                     logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
@@ -233,7 +233,7 @@ def main():
                 logging.info("%s already exists." % feat_id)
             else:
                 logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                samples = model.faster_generate(x, h, n_samples, args.intervals)
+                samples = model.fast_generate(x, h, n_samples, args.intervals)
                 wav = decode_mu_law(samples, config.n_quantize)
                 sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
                 logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
