@@ -141,7 +141,8 @@ def main():
                             n_skipch=config.n_skipch,
                             dilation_depth=config.dilation_depth,
                             dilation_repeat=config.dilation_repeat,
-                            kernel_size=config.kernel_size)
+                            kernel_size=config.kernel_size,
+                            upsampling_factor=config.upsampling_factor)
             model.load_state_dict(torch.load(args.checkpoint)["model"])
             model.eval()
             model.cuda()
@@ -183,7 +184,8 @@ def main():
                         n_skipch=config.n_skipch,
                         dilation_depth=config.dilation_depth,
                         dilation_repeat=config.dilation_repeat,
-                        kernel_size=config.kernel_size)
+                        kernel_size=config.kernel_size,
+                        upsampling_factor=config.upsampling_factor)
         model.load_state_dict(torch.load(args.checkpoint)["model"])
         model.eval()
         model.cpu()

@@ -33,6 +33,10 @@ def initialize(m):
         nn.init.xavier_uniform(m.weight)
         nn.init.constant(m.bias, 0.0)
 
+    if isinstance(m, nn.ConvTranspose2d):
+        nn.init.constant(m.weight, 1.0)
+        nn.init.constant(m.bias, 0.0)
+
 
 class OneHot(nn.Module):
     """CONVERT TO ONE-HOT VECTOR"""
@@ -71,6 +75,31 @@ class CausalConv1d(nn.Module):
         return x
 
 
+class UpSampling(nn.Module):
+    """ UPSAMPLING LAYER WITH DECONVOLUTION"""
+    def __init__(self, upsampling_factor, bias=True):
+        super(UpSampling, self).__init__()
+        self.upsampling_factor = upsampling_factor
+        self.bias = bias
+        self.conv = nn.ConvTranspose2d(1, 1,
+                                       kernel_size=(1, self.upsampling_factor),
+                                       stride=(1, self.upsampling_factor),
+                                       bias=self.bias)
+
+    def forward(self, x):
+        """
+        Arg:
+            x (Variable): float tensor variable with the shape  (1 x C x T)
+
+        Return:
+            (Variable): float tensor variable with the shape (1 x C x T')
+                        where T' = T * upsampling_factor
+        """
+        x = x.unsqueeze(1)  # 1 x 1 x C x T
+        x = self.conv(x)  # 1 x 1 x C x T'
+        return x.view(1, x.size(2), -1)
+
+
 class WaveNet(nn.Module):
     """CONDITIONAL WAVENET
 
@@ -82,10 +111,11 @@ class WaveNet(nn.Module):
         dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2**(10-1))
         dilation_repeat (int): number of dilation repeat
         kernel_size (int): filter size of dilated causal convolution
+        upsampling_factor (int): upsampling factor
 
     """
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
-                 dilation_depth=10, dilation_repeat=3, kernel_size=2):
+                 dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=None):
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
@@ -94,12 +124,16 @@ class WaveNet(nn.Module):
         self.kernel_size = kernel_size
         self.dilation_depth = dilation_depth
         self.dilation_repeat = dilation_repeat
+        self.upsampling_factor = upsampling_factor
+
         self.dilations = [2**i for i in range(self.dilation_depth)] * self.dilation_repeat
         self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
 
         # for preprocessing
         self.onehot = OneHot(self.n_quantize)
         self.causal = CausalConv1d(self.n_quantize, self.n_resch, self.kernel_size)
+        if self.upsampling_factor is not None:
+            self.upsampling = UpSampling(self.upsampling_factor)
 
         # for residual blocks
         self.dil_sigmoid = nn.ModuleList()
@@ -121,7 +155,21 @@ class WaveNet(nn.Module):
         self.conv_post_2 = nn.Conv1d(self.n_skipch, self.n_quantize, 1)
 
     def forward(self, x, h):
+        """
+        Args:
+            x (Variable): long tensor variable with the shape  (1 x T)
+            h (Variable): float tensor variable with the shape  (1 x n_aux x T)
+
+        Return:
+            (Variable): float tensor variable with the shape (T x n_quantize)
+        """
+        # preprocess
         output = self._preprocess(x)
+        if self.upsampling_factor is not None:
+            h = self.upsampling(h)
+            assert x.size(-1) == h.size(-1)
+
+        # residual block
         skip_connections = []
         for l in range(len(self.dilations)):
             output, skip = self._residual_forward(
@@ -130,9 +178,10 @@ class WaveNet(nn.Module):
                 self.skip_1x1[l], self.res_1x1[l])
             skip_connections.append(skip)
 
-        # sum up skip connections
+        # skip-connection part
         output = sum(skip_connections)
         output = self._postprocess(output)
+
         return output
 
     def _preprocess(self, x):
