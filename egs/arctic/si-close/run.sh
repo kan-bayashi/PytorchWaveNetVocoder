@@ -164,7 +164,7 @@ if [ `echo ${stage} | grep 1` ];then
             ${train_cmd} --num-threads ${n_jobs} \
                 exp/feature_extract/feature_extract_${set}.${spk}.log \
                 feature_extract.py \
-                    --waveforms exp/feature_extract/${set}/wav.${spk}.scp \
+                    --waveforms ${scp} \
                     --wavdir wav/${set}/${spk} \
                     --hdf5dir hdf5/${set}/${spk} \
                     --fs ${fs} \
@@ -229,7 +229,7 @@ if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
         ${train_cmd} --num-threads ${n_jobs} \
             exp/noise_shaping/noise_shaping_apply.${spk}.log \
             noise_shaping.py \
-                --waveforms exp/noise_shaping/wav_filtered.${spk}.scp \
+                --waveforms ${scp} \
                 --stats data/${train}/stats.h5 \
                 --writedir wav_ns/${train}/${spk} \
                 --fs ${fs} \
@@ -332,7 +332,7 @@ if [ `echo ${stage} | grep 5` ];then
         ${cuda_cmd} --num-threads ${n_jobs} \
             exp/decoding/decode_${eval}.${spk}.log \
             decode.py \
-                --feats exp/decoding/feats.${spk}.scp \
+                --feats ${scp} \
                 --stats data/${train}/stats.h5 \
                 --outdir ${outdir}/${spk} \
                 --checkpoint ${checkpoint} \
@@ -369,7 +369,7 @@ if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
         ${train_cmd} --num-threads ${n_jobs} \
             exp/noise_shaping/noise_shaping_restore.${spk}.log \
             noise_shaping.py \
-                --waveforms exp/noise_shaping/wav_generated.${spk}.scp \
+                --waveforms ${scp} \
                 --stats data/${train}/stats.h5 \
                 --writedir ${outdir}_restored/${spk} \
                 --fs ${fs} \
