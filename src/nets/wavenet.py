@@ -118,7 +118,7 @@ class UpSampling(nn.Module):
 class WaveNet(nn.Module):
     """CONDITIONAL WAVENET"""
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
-                 dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=None):
+                 dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=0):
         """
         Args:
             n_quantize (int): number of quantization
@@ -146,7 +146,7 @@ class WaveNet(nn.Module):
         # for preprocessing
         self.onehot = OneHot(self.n_quantize)
         self.causal = CausalConv1d(self.n_quantize, self.n_resch, self.kernel_size)
-        if self.upsampling_factor is not None:
+        if self.upsampling_factor > 0:
             self.upsampling = UpSampling(self.upsampling_factor)
 
         # for residual blocks
@@ -179,7 +179,7 @@ class WaveNet(nn.Module):
         """
         # preprocess
         output = self._preprocess(x)
-        if self.upsampling_factor is not None:
+        if self.upsampling_factor > 0:
             h = self.upsampling(h)
 
         # residual block
@@ -210,7 +210,7 @@ class WaveNet(nn.Module):
             (ndarray): generated quantized wavenform (n_samples)
         """
         # upsampling
-        if self.upsampling_factor is not None:
+        if self.upsampling_factor > 0:
             h = self.upsampling(h)
 
         # padding if the length less than receptive field size
@@ -275,7 +275,7 @@ class WaveNet(nn.Module):
             (ndarray): generated quantized wavenform (n_samples)
         """
         # upsampling
-        if self.upsampling_factor is not None:
+        if self.upsampling_factor > 0:
             h = self.upsampling(h)
 
         # padding if the length less than

@@ -59,9 +59,9 @@ def validate_length(x, y, upsampling_factor=None):
 
 
 @background(max_prefetch=16)
-def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
+def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     wav_transform=None, feat_transform=None, shuffle=True,
-                    upsampling_factor=None, use_speaker_code=False):
+                    upsampling_factor=0, use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
@@ -86,7 +86,7 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
         feat_list = [feat_list[i] for i in idx]
 
     # check batch_size
-    if batch_size is not None and upsampling_factor is not None:
+    if batch_size != 0 and upsampling_factor != 0:
         batch_mod = (receptive_field + batch_size) % upsampling_factor
         logging.warn("batch size is decreased due to upsampling (%d -> %d)" % (
             batch_size, batch_size - batch_mod))
@@ -145,7 +145,7 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                     h_buffer = h_buffer[batch_size:]
 
             # use mini batch with upsampling
-            elif batch_size is not None and upsampling_factor is not None:
+            elif batch_size != 0 and upsampling_factor > 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
@@ -184,7 +184,7 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
                     x_buffer = x_buffer[x_ss:]
 
             # use utterance batch without upsampling
-            elif batch_size is None and upsampling_factor is None:
+            elif batch_size == 0 and upsampling_factor == 0:
                 # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
@@ -271,8 +271,9 @@ def main():
                         type=int, help="number of repeating of dilation")
     parser.add_argument("--kernel_size", default=2,
                         type=int, help="kernel size of dilated causal convolution")
-    parser.add_argument("--upsampling_factor", default=None,
-                        type=int, help="upsampling factor of aux features")
+    parser.add_argument("--upsampling_factor", default=0,
+                        type=int, help="upsampling factor of aux features"
+                                       "(if set 0, do not apply)")
     parser.add_argument("--use_speaker_code", default=False,
                         type=strtobool, help="flag to use speaker code")
     # network training setting
@@ -281,7 +282,7 @@ def main():
     parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
     parser.add_argument("--batch_size", default=20000,
-                        type=int, help="number of iterations")
+                        type=int, help="batch size (if set 0, utterance batch will be used)")
     parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
     # other setting

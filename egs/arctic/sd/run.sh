@@ -245,45 +245,28 @@ if [ `echo ${stage} | grep 4` ];then
     fi
     if ${use_upsampling};then
         upsampling_factor=`echo "${shiftms} * ${fs} / 1000" | bc`
-        ${cuda_cmd} ${expdir}/log/${train}.log \
-            train.py \
-                --waveforms ${waveforms} \
-                --feats data/${train}/feats.scp \
-                --stats data/${train}/stats.h5 \
-                --expdir ${expdir} \
-                --n_quantize ${n_quantize} \
-                --n_aux ${n_aux} \
-                --n_resch ${n_resch} \
-                --n_skipch ${n_skipch} \
-                --dilation_depth ${dilation_depth} \
-                --dilation_repeat ${dilation_repeat} \
-                --lr ${lr} \
-                --weight_decay ${weight_decay} \
-                --iters ${iters} \
-                --batch_size ${batch_size} \
-                --checkpoints ${checkpoints} \
-                --use_speaker_code ${use_speaker_code} \
-                --upsampling_factor ${upsampling_factor}
     else
-        ${cuda_cmd} ${expdir}/log/${train}.log \
-            train.py \
-                --waveforms ${waveforms} \
-                --feats data/${train}/feats.scp \
-                --stats data/${train}/stats.h5 \
-                --expdir ${expdir} \
-                --n_quantize ${n_quantize} \
-                --n_aux ${n_aux} \
-                --n_resch ${n_resch} \
-                --n_skipch ${n_skipch} \
-                --dilation_depth ${dilation_depth} \
-                --dilation_repeat ${dilation_repeat} \
-                --lr ${lr} \
-                --weight_decay ${weight_decay} \
-                --iters ${iters} \
-                --batch_size ${batch_size} \
-                --checkpoints ${checkpoints} \
-                --use_speaker_code ${use_speaker_code}
+        upsampling_factor=0
     fi
+    ${cuda_cmd} ${expdir}/log/${train}.log \
+        train.py \
+            --waveforms ${waveforms} \
+            --feats data/${train}/feats.scp \
+            --stats data/${train}/stats.h5 \
+            --expdir ${expdir} \
+            --n_quantize ${n_quantize} \
+            --n_aux ${n_aux} \
+            --n_resch ${n_resch} \
+            --n_skipch ${n_skipch} \
+            --dilation_depth ${dilation_depth} \
+            --dilation_repeat ${dilation_repeat} \
+            --lr ${lr} \
+            --weight_decay ${weight_decay} \
+            --iters ${iters} \
+            --batch_size ${batch_size} \
+            --checkpoints ${checkpoints} \
+            --use_speaker_code ${use_speaker_code} \
+            --upsampling_factor ${upsampling_factor}
 fi
 # }}}
 
