@@ -97,7 +97,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
         for wavfile, featfile in zip(wav_list, feat_list):
             # load wavefrom and aux feature
             x, fs = sf.read(wavfile, dtype=np.float32)
-            if upsampling_factor is not None:
+            if upsampling_factor > 0:
                 h = read_hdf5(featfile, "/feat_org")
             else:
                 h = read_hdf5(featfile, "/feat")
@@ -114,7 +114,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
             logging.debug("after h length = %d" % h.shape[0])
 
             # use mini batch without upsampling
-            if batch_size is not None and upsampling_factor is None:
+            if batch_size == 0 and upsampling_factor == 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
