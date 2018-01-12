@@ -77,7 +77,7 @@ weight_decay=0.0
 iters=200000
 batch_size=20000
 checkpoints=10000
-use_upsampling=true
+use_upsampling=false
 use_noise_shaping=true
 use_speaker_code=false
 
