@@ -23,7 +23,7 @@ from utils import background, find_files, read_hdf5, read_txt
 from wavenet import WaveNet, encode_mu_law, initialize
 
 
-def validate_length(x, y, upsampling_factor=None):
+def validate_length(x, y, upsampling_factor=0):
     """FUNCTION TO VALIDATE LENGTH
 
     Args:
@@ -32,14 +32,14 @@ def validate_length(x, y, upsampling_factor=None):
         upsampling_factor (int): upsampling factor
 
     Returns:
-        upsampling_factor = None:
+        upsampling_factor = 0:
             x with x.shape[0] = min(len_x, len_y)
             y with y.shape[0] = min(len_x, len_y)
-        upsampling_factor != None:
+        upsampling_factor != 0:
             x with x.shape[0] = min(len_x, len_y*upsampling_factor)
             y with y.shape[0] = min(len_x, len_y*upsampling_factor)
     """
-    if upsampling_factor is None:
+    if upsampling_factor == 0:
         if x.shape[0] < y.shape[0]:
             y = y[:x.shape[0]]
         if x.shape[0] > y.shape[0]:
