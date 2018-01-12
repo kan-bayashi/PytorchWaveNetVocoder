@@ -32,17 +32,34 @@ net.eval()
 
 # forward test
 generator = sine_generator(100)
-batch = generator.next()
+batch = next(generator)
 batch_input = batch.view(1, -1)
-batch_aux = Variable(torch.FloatTensor(1, 28, batch_input.size(1)).fill_(0.0).cuda())
+batch_aux = Variable(torch.rand(1, 28, batch_input.size(1)).float().cuda())
 y = net(batch_input, batch_aux)
 
 # generation test
 length = 100
-batch_aux = Variable(torch.FloatTensor(1, 28, batch_input.size(1) + length).fill_(0.0).cuda(), volatile=True)
+batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) + length).float().cuda(), volatile=True)
 gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
 gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
-gen3 = net.faster_generate(batch_input, batch_aux, length, 1, "argmax")
 np.testing.assert_array_equal(gen1, gen2)
-np.testing.assert_array_equal(gen2, gen3)
-np.testing.assert_array_equal(gen1, gen3)
+
+# define model
+net = WaveNet(256, 28, 512, 256, 10, 3, 2, 10)
+net.apply(initialize)
+net.cuda()
+net.eval()
+
+# forward test
+generator = sine_generator(100)
+batch = next(generator)
+batch_input = batch.view(1, -1)
+batch_aux = Variable(torch.rand(1, 28, 10).float().cuda())
+y = net(batch_input, batch_aux)
+
+# generation test
+length = 100
+batch_aux = Variable(torch.rand(1, 28, 20).float().cuda(), volatile=True)
+gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
+gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+np.testing.assert_array_equal(gen1, gen2)

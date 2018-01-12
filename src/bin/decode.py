@@ -19,7 +19,9 @@ from utils import find_files, read_hdf5, read_txt
 from wavenet import WaveNet, decode_mu_law, encode_mu_law
 
 
-def decode_generator(feat_list, wav_transform=None, feat_transform=None, use_speaker_code=False):
+def decode_generator(feat_list, wav_transform=None,
+                     feat_transform=None, use_speaker_code=False,
+                     upsampling_factor=None):
     """DECODE BATCH GENERATOR
 
     Args:
@@ -27,14 +29,18 @@ def decode_generator(feat_list, wav_transform=None, feat_transform=None, use_spe
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
         use_speaker_code (bool): whether to use speaker code
+        upsampling_factor (int): upsampling factor
 
-    Return: generator instance
-
+    Return:
+        (object): generator instance
     """
     # process over all of files
     for featfile in feat_list:
         x = np.zeros((1))
-        h = read_hdf5(featfile, "/feat")
+        if upsampling_factor is None:
+            h = read_hdf5(featfile, "/feat")
+        else:
+            h = read_hdf5(featfile, "/feat_org")
         if use_speaker_code:
             sc = read_hdf5(featfile, "/speaker_code")
             sc = np.tile(sc, [h.shape[0], 1])
@@ -48,7 +54,10 @@ def decode_generator(feat_list, wav_transform=None, feat_transform=None, use_spe
 
         x = x.unsqueeze(0)
         h = h.transpose(0, 1).unsqueeze(0)
-        n_samples = h.size(2) - 1
+        if upsampling_factor is None:
+            n_samples = h.size(2) - 1
+        else:
+            n_samples = h.size(2) * upsampling_factor - 1
         feat_id = os.path.basename(featfile).replace(".h5", "")
 
         yield feat_id, (x, h, n_samples)
@@ -135,14 +144,15 @@ def main():
     def gpu_decode(feat_list, gpu):
         with torch.cuda.device(gpu):
             # define model and load parameters
-            model = WaveNet(n_quantize=config.n_quantize,
-                            n_aux=config.n_aux,
-                            n_resch=config.n_resch,
-                            n_skipch=config.n_skipch,
-                            dilation_depth=config.dilation_depth,
-                            dilation_repeat=config.dilation_repeat,
-                            kernel_size=config.kernel_size,
-                            upsampling_factor=config.upsampling_factor)
+            model = WaveNet(
+                n_quantize=config.n_quantize,
+                n_aux=config.n_aux,
+                n_resch=config.n_resch,
+                n_skipch=config.n_skipch,
+                dilation_depth=config.dilation_depth,
+                dilation_repeat=config.dilation_repeat,
+                kernel_size=config.kernel_size,
+                upsampling_factor=config.upsampling_factor)
             model.load_state_dict(torch.load(args.checkpoint)["model"])
             model.eval()
             model.cuda()
@@ -162,7 +172,12 @@ def main():
                 lambda x: Variable(x, volatile=True)])
 
             # define generator
-            generator = decode_generator(feat_list, wav_transform, feat_transform, config.use_speaker_code)
+            generator = decode_generator(
+                feat_list,
+                wav_transform=wav_transform,
+                feat_transform=feat_transform,
+                use_speaker_code=config.use_speaker_code,
+                upsampling_factor=config.upsampling_factor)
 
             # decode
             for feat_id, (x, h, n_samples) in generator:
@@ -178,14 +193,15 @@ def main():
     # define cpu decode function
     def cpu_decode(feat_list):
         # define model and load parameters
-        model = WaveNet(n_quantize=config.n_quantize,
-                        n_aux=config.n_aux,
-                        n_resch=config.n_resch,
-                        n_skipch=config.n_skipch,
-                        dilation_depth=config.dilation_depth,
-                        dilation_repeat=config.dilation_repeat,
-                        kernel_size=config.kernel_size,
-                        upsampling_factor=config.upsampling_factor)
+        model = WaveNet(
+            n_quantize=config.n_quantize,
+            n_aux=config.n_aux,
+            n_resch=config.n_resch,
+            n_skipch=config.n_skipch,
+            dilation_depth=config.dilation_depth,
+            dilation_repeat=config.dilation_repeat,
+            kernel_size=config.kernel_size,
+            upsampling_factor=config.upsampling_factor)
         model.load_state_dict(torch.load(args.checkpoint)["model"])
         model.eval()
         model.cpu()
@@ -204,7 +220,12 @@ def main():
             lambda x: Variable(x, volatile=True)])
 
         # define generator
-        generator = decode_generator(feat_list, wav_transform, feat_transform, config.use_speaker_code)
+        generator = decode_generator(
+            feat_list,
+            wav_transform=wav_transform,
+            feat_transform=feat_transform,
+            use_speaker_code=config.use_speaker_code,
+            upsampling_factor=config.upsampling_factor)
 
         # decode
         for feat_id, (x, h, n_samples) in generator:

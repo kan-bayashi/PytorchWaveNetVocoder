@@ -38,7 +38,6 @@ def validate_length(x, y, upsampling_factor=None):
         upsampling_factor != None:
             x with x.shape[0] = min(len_x, len_y*upsampling_factor)
             y with y.shape[0] = min(len_x, len_y*upsampling_factor)
-
     """
     if upsampling_factor is None:
         if x.shape[0] < y.shape[0]:
@@ -76,8 +75,8 @@ def train_generator(wav_list, feat_list, receptive_field=None, batch_size=None,
         upsampling_factor (int): upsampling factor
         use_speaker_code (bool): whether to use speaker code
 
-    Return: generator instance
-
+    Return:
+        (object): generator instance
     """
     # shuffle list
     if shuffle:
@@ -233,7 +232,6 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
         model (torch.nn.Module): pytorch model instance
         optimizer (Optimizer): pytorch optimizer instance
         iterations (int): number of current iterations
-
     """
     model.cpu()
     checkpoint = {
@@ -333,14 +331,15 @@ def main():
     torch.save(args, args.expdir + "/model.conf")
 
     # # define network
-    model = WaveNet(n_quantize=args.n_quantize,
-                    n_aux=args.n_aux,
-                    n_resch=args.n_resch,
-                    n_skipch=args.n_skipch,
-                    dilation_depth=args.dilation_depth,
-                    dilation_repeat=args.dilation_repeat,
-                    kernel_size=args.kernel_size,
-                    upsampling_factor=args.upsampling_factor)
+    model = WaveNet(
+        n_quantize=args.n_quantize,
+        n_aux=args.n_aux,
+        n_resch=args.n_resch,
+        n_skipch=args.n_skipch,
+        dilation_depth=args.dilation_depth,
+        dilation_repeat=args.dilation_repeat,
+        kernel_size=args.kernel_size,
+        upsampling_factor=args.upsampling_factor)
     logging.info(model)
     model.apply(initialize)
     model.train()
@@ -375,14 +374,15 @@ def main():
         sys.exit(1)
     assert len(wav_list) == len(feat_list)
     logging.info("number of training data = %d." % len(wav_list))
-    generator = train_generator(wav_list, feat_list,
-                                receptive_field=model.receptive_field,
-                                batch_size=None,
-                                wav_transform=wav_transform,
-                                feat_transform=feat_transform,
-                                shuffle=True,
-                                upsampling_factor=args.upsampling_factor,
-                                use_speaker_code=args.use_speaker_code)
+    generator = train_generator(
+            wav_list, feat_list,
+            receptive_field=model.receptive_field,
+            batch_size=None,
+            wav_transform=wav_transform,
+            feat_transform=feat_transform,
+            shuffle=True,
+            upsampling_factor=args.upsampling_factor,
+            use_speaker_code=args.use_speaker_code)
     while not generator.queue.full():
         time.sleep(0.1)
 

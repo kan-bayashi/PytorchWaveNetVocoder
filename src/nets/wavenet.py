@@ -41,6 +41,10 @@ def initialize(m):
 class OneHot(nn.Module):
     """CONVERT TO ONE-HOT VECTOR"""
     def __init__(self, depth):
+        """
+        Arg:
+            depth (int): dimension of one-hot vector
+        """
         super(OneHot, self).__init__()
         self.depth = depth
         if torch.cuda.is_available():
@@ -49,6 +53,13 @@ class OneHot(nn.Module):
             self.ones = torch.eye(depth)
 
     def forward(self, x):
+        """
+        Arg:
+            x (Variable): long tensor variable with the shape  (1 x T)
+
+        Return:
+            (Variable): float tensor variable with the shape (1 x depth x T)
+        """
         x_onehot = self.ones.index_select(0, x.data[0]).unsqueeze(0)
         if self.training:
             return Variable(x_onehot)
@@ -78,6 +89,10 @@ class CausalConv1d(nn.Module):
 class UpSampling(nn.Module):
     """ UPSAMPLING LAYER WITH DECONVOLUTION"""
     def __init__(self, upsampling_factor, bias=True):
+        """
+        Arg:
+            upsampling_factor (int): upsampling factor
+        """
         super(UpSampling, self).__init__()
         self.upsampling_factor = upsampling_factor
         self.bias = bias
@@ -101,21 +116,20 @@ class UpSampling(nn.Module):
 
 
 class WaveNet(nn.Module):
-    """CONDITIONAL WAVENET
-
-    Args:
-        n_quantize (int): number of quantization
-        n_aux (int): number of aux feature dimension
-        n_resch (int): number of filter channels for residual block
-        n_skipch (int): number of filter channels for skip connection
-        dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2**(10-1))
-        dilation_repeat (int): number of dilation repeat
-        kernel_size (int): filter size of dilated causal convolution
-        upsampling_factor (int): upsampling factor
-
-    """
+    """CONDITIONAL WAVENET"""
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
                  dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=None):
+        """
+        Args:
+            n_quantize (int): number of quantization
+            n_aux (int): number of aux feature dimension
+            n_resch (int): number of filter channels for residual block
+            n_skipch (int): number of filter channels for skip connection
+            dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2**(10-1))
+            dilation_repeat (int): number of dilation repeat
+            kernel_size (int): filter size of dilated causal convolution
+            upsampling_factor (int): upsampling factor
+        """
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
@@ -167,7 +181,6 @@ class WaveNet(nn.Module):
         output = self._preprocess(x)
         if self.upsampling_factor is not None:
             h = self.upsampling(h)
-            assert x.size(-1) == h.size(-1)
 
         # residual block
         skip_connections = []
@@ -184,32 +197,22 @@ class WaveNet(nn.Module):
 
         return output
 
-    def _preprocess(self, x):
-        x = self.onehot(x).transpose(1, 2)
-        output = self.causal(x)
-        return output
-
-    def _postprocess(self, x):
-        output = F.relu(x)
-        output = self.conv_post_1(output)
-        output = F.relu(output)
-        output = self.conv_post_2(output).squeeze(0).transpose(0, 1)
-        return output
-
-    def _residual_forward(self, x, h, dil_sigmoid, dil_tanh,
-                          aux_1x1_sigmoid, aux_1x1_tanh, skip_1x1, res_1x1):
-        output_sigmoid = dil_sigmoid(x)
-        output_tanh = dil_tanh(x)
-        aux_output_sigmoid = aux_1x1_sigmoid(h)
-        aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
-            F.tanh(output_tanh + aux_output_tanh)
-        skip = skip_1x1(output)
-        output = res_1x1(output)
-        output = output + x
-        return output, skip
-
     def generate(self, x, h, n_samples, intervals=None, mode="sampling"):
+        """
+        Args:
+            x (Variable): long tensor variable with the shape  (1 x T)
+            h (Variable): long tensor variable with the shape  (1 x n_samples + T)
+            n_samples (int): number of samples to be generated
+            intervals (int): log interval
+            mode (str): "sampling" or "argmax"
+
+        Return:
+            (ndarray): generated quantized wavenform (n_samples)
+        """
+        # upsampling
+        if self.upsampling_factor is not None:
+            h = self.upsampling(h)
+
         # padding if the length less than receptive field size
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -224,7 +227,20 @@ class WaveNet(nn.Module):
             x = Variable(torch.LongTensor(samples[-self.receptive_field:]).view(1, -1).cuda(),
                          volatile=True)
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
-            output = self.forward(x, h_)
+
+            # calculate output
+            output = self._preprocess(x)
+            skip_connections = []
+            for l in range(len(self.dilations)):
+                output, skip = self._residual_forward(
+                    output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
+                    self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
+                    self.skip_1x1[l], self.res_1x1[l])
+                skip_connections.append(skip)
+            output = sum(skip_connections)
+            output = self._postprocess(output)
+
+            # get waveform
             if mode == "sampling":
                 posterior = F.softmax(output[-1], dim=0)
                 dist = torch.distributions.Categorical(posterior)
@@ -247,76 +263,21 @@ class WaveNet(nn.Module):
         return np.array(samples[-n_samples:])
 
     def fast_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
-        # padding if the length less than
-        n_pad = self.receptive_field - x.size(1)
-        if n_pad > 0:
-            x = F.pad(x, (n_pad, 0), "constant", self.n_quantize // 2)
-            h = F.pad(h, (n_pad, 0), "replicate")
+        """
+        Args:
+            x (Variable): long tensor variable with the shape  (1 x T)
+            h (Variable): long tensor variable with the shape  (1 x n_samples + T)
+            n_samples (int): number of samples to be generated
+            intervals (int): log interval
+            mode (str): "sampling" or "argmax"
 
-        # prepare buffer
-        output = self._preprocess(x)
-        h_ = h[:, :, :x.size(1)]
-        output_buffer = []
-        buffer_size = []
-        for l, d in enumerate(self.dilations):
-            output, _ = self._residual_forward(
-                output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
-                self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
-                self.skip_1x1[l], self.res_1x1[l])
-            if d == 2**(self.dilation_depth - 1):
-                buffer_size.append(self.kernel_size - 1)
-            else:
-                buffer_size.append(d * 2 * (self.kernel_size - 1))
-            output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
+        Return:
+            (ndarray): generated quantized wavenform (n_samples)
+        """
+        # upsampling
+        if self.upsampling_factor is not None:
+            h = self.upsampling(h)
 
-        # generate
-        samples = x.data[0].tolist()
-        start = time.time()
-        for i in range(n_samples):
-            output = Variable(torch.LongTensor(samples[-self.kernel_size * 2 - 1:]).view(1, -1).cuda(),
-                              volatile=True)
-            output = self._preprocess(output)
-            h_ = h[:, :, len(samples) - 1].contiguous().view(1, h.size(1), 1)
-            output_buffer_next = []
-            skip_connections = []
-            for l, d in enumerate(self.dilations):
-                output, skip = self._residual_forward(
-                    output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
-                    self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
-                    self.skip_1x1[l], self.res_1x1[l])
-                output = output[:, :, -1:]
-                output = torch.cat([output_buffer[l], output], dim=2)
-                skip_connections.append(skip[:, :, -1:])
-                output_buffer_next.append(output[:, :, -buffer_size[l]:])
-
-            # update buffer
-            output_buffer = output_buffer_next
-
-            # get predicted sample
-            output = sum(skip_connections)
-            output = self._postprocess(output)
-            if mode == "sampling":
-                posterior = F.softmax(output[-1], dim=0)
-                dist = torch.distributions.Categorical(posterior)
-                sample = dist.sample().data[0]
-            elif mode == "argmax":
-                sample = output.max(1)[-1].data[-1]
-            else:
-                logging.error("mode should be sampling or argmax")
-                sys.exit(1)
-            samples.append(sample)
-
-            # show progress
-            if intervals is not None and (i + 1) % intervals == 0:
-                logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
-                    i + 1, n_samples,
-                    (n_samples - i - 1) * ((time.time() - start) / intervals),
-                    (time.time() - start) / intervals))
-                start = time.time()
-
-        return np.array(samples[-n_samples:])
-
-    def faster_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
         # padding if the length less than
         n_pad = self.receptive_field - x.size(1)
         if n_pad > 0:
@@ -383,6 +344,31 @@ class WaveNet(nn.Module):
                 start = time.time()
 
         return samples[-n_samples:].cpu().numpy()
+
+    def _preprocess(self, x):
+        x = self.onehot(x).transpose(1, 2)
+        output = self.causal(x)
+        return output
+
+    def _postprocess(self, x):
+        output = F.relu(x)
+        output = self.conv_post_1(output)
+        output = F.relu(output)
+        output = self.conv_post_2(output).squeeze(0).transpose(0, 1)
+        return output
+
+    def _residual_forward(self, x, h, dil_sigmoid, dil_tanh,
+                          aux_1x1_sigmoid, aux_1x1_tanh, skip_1x1, res_1x1):
+        output_sigmoid = dil_sigmoid(x)
+        output_tanh = dil_tanh(x)
+        aux_output_sigmoid = aux_1x1_sigmoid(h)
+        aux_output_tanh = aux_1x1_tanh(h)
+        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            F.tanh(output_tanh + aux_output_tanh)
+        skip = skip_1x1(output)
+        output = res_1x1(output)
+        output = output + x
+        return output, skip
 
     def _generate_residual_forward(self, x, h, dil_sigmoid, dil_tanh,
                                    aux_1x1_sigmoid, aux_1x1_tanh, skip_1x1, res_1x1):
