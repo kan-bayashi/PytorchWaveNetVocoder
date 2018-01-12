@@ -79,7 +79,7 @@ weight_decay=0.0
 iters=200000
 batch_size=20000
 checkpoints=10000
-use_upsampling=true
+use_upsampling=false
 use_noise_shaping=true
 use_speaker_code=false
 
@@ -193,6 +193,10 @@ if [ `echo ${stage} | grep 1` ];then
     n_wavs=`cat data/${train}/wav.scp | wc -l`
     n_feats=`find hdf5/${train} -name "*.h5" | wc -l`
     echo "${n_feats}/${n_wavs} files are successfully processed."
+
+    # make scp files
+    find wav/${train} -name "*.wav" | sort > data/${train}/wav_filtered.scp
+    find hdf5/${train} -name "*.h5" | sort > data/${train}/feats.scp
 
     nj=0
     for spk in ${eval_spks[@]};do
