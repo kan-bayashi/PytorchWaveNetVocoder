@@ -114,7 +114,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
             logging.debug("after h length = %d" % h.shape[0])
 
             # use mini batch without upsampling
-            if batch_size != 0 and upsampling_factor != 0:
+            if batch_size != 0 and upsampling_factor == 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
