@@ -65,8 +65,8 @@ n_jobs=10
 # use_noise_shaping: true or false
 # use_speaker_code: true or false
 # }}}
-train_spks=(rms clb slt ksp jmk)
-eval_spks=(bdl)
+train_spks=(bdl rms clb ksp jmk)
+eval_spks=(slt)
 n_quantize=256
 n_aux=28
 n_resch=512
@@ -161,7 +161,7 @@ if [ `echo ${stage} | grep 1` ];then
         minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
         maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
         # feature extract
-        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${train}.${spk}.log \
+        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${train}.${spk}.log \
             feature_extract.py \
                 --waveforms ${scp} \
                 --wavdir wav/${train}/${spk} \

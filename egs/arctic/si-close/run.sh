@@ -158,7 +158,7 @@ if [ `echo ${stage} | grep 1` ];then
             minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
             maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
             # feature extract
-            ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.${spk}.log \
+            ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${set}.${spk}.log \
                 feature_extract.py \
                     --waveforms ${scp} \
                     --wavdir wav/${set}/${spk} \

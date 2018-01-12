@@ -149,7 +149,7 @@ if [ `echo ${stage} | grep 1` ];then
     maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
     for set in ${train} ${eval};do
         # training data feature extraction
-        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/featture_extract_${set}.log \
+        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${set}.log \
             feature_extract.py \
                 --waveforms data/${set}/wav.scp \
                 --wavdir wav/${set} \
