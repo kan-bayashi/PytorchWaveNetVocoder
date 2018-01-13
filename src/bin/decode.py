@@ -21,7 +21,7 @@ from wavenet import WaveNet, decode_mu_law, encode_mu_law
 
 def decode_generator(feat_list, wav_transform=None,
                      feat_transform=None, use_speaker_code=False,
-                     upsampling_factor=None):
+                     upsampling_factor=0):
     """DECODE BATCH GENERATOR
 
     Args:
@@ -37,7 +37,7 @@ def decode_generator(feat_list, wav_transform=None,
     # process over all of files
     for featfile in feat_list:
         x = np.zeros((1))
-        if upsampling_factor is None:
+        if upsampling_factor == 0:
             h = read_hdf5(featfile, "/feat")
         else:
             h = read_hdf5(featfile, "/feat_org")
@@ -54,7 +54,7 @@ def decode_generator(feat_list, wav_transform=None,
 
         x = x.unsqueeze(0)
         h = h.transpose(0, 1).unsqueeze(0)
-        if upsampling_factor is None:
+        if upsampling_factor == 0:
             n_samples = h.size(2) - 1
         else:
             n_samples = h.size(2) * upsampling_factor - 1
