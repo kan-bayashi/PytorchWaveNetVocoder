@@ -2,7 +2,9 @@
 ############################################################
 #         SCRIPT TO BUILD SI-OPEN WAVENET VOCODER          #
 ############################################################
-# Edited by Tomoki Hayashi @ Nagoya University
+
+# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 . ./path.sh
 . ./cmd.sh
