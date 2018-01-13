@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+
 from __future__ import print_function, division
 
 import argparse
@@ -32,12 +36,8 @@ def validate_length(x, y, upsampling_factor=0):
         upsampling_factor (int): upsampling factor
 
     Returns:
-        upsampling_factor = 0:
-            x with x.shape[0] = min(len_x, len_y)
-            y with y.shape[0] = min(len_x, len_y)
-        upsampling_factor != 0:
-            x with x.shape[0] = min(len_x, len_y*upsampling_factor)
-            y with y.shape[0] = min(len_x, len_y*upsampling_factor)
+        (ndarray): length adjusted x with same length y
+        (ndarray): length adjusted y with same length x
     """
     if upsampling_factor == 0:
         if x.shape[0] < y.shape[0]:

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-EXTRACT FEATURE VECTOR AND PERFORM TIME RESOLUTION ADJUSTMENT
-"""
+
+# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+
 from __future__ import division, print_function
 
 import argparse
@@ -31,20 +32,15 @@ OVERWRITE = True
 
 
 def low_cut_filter(x, fs, cutoff=70):
-    """Low cut filter
-    Parameters
-    ---------
-    x : array, shape(`samples`)
-        Waveform sequence
-    fs: array, int
-        Sampling frequency
-    cutoff : float, optional
-        Cutoff frequency of low cut filter
-        Default set to 70 [Hz]
-    Returns
-    ---------
-    lcf_x : array, shape(`samples`)
-        Low cut filtered waveform sequence
+    """FUNCTION TO APPLY LOW CUT FILTER
+
+    Args:
+        x (ndarray): Waveform sequence
+        fs (int): Sampling frequency
+        cutoff (float): Cutoff frequency of low cut filter
+
+    Return:
+        (ndarray): Low cut filtered waveform sequence
     """
 
     nyquist = fs // 2
@@ -58,20 +54,15 @@ def low_cut_filter(x, fs, cutoff=70):
 
 
 def low_pass_filter(x, fs, cutoff=70, padding=True):
-    """Low pass filter
-    Parameters
-    ---------
-    x : array, shape(`samples`)
-        Waveform sequence
-    fs: array, int
-        Sampling frequency
-    cutoff : float, optional
-        Cutoff frequency of low pass filter
-        Default set to 70 [Hz]
-    Returns
-    ---------
-    lcf_x : array, shape(`samples`)
-        Low pass filtered waveform sequence
+    """FUNCTION TO APPLY LOW PASS FILTER
+
+    Args:
+        x (ndarray): Waveform sequence
+        fs (int): Sampling frequency
+        cutoff (float): Cutoff frequency of low pass filter
+
+    Return:
+        (ndarray): Low pass filtered waveform sequence
     """
 
     nyquist = fs // 2
@@ -87,25 +78,26 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
     return lpf_x
 
 
-def extend_time(feats, num_shift_frame):
-    """EXTEND TIME RESOLUTION
+def extend_time(feats, upsampling_factor):
+    """FUNCTION TO EXTEND TIME RESOLUTION
 
     Args:
-        feats           : feature vector [T, D]
-        num_shit_frames : number of shift frames
+        feats (ndarray): feature vector with the shape (T x D)
+        upsampling_factor (int): upsampling_factor
 
-    Return: extend_feats [num_shift_frame*T, D]
+    Return:
+        (ndarray): extend feats with the shape (upsampling_factor*T x D)
     """
     # get number
-    num_feat_frames = feats.shape[0]
-    num_feat_dims = feats.shape[1]
+    n_frames = feats.shape[0]
+    n_dims = feats.shape[1]
 
     # extend time
-    feats_extended = np.zeros((num_feat_frames * num_shift_frame, num_feat_dims))
-    for j in range(num_feat_frames):
-        start_idx = j * num_shift_frame
-        end_idx = (j + 1) * num_shift_frame
-        feats_extended[start_idx: end_idx] = repmat(feats[j, :], num_shift_frame, 1)
+    feats_extended = np.zeros((n_frames * upsampling_factor, n_dims))
+    for j in range(n_frames):
+        start_idx = j * upsampling_factor
+        end_idx = (j + 1) * upsampling_factor
+        feats_extended[start_idx: end_idx] = repmat(feats[j, :], upsampling_factor, 1)
 
     return feats_extended
 
@@ -113,9 +105,10 @@ def extend_time(feats, num_shift_frame):
 def convert_continuos_f0(f0):
     """CONVERT F0 TO CONTINUOUS F0
     Args:
-        f0 : original f0
+        f0 (ndarray): original f0 sequence with the shape (T)
 
-    Return: continuous f0
+    Return:
+        (ndarray): continuous f0 with the shape (T)
     """
     # get uv information as binary
     uv = np.float32(f0 != 0)
@@ -233,8 +226,8 @@ def main():
             feats = np.concatenate([uv, cont_f0_lpf, mcep, codeap], axis=1)
 
             # extend time resolution
-            shiftframe = int(args.shiftms * fs * 0.001)
-            feats_extended = extend_time(feats, shiftframe)
+            upsampling_factor = int(args.shiftms * fs * 0.001)
+            feats_extended = extend_time(feats, upsampling_factor)
 
             # save to hdf5
             feats_extended = feats_extended.astype(np.float32)

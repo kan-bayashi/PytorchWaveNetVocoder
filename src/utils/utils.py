@@ -10,20 +10,37 @@ import h5py
 import numpy as np
 
 
-def check_hdf5(hdf5_name, hdf5_dir):
+def check_hdf5(hdf5_name, hdf5_path):
+    """FUNCTION TO CHECK HDF5 EXISTENCE
+
+    Args:
+        hdf5_name (str): filename of hdf5 file
+        hdf5_path (str): dataset name in hdf5 file
+
+    Return:
+        (bool): dataset exists then return true
+    """
     if not os.path.exists(hdf5_name):
         return False
     else:
         with h5py.File(hdf5_name, "r") as f:
-            if hdf5_dir in f:
+            if hdf5_path in f:
                 return True
             else:
                 return False
 
 
 def read_hdf5(hdf5_name, hdf5_path):
+    """FUNCTION TO READ HDF5 DATASET
+    Args:
+        hdf5_name (str): filename of hdf5 file
+        hdf5_path (str): dataset name in hdf5 file
+
+    Return:
+        dataset values
+    """
     if not os.path.exists(hdf5_name):
-        print("ERROR: There is no such a _hdf5 file. (%s)" % hdf5_name)
+        print("ERROR: There is no such a hdf5 file. (%s)" % hdf5_name)
         print("Please check the hdf5 file path.")
         sys.exit(-1)
 
@@ -41,11 +58,11 @@ def read_hdf5(hdf5_name, hdf5_path):
 
 
 def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
-    """WRITE DATASET TO HDF5
+    """FUNCTION TO WRITE DATASET TO HDF5
 
     Args :
         hdf5_name (str): hdf5 dataset filename
-        hdf5_dir (str): dataset path in hdf5
+        hdf5_path (str): dataset path in hdf5
         write_data (ndarray): data to write
         is_overwrite (bool): flag to decide whether to overwrite dataset
     """
@@ -82,6 +99,16 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
 
 
 def find_files(directory, pattern="*.wav", use_dir_name=True):
+    """FUNCTION TO FIND FILES RECURSIVELY
+
+    Args:
+        directory (str): root directory to find
+        pattern (str): query to find
+        use_dir_name (bool): if False, directory name is not included
+
+    Return:
+        (list): list of found filenames
+    """
     files = []
     for root, dirnames, filenames in os.walk(directory, followlinks=True):
         for filename in fnmatch.filter(filenames, pattern):
@@ -92,6 +119,14 @@ def find_files(directory, pattern="*.wav", use_dir_name=True):
 
 
 def read_txt(file_list):
+    """FUNCTION TO READ TXT FILE
+
+    Arg:
+        file_list (str): txt file filename
+
+    Return:
+        (list): list of read lines
+    """
     with open(file_list, "r") as f:
         filenames = f.readlines()
     return [filename.replace("\n", "") for filename in filenames]
@@ -100,6 +135,11 @@ def read_txt(file_list):
 class BackgroundGenerator(threading.Thread):
     """BACKGROUND GENERATOR"""
     def __init__(self, generator, max_prefetch=1):
+        """
+        Args:
+            generator (object): generator instance
+            max_prefetch (int): max number of prefetch
+        """
         threading.Thread.__init__(self)
         if sys.version_info.major == 2:
             from Queue import Queue
@@ -129,7 +169,12 @@ class BackgroundGenerator(threading.Thread):
 
 
 class background:
-    """BACKGROUND GENERATOR DECORATOR"""
+    """BACKGROUND GENERATOR DECORATOR
+
+    How-to-use:
+        @background(max_prefetch=16)
+        def <your_genrator>()...
+    """
     def __init__(self, max_prefetch=1):
         self.max_prefetch = max_prefetch
 
