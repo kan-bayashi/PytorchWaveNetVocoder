@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-CALCULATE STATISTICS
-"""
+
+# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+
 from __future__ import print_function
 
 import argparse
@@ -25,19 +26,19 @@ def main():
 
     args = parser.parse_args()
 
-    # read list and load all of features
+    # read list and define scaler
     filenames = read_txt(args.feats)
-    print("load feature vector file...", end="")
-    feats = [read_hdf5(filename, "/feat_org") for filename in filenames]
+    scaler = StandardScaler()
     print("number of training utterances =", len(filenames))
 
-    # calculate stats
-    scaler = StandardScaler()
-    [scaler.partial_fit(feat[:, 1:]) for feat in feats]
+    # process over all of data
+    for filename in filenames:
+        feat = read_hdf5(filename, "/feat_org")
+        scaler.partial_fit(feat[:, 1:])
 
     # add uv term
-    mean = np.zeros((feats[0].shape[1]))
-    scale = np.ones((feats[0].shape[1]))
+    mean = np.zeros((feat.shape[1]))
+    scale = np.ones((feat.shape[1]))
     mean[1:] = scaler.mean_
     scale[1:] = scaler.scale_
 

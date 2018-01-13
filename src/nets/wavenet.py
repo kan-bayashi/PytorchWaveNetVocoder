@@ -13,14 +13,30 @@ from torch.autograd import Variable
 
 
 def encode_mu_law(x, mu=256):
-    """FUNCTION TO PERFORM MU-LAW ENCODING"""
+    """FUNCTION TO PERFORM MU-LAW ENCODING
+
+    Args:
+        x (ndarray): audio signal with the range from -1 to 1
+        mu (int): quantized level
+
+    Return:
+        (ndarray): quantized audio signal with the range from 0 to mu - 1
+    """
     mu = mu - 1
     fx = np.sign(x) * np.log(1 + mu * np.abs(x)) / np.log(1 + mu)
     return np.floor((fx + 1) / 2 * mu + 0.5).astype(np.int64)
 
 
 def decode_mu_law(y, mu=256):
-    """FUNCTION TO PERFORM MU-LAW DECODING"""
+    """FUNCTION TO PERFORM MU-LAW DECODINGi
+
+    Args:
+        x (ndarray): quantized audio signal with the range from 0 to mu - 1
+        mu (int): quantized level
+
+    Return:
+        (ndarray): audio signal with the range from -1 to 1
+    """
     mu = mu - 1
     fx = (y - 0.5) / mu * 2 - 1
     x = np.sign(fx) / mu * ((1 + mu)**np.abs(fx) - 1)
@@ -28,7 +44,11 @@ def decode_mu_law(y, mu=256):
 
 
 def initialize(m):
-    """FUCNTION TO INITILIZE CONV WITH XAVIER"""
+    """FUCNTION TO INITILIZE CONV WITH XAVIER
+
+    Arg:
+        m (torch.nn.Module): torch nn module instance
+    """
     if isinstance(m, nn.Conv1d):
         nn.init.xavier_uniform(m.weight)
         nn.init.constant(m.bias, 0.0)
@@ -80,6 +100,13 @@ class CausalConv1d(nn.Module):
                               padding=padding, dilation=dilation, bias=bias)
 
     def forward(self, x):
+        """
+        Arg:
+            x (Variable): float tensor variable with the shape  (1 x C x T)
+
+        Return:
+            (Variable): float tensor variable with the shape (1 x C x T)
+        """
         x = self.conv(x)
         if self.padding != 0:
             x = x[:, :, :-self.padding]
