@@ -23,7 +23,7 @@ from utils import background, find_files, read_hdf5, read_txt
 from wavenet import WaveNet, encode_mu_law, initialize
 
 
-def validate_length(x, y, upsampling_factor=None):
+def validate_length(x, y, upsampling_factor=0):
     """FUNCTION TO VALIDATE LENGTH
 
     Args:
@@ -32,14 +32,14 @@ def validate_length(x, y, upsampling_factor=None):
         upsampling_factor (int): upsampling factor
 
     Returns:
-        upsampling_factor = None:
+        upsampling_factor = 0:
             x with x.shape[0] = min(len_x, len_y)
             y with y.shape[0] = min(len_x, len_y)
-        upsampling_factor != None:
+        upsampling_factor != 0:
             x with x.shape[0] = min(len_x, len_y*upsampling_factor)
             y with y.shape[0] = min(len_x, len_y*upsampling_factor)
     """
-    if upsampling_factor is None:
+    if upsampling_factor == 0:
         if x.shape[0] < y.shape[0]:
             y = y[:x.shape[0]]
         if x.shape[0] > y.shape[0]:
@@ -97,7 +97,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
         for wavfile, featfile in zip(wav_list, feat_list):
             # load wavefrom and aux feature
             x, fs = sf.read(wavfile, dtype=np.float32)
-            if upsampling_factor is not None:
+            if upsampling_factor > 0:
                 h = read_hdf5(featfile, "/feat_org")
             else:
                 h = read_hdf5(featfile, "/feat")
@@ -114,7 +114,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
             logging.debug("after h length = %d" % h.shape[0])
 
             # use mini batch without upsampling
-            if batch_size is not None and upsampling_factor is None:
+            if batch_size != 0 and upsampling_factor == 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
