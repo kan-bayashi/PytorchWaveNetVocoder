@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+
 from __future__ import division
 
 import logging
@@ -7,6 +11,7 @@ import time
 
 import numpy as np
 import torch
+
 import torch.nn.functional as F
 from torch import nn
 from torch.autograd import Variable
