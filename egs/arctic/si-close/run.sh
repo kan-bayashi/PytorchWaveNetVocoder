@@ -3,7 +3,7 @@
 #        SCRIPT TO BUILD SI-CLOSE WAVENET VOCODER          #
 ############################################################
 
-# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+# Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 . ./path.sh

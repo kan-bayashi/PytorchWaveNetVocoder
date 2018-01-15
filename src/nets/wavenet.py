@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+# Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import division
@@ -33,7 +33,7 @@ def encode_mu_law(x, mu=256):
 
 
 def decode_mu_law(y, mu=256):
-    """FUNCTION TO PERFORM MU-LAW DECODINGi
+    """FUNCTION TO PERFORM MU-LAW DECODING
 
     Args:
         x (ndarray): quantized audio signal with the range from 0 to mu - 1

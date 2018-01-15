@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# Copyright 2017 Tomoki Hayashi (Nagoya University)
+#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+
 from __future__ import division, print_function
 
 import fnmatch
@@ -32,6 +36,7 @@ def check_hdf5(hdf5_name, hdf5_path):
 
 def read_hdf5(hdf5_name, hdf5_path):
     """FUNCTION TO READ HDF5 DATASET
+
     Args:
         hdf5_name (str): filename of hdf5 file
         hdf5_path (str): dataset name in hdf5 file
@@ -133,7 +138,11 @@ def read_txt(file_list):
 
 
 class BackgroundGenerator(threading.Thread):
-    """BACKGROUND GENERATOR"""
+    """BACKGROUND GENERATOR
+
+    reference:
+        https://stackoverflow.com/questions/7323664/python-generator-pre-fetch
+    """
     def __init__(self, generator, max_prefetch=1):
         """
         Args:
@@ -169,12 +178,7 @@ class BackgroundGenerator(threading.Thread):
 
 
 class background:
-    """BACKGROUND GENERATOR DECORATOR
-
-    How-to-use:
-        @background(max_prefetch=16)
-        def <your_genrator>()...
-    """
+    """BACKGROUND GENERATOR DECORATOR"""
     def __init__(self, max_prefetch=1):
         self.max_prefetch = max_prefetch
 

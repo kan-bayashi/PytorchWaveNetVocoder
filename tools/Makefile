@@ -14,7 +14,6 @@ venv/lib/python3.6/site-packages/sprocket: venv/bin/activate
 venv/lib/python3.6/site-packages/torch: venv/bin/activate
 	. venv/bin/activate; pip install pip --upgrade; pip install http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl; pip install torchvision
 
-
 clean:
 	rm -fr venv sprocket
 	find -iname "*.pyc" -delete
