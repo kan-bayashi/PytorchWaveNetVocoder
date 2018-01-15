@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2017 Tomoki Hyaashi (Nagoya University)
+# Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import print_function
