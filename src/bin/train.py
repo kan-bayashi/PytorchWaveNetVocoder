@@ -4,7 +4,7 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import print_function, division
+from __future__ import division, print_function
 
 import argparse
 import logging

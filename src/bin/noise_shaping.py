@@ -13,12 +13,12 @@ import sys
 from distutils.util import strtobool
 
 import numpy as np
-
-from feature_extract import low_cut_filter
 from scipy.io import wavfile
 from sprocket.speech.feature_extractor import FeatureExtractor
 from sprocket.speech.synthesizer import Synthesizer
-from utils import find_files, read_txt, read_hdf5
+
+from feature_extract import low_cut_filter
+from utils import find_files, read_hdf5, read_txt
 
 FS = 22050
 SHIFTMS = 5
