@@ -20,8 +20,7 @@ make -j
 
 ## Run example
 All examples are based on kaldi-style recipe.  
-If you are using Slurm, you can change cmd.sh in the recipe.  
-```
+```bash
 # build SD model
 cd egs/arctic/sd
 ./run.sh 
@@ -32,6 +31,40 @@ cd egs/arctic/si-close
 
 # build SI-OPEN model
 cd egs/arctic/si-open
+./run.sh
+```
+
+If slurm is installed in your servers, you can run recipes with slurm.
+
+```bash
+cd egs/arctic/sd
+
+# edit configuration
+vim cmd.sh # please edit as follows
+---
+# for local
+# export train_cmd="run.pl"
+# export cuda_cmd="run.pl --gpu 1"
+
+# for slurm (you can change configuration file "conf/slurm.conf")
+export train_cmd="slurm.pl --config conf/slurm.conf"
+export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
+---
+
+vim conf/slurm.conf # edit <your_partition_name>
+---
+command sbatch --export=PATH  --ntasks-per-node=1
+option time=* --time $0
+option mem=* --mem-per-cpu $0
+option mem=0
+option num_threads=* --cpus-per-task $0 --ntasks-per-node=1
+option num_threads=1 --cpus-per-task 1  --ntasks-per-node=1
+default gpu=0
+option gpu=0 -p <your_partion_name>
+option gpu=* -p <your_partion_name> --gres=gpu:$0 --time 10-00:00:00
+---
+
+# run the recipe
 ./run.sh
 ```
 
