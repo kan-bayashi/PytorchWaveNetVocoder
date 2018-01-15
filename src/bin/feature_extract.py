@@ -13,11 +13,11 @@ import sys
 
 import numpy as np
 from numpy.matlib import repmat
-
 from scipy.interpolate import interp1d
 from scipy.io import wavfile
 from scipy.signal import firwin, lfilter
 from sprocket.speech.feature_extractor import FeatureExtractor
+
 from utils import find_files, read_txt, write_hdf5
 
 FS = 22050
