@@ -4,7 +4,8 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division, print_function
+from __future__ import division
+from __future__ import print_function
 
 import argparse
 import multiprocessing as mp
@@ -15,10 +16,13 @@ import numpy as np
 from numpy.matlib import repmat
 from scipy.interpolate import interp1d
 from scipy.io import wavfile
-from scipy.signal import firwin, lfilter
+from scipy.signal import firwin
+from scipy.signal import lfilter
 from sprocket.speech.feature_extractor import FeatureExtractor
 
-from utils import find_files, read_txt, write_hdf5
+from utils import find_files
+from utils import read_txt
+from utils import write_hdf5
 
 FS = 22050
 SHIFTMS = 5
@@ -73,7 +77,7 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
     fil = firwin(numtaps, norm_cutoff)
     x_pad = np.pad(x, (numtaps, numtaps), 'edge')
     lpf_x = lfilter(fil, 1, x_pad)
-    lpf_x = lpf_x[numtaps+numtaps//2:-numtaps//2]
+    lpf_x = lpf_x[numtaps + numtaps // 2: -numtaps // 2]
 
     return lpf_x
 
@@ -104,6 +108,7 @@ def extend_time(feats, upsampling_factor):
 
 def convert_continuos_f0(f0):
     """CONVERT F0 TO CONTINUOUS F0
+
     Args:
         f0 (ndarray): original f0 sequence with the shape (T)
 
@@ -187,12 +192,12 @@ def main():
 
     # define feature extractor
     feature_extractor = FeatureExtractor(
-            analyzer="world",
-            fs=args.fs,
-            shiftms=args.shiftms,
-            minf0=args.minf0,
-            maxf0=args.maxf0,
-            fftl=args.fftl)
+        analyzer="world",
+        fs=args.fs,
+        shiftms=args.shiftms,
+        minf0=args.minf0,
+        maxf0=args.maxf0,
+        fftl=args.fftl)
 
     # check directory existence
     if not os.path.exists(args.wavdir):
@@ -216,7 +221,7 @@ def main():
             # extract features
             f0, spc, ap = feature_extractor.analyze(x)
             uv, cont_f0 = convert_continuos_f0(f0)
-            cont_f0_lpf = low_pass_filter(cont_f0, int(1.0/(args.shiftms*0.001)), cutoff=20)
+            cont_f0_lpf = low_pass_filter(cont_f0, int(1.0 / (args.shiftms * 0.001)), cutoff=20)
             codeap = feature_extractor.codeap()
             mcep = feature_extractor.mcep(dim=args.mcep_dim, alpha=args.mcep_alpha)
 

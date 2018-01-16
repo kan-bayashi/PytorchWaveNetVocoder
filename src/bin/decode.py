@@ -12,15 +12,19 @@ import os
 import sys
 
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 import soundfile as sf
 import torch
-import torch.multiprocessing as mp
-from sklearn.preprocessing import StandardScaler
 from torch.autograd import Variable
+import torch.multiprocessing as mp
 from torchvision import transforms
 
-from utils import find_files, read_hdf5, read_txt
-from wavenet import WaveNet, decode_mu_law, encode_mu_law
+from utils import find_files
+from utils import read_hdf5
+from utils import read_txt
+from wavenet import decode_mu_law
+from wavenet import encode_mu_law
+from wavenet import WaveNet
 
 
 def decode_generator(feat_list, wav_transform=None,

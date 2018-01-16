@@ -9,11 +9,12 @@ from __future__ import absolute_import
 import logging
 
 import numpy as np
-import pytest
 import torch
 from torch.autograd import Variable
 
-from wavenet import WaveNet, encode_mu_law, initialize
+from wavenet import encode_mu_law
+from wavenet import initialize
+from wavenet import WaveNet
 
 # set log level
 logging.basicConfig(level=logging.DEBUG,
@@ -28,7 +29,7 @@ def sine_generator(seq_size=100, mu=256):
     while True:
         ys = data[:seq_size]
         ys = encode_mu_law(data, mu)
-        yield Variable(torch.from_numpy(ys[:seq_size]).cuda())
+        yield Variable(torch.from_numpy(ys[:seq_size]))
 
 
 def test_forward():
@@ -54,6 +55,9 @@ def test_forward():
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
+    batch_input = batch.view(1, -1)
+    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) // 10).float())
+
     # define model with upsampling and kernel size = 2
     net = WaveNet(256, 28, 32, 128, 10, 1, 2, 10)
     net.apply(initialize)
@@ -77,11 +81,12 @@ def test_generate():
     generator = sine_generator(100)
     batch = next(generator)
     batch_input = batch.view(1, -1)
-    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1)).float())
+    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) + length).float())
 
     # define model without upsampling and with kernel size = 2
     net = WaveNet(256, 28, 16, 32, 10, 3, 2)
     net.apply(initialize)
+    net.cpu()
     net.eval()
     gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
     gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
@@ -90,14 +95,20 @@ def test_generate():
     # define model without upsampling and with kernel size = 3
     net = WaveNet(256, 28, 16, 32, 10, 3, 3)
     net.apply(initialize)
+    net.cpu()
     net.eval()
     gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
     gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
     np.testing.assert_array_equal(gen1, gen2)
 
+    batch_input = batch.view(1, -1)
+    batch_aux = Variable(
+        torch.rand(1, 28, (batch_input.size(1) + length) // 10 * 2).float())
+
     # define model with upsampling and kernel size = 2
     net = WaveNet(256, 28, 16, 32, 10, 3, 2, 10)
     net.apply(initialize)
+    net.cpu()
     net.eval()
     gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
     gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
@@ -106,6 +117,7 @@ def test_generate():
     # define model with upsampling and kernel size = 3
     net = WaveNet(256, 28, 16, 32, 10, 3, 3, 10)
     net.apply(initialize)
+    net.cpu()
     net.eval()
     gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
     gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")

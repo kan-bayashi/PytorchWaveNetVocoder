@@ -11,9 +11,9 @@ import time
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-from torch import nn
 from torch.autograd import Variable
+from torch import nn
+import torch.nn.functional as F
 
 
 def encode_mu_law(x, mu=256):
@@ -43,7 +43,7 @@ def decode_mu_law(y, mu=256):
     """
     mu = mu - 1
     fx = (y - 0.5) / mu * 2 - 1
-    x = np.sign(fx) / mu * ((1 + mu)**np.abs(fx) - 1)
+    x = np.sign(fx) / mu * ((1 + mu) ** np.abs(fx) - 1)
     return x
 
 
@@ -63,12 +63,13 @@ def initialize(m):
 
 
 class OneHot(nn.Module):
-    """CONVERT TO ONE-HOT VECTOR"""
+    """CONVERT TO ONE-HOT VECTOR
+
+    Arg:
+        depth (int): dimension of one-hot vector
+    """
+
     def __init__(self, depth):
-        """
-        Arg:
-            depth (int): dimension of one-hot vector
-        """
         super(OneHot, self).__init__()
         self.depth = depth
         if torch.cuda.is_available():
@@ -77,7 +78,8 @@ class OneHot(nn.Module):
             self.ones = torch.eye(depth)
 
     def forward(self, x):
-        """
+        """Forward calculation
+
         Arg:
             x (Variable): long tensor variable with the shape  (1 x T)
 
@@ -93,6 +95,7 @@ class OneHot(nn.Module):
 
 class CausalConv1d(nn.Module):
     """1D DILATED CAUSAL CONVOLUTION"""
+
     def __init__(self, in_channels, out_channels, kernel_size, dilation=1, bias=True):
         super(CausalConv1d, self).__init__()
         self.in_channels = in_channels
@@ -104,7 +107,8 @@ class CausalConv1d(nn.Module):
                               padding=padding, dilation=dilation, bias=bias)
 
     def forward(self, x):
-        """
+        """Forward calculation
+
         Arg:
             x (Variable): float tensor variable with the shape  (1 x C x T)
 
@@ -118,12 +122,13 @@ class CausalConv1d(nn.Module):
 
 
 class UpSampling(nn.Module):
-    """ UPSAMPLING LAYER WITH DECONVOLUTION"""
+    """UPSAMPLING LAYER WITH DECONVOLUTION
+
+    Arg:
+        upsampling_factor (int): upsampling factor
+    """
+
     def __init__(self, upsampling_factor, bias=True):
-        """
-        Arg:
-            upsampling_factor (int): upsampling factor
-        """
         super(UpSampling, self).__init__()
         self.upsampling_factor = upsampling_factor
         self.bias = bias
@@ -133,7 +138,8 @@ class UpSampling(nn.Module):
                                        bias=self.bias)
 
     def forward(self, x):
-        """
+        """Forward calculation
+
         Arg:
             x (Variable): float tensor variable with the shape  (1 x C x T)
 
@@ -147,20 +153,21 @@ class UpSampling(nn.Module):
 
 
 class WaveNet(nn.Module):
-    """CONDITIONAL WAVENET"""
+    """CONDITIONAL WAVENET
+
+    Args:
+        n_quantize (int): number of quantization
+        n_aux (int): number of aux feature dimension
+        n_resch (int): number of filter channels for residual block
+        n_skipch (int): number of filter channels for skip connection
+        dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2^(10-1))
+        dilation_repeat (int): number of dilation repeat
+        kernel_size (int): filter size of dilated causal convolution
+        upsampling_factor (int): upsampling factor
+    """
+
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
                  dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=0):
-        """
-        Args:
-            n_quantize (int): number of quantization
-            n_aux (int): number of aux feature dimension
-            n_resch (int): number of filter channels for residual block
-            n_skipch (int): number of filter channels for skip connection
-            dilation_depth (int): number of dilation depth (e.g. if set 10, max dilation = 2**(10-1))
-            dilation_repeat (int): number of dilation repeat
-            kernel_size (int): filter size of dilated causal convolution
-            upsampling_factor (int): upsampling factor
-        """
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
@@ -171,7 +178,7 @@ class WaveNet(nn.Module):
         self.dilation_repeat = dilation_repeat
         self.upsampling_factor = upsampling_factor
 
-        self.dilations = [2**i for i in range(self.dilation_depth)] * self.dilation_repeat
+        self.dilations = [2 ** i for i in range(self.dilation_depth)] * self.dilation_repeat
         self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
 
         # for preprocessing
@@ -200,7 +207,8 @@ class WaveNet(nn.Module):
         self.conv_post_2 = nn.Conv1d(self.n_skipch, self.n_quantize, 1)
 
     def forward(self, x, h):
-        """
+        """Forward calculation
+
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
             h (Variable): float tensor variable with the shape  (1 x n_aux x T)
@@ -229,7 +237,8 @@ class WaveNet(nn.Module):
         return output
 
     def generate(self, x, h, n_samples, intervals=None, mode="sampling"):
-        """
+        """Normal generation
+
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
             h (Variable): long tensor variable with the shape  (1 x n_samples + T)
@@ -255,8 +264,11 @@ class WaveNet(nn.Module):
         start = time.time()
         for i in range(n_samples):
             current_idx = len(samples)
-            x = Variable(torch.LongTensor(samples[-self.receptive_field:]).view(1, -1).cuda(),
-                         volatile=True)
+            x = Variable(
+                torch.LongTensor(samples[-self.receptive_field:]).view(1, -1),
+                volatile=True)
+            if torch.cuda.is_available():
+                x = x.cuda()
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
 
             # calculate output
@@ -294,7 +306,8 @@ class WaveNet(nn.Module):
         return np.array(samples[-n_samples:])
 
     def fast_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
-        """
+        """Fast generation
+
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
             h (Variable): long tensor variable with the shape  (1 x n_samples + T)
@@ -325,7 +338,7 @@ class WaveNet(nn.Module):
                 output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
                 self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
                 self.skip_1x1[l], self.res_1x1[l])
-            if d == 2**(self.dilation_depth - 1):
+            if d == 2 ** (self.dilation_depth - 1):
                 buffer_size.append(self.kernel_size - 1)
             else:
                 buffer_size.append(d * 2 * (self.kernel_size - 1))

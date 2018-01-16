@@ -11,13 +11,14 @@ matrix:
 
 install:
   - pip install -U pip wheel
+  - pip install virtualenv
   - pip install -r ./tools/test_requirements.txt
   - pip3 install numpy
   - pip3 install http://download.pytorch.org/whl/cpu/torch-0.3.0.post4-cp36-cp36m-linux_x86_64.whl
   - pip3 install torchvision
 
 script:
-  - flake8 src test
+  - flake8 src test 
   - autopep8 -r src test --exclude src/utils --global-config .pep8 --diff --max-line-length 120 | tee check_autopep8
   - test ! -s check_autopep8
   - pytest
@@ -29,4 +30,3 @@ addons:
     packages:
       - cmake
       - python3-dev
-      - virtualenv
