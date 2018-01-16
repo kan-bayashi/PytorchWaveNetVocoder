@@ -70,7 +70,7 @@ $ ./run.sh
 
 ## Use pre-trained model
 
-Under construction.
+Download pre-trained model from [here](https://www.dropbox.com/s/ifq9xw6gh1o3tzt/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0).
 
 ## Results
 
