@@ -55,6 +55,9 @@ def test_forward():
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
+    batch_input = batch.view(1, -1)
+    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) // 10).float())
+
     # define model with upsampling and kernel size = 2
     net = WaveNet(256, 28, 32, 128, 10, 1, 2, 10)
     net.apply(initialize)
@@ -95,6 +98,9 @@ def test_generate():
     gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
     gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
     np.testing.assert_array_equal(gen1, gen2)
+
+    batch_input = batch.view(1, -1)
+    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) // 10).float())
 
     # define model with upsampling and kernel size = 2
     net = WaveNet(256, 28, 16, 32, 10, 3, 2, 10)
