@@ -100,7 +100,7 @@ def test_generate():
     np.testing.assert_array_equal(gen1, gen2)
 
     batch_input = batch.view(1, -1)
-    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) // 10).float())
+    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) // 10 * 2).float())
 
     # define model with upsampling and kernel size = 2
     net = WaveNet(256, 28, 16, 32, 10, 3, 2, 10)
