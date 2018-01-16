@@ -68,6 +68,7 @@ class OneHot(nn.Module):
     Arg:
         depth (int): dimension of one-hot vector
     """
+
     def __init__(self, depth):
         super(OneHot, self).__init__()
         self.depth = depth
@@ -94,6 +95,7 @@ class OneHot(nn.Module):
 
 class CausalConv1d(nn.Module):
     """1D DILATED CAUSAL CONVOLUTION"""
+
     def __init__(self, in_channels, out_channels, kernel_size, dilation=1, bias=True):
         super(CausalConv1d, self).__init__()
         self.in_channels = in_channels
@@ -125,6 +127,7 @@ class UpSampling(nn.Module):
     Arg:
         upsampling_factor (int): upsampling factor
     """
+
     def __init__(self, upsampling_factor, bias=True):
         super(UpSampling, self).__init__()
         self.upsampling_factor = upsampling_factor
@@ -162,6 +165,7 @@ class WaveNet(nn.Module):
         kernel_size (int): filter size of dilated causal convolution
         upsampling_factor (int): upsampling factor
     """
+
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
                  dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=0):
         super(WaveNet, self).__init__()

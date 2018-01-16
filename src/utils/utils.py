@@ -148,6 +148,7 @@ class BackgroundGenerator(threading.Thread):
         generator (object): generator instance
         max_prefetch (int): max number of prefetch
     """
+
     def __init__(self, generator, max_prefetch=1):
         threading.Thread.__init__(self)
         if sys.version_info.major == 2:
@@ -179,6 +180,7 @@ class BackgroundGenerator(threading.Thread):
 
 class background(object):
     """BACKGROUND GENERATOR DECORATOR"""
+
     def __init__(self, max_prefetch=1):
         self.max_prefetch = max_prefetch
 
