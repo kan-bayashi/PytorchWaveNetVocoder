@@ -13,34 +13,34 @@ Recommend to use the GPU with 10GB> memory.
 
 ## Setup
 ```bash
-git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
-cd PytorchWaveNetVocoder/tools
-make -j
+$ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
+$ cd PytorchWaveNetVocoder/tools
+$ make -j
 ```
 
 ## Run example
 All examples are based on kaldi-style recipe.  
 ```bash
 # build SD model
-cd egs/arctic/sd
-./run.sh 
+$ cd egs/arctic/sd
+$ ./run.sh 
 
 # build SI-CLOSE model
-cd egs/arctic/si-close
-./run.sh 
+$ cd egs/arctic/si-close
+$ ./run.sh 
 
 # build SI-OPEN model
-cd egs/arctic/si-open
-./run.sh
+$ cd egs/arctic/si-open
+$ ./run.sh
 ```
 
 If slurm is installed in your servers, you can run recipes with slurm.
 
 ```bash
-cd egs/arctic/sd
+$ cd egs/arctic/sd
 
 # edit configuration
-vim cmd.sh # please edit as follows
+$ vim cmd.sh # please edit as follows
 ---
 # for local
 # export train_cmd="run.pl"
@@ -51,7 +51,7 @@ export train_cmd="slurm.pl --config conf/slurm.conf"
 export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
 ---
 
-vim conf/slurm.conf # edit <your_partition_name>
+$ vim conf/slurm.conf # edit <your_partition_name>
 ---
 command sbatch --export=PATH  --ntasks-per-node=1
 option time=* --time $0
@@ -65,7 +65,7 @@ option gpu=* -p <your_partion_name> --gres=gpu:$0 --time 10-00:00:00
 ---
 
 # run the recipe
-./run.sh
+$ ./run.sh
 ```
 
 ## Use pre-trained model
