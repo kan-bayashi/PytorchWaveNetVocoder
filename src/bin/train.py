@@ -4,27 +4,33 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division, print_function
+from __future__ import division
+from __future__ import print_function
 
 import argparse
+from dateutil.relativedelta import relativedelta
+from distutils.util import strtobool
 import logging
 import os
 import sys
 import time
-from distutils.util import strtobool
 
 import numpy as np
 import six
+from sklearn.preprocessing import StandardScaler
 import soundfile as sf
 import torch
-from dateutil.relativedelta import relativedelta
-from sklearn.preprocessing import StandardScaler
-from torch import nn
 from torch.autograd import Variable
+from torch import nn
 from torchvision import transforms
 
-from utils import background, find_files, read_hdf5, read_txt
-from wavenet import WaveNet, encode_mu_law, initialize
+from utils import background
+from utils import find_files
+from utils import read_hdf5
+from utils import read_txt
+from wavenet import encode_mu_law
+from wavenet import initialize
+from wavenet import WaveNet
 
 
 def validate_length(x, y, upsampling_factor=0):
@@ -202,7 +208,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
             else:
                 # remove last frame
                 h = h[:-1]
-                x = x[:-upsampling_factor+1]
+                x = x[:-upsampling_factor + 1]
 
                 # perform pre-processing
                 if wav_transform is not None:
@@ -376,14 +382,14 @@ def main():
     assert len(wav_list) == len(feat_list)
     logging.info("number of training data = %d." % len(wav_list))
     generator = train_generator(
-            wav_list, feat_list,
-            receptive_field=model.receptive_field,
-            batch_size=args.batch_size,
-            wav_transform=wav_transform,
-            feat_transform=feat_transform,
-            shuffle=True,
-            upsampling_factor=args.upsampling_factor,
-            use_speaker_code=args.use_speaker_code)
+        wav_list, feat_list,
+        receptive_field=model.receptive_field,
+        batch_size=args.batch_size,
+        wav_transform=wav_transform,
+        feat_transform=feat_transform,
+        shuffle=True,
+        upsampling_factor=args.upsampling_factor,
+        use_speaker_code=args.use_speaker_code)
     while not generator.queue.full():
         time.sleep(0.1)
 
@@ -420,7 +426,7 @@ def main():
         loss += batch_loss.data[0]
         total += time.time() - start
         logging.debug("batch loss = %.3f (%.3f sec / batch)" % (
-            batch_loss.data[0], time.time()-start))
+            batch_loss.data[0], time.time() - start))
 
         # report progress
         if (i + 1) % args.intervals == 0:

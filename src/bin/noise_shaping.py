@@ -4,13 +4,14 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division, print_function
+from __future__ import division
+from __future__ import print_function
 
 import argparse
+from distutils.util import strtobool
 import multiprocessing as mp
 import os
 import sys
-from distutils.util import strtobool
 
 import numpy as np
 from scipy.io import wavfile
@@ -18,7 +19,9 @@ from sprocket.speech.feature_extractor import FeatureExtractor
 from sprocket.speech.synthesizer import Synthesizer
 
 from feature_extract import low_cut_filter
-from utils import find_files, read_hdf5, read_txt
+from utils import find_files
+from utils import read_hdf5
+from utils import read_txt
 
 FS = 22050
 SHIFTMS = 5
@@ -82,16 +85,16 @@ def main():
 
     # define feature extractor
     feature_extractor = FeatureExtractor(
-            analyzer="world",
-            fs=args.fs,
-            shiftms=args.shiftms,
-            fftl=args.fftl)
+        analyzer="world",
+        fs=args.fs,
+        shiftms=args.shiftms,
+        fftl=args.fftl)
 
     # define synthesizer
     synthesizer = Synthesizer(
-            fs=args.fs,
-            shiftms=args.shiftms,
-            fftl=args.fftl)
+        fs=args.fs,
+        shiftms=args.shiftms,
+        fftl=args.fftl)
 
     # check directory existence
     if not os.path.exists(args.writedir):
@@ -123,7 +126,7 @@ def main():
 
             # synthesis and write
             x_ns = synthesizer.synthesis_diff(
-                    x, mlsa_coef, alpha=args.mcep_alpha)
+                x, mlsa_coef, alpha=args.mcep_alpha)
             x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
             if wav_type == np.int16:
                 write_name = args.writedir + "/" + os.path.basename(wav_name)
