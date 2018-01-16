@@ -155,6 +155,8 @@ class UpSampling(nn.Module):
 class WaveNet(nn.Module):
     """CONDITIONAL WAVENET
 
+    Reference [Pytorch Wavenet](https://lirnli.wordpress.com/2017/10/16/pytorch-wavenet/)
+
     Args:
         n_quantize (int): number of quantization
         n_aux (int): number of aux feature dimension
@@ -307,6 +309,8 @@ class WaveNet(nn.Module):
 
     def fast_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
         """Fast generation
+
+        Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
