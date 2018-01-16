@@ -88,7 +88,7 @@ The procedure is as follows:
 ```bash
 cd egs/arctic/si-close
 
-# download pre-trained model
+# download pre-trained model which trained with 6 arctic speakers
 wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # unzip 
@@ -116,7 +116,7 @@ feature_extract.py \
 # make filelist of feature file
 find hdf5/test -name "*.h5" > feats.scp
     
-# decode 
+# decode with pre-trained model
 decode.py \
     --feats feats.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
