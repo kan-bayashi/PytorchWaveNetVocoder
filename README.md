@@ -1,5 +1,7 @@
 # PYTORCH-WAVENET-VOCODER
 
+[![Build Status](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder.svg?branch=master)](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder)
+
 This repository is the wavenet-vocoder implementation with pytorch.  
 
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
