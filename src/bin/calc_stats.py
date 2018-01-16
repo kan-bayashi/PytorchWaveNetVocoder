@@ -11,7 +11,9 @@ import argparse
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-from utils import read_hdf5, read_txt, write_hdf5
+from utils import read_hdf5
+from utils import read_txt
+from utils import write_hdf5
 
 
 def main():

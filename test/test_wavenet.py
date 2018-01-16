@@ -9,11 +9,12 @@ from __future__ import absolute_import
 import logging
 
 import numpy as np
-import pytest
 import torch
 from torch.autograd import Variable
 
-from wavenet import WaveNet, encode_mu_law, initialize
+from wavenet import encode_mu_law
+from wavenet import initialize
+from wavenet import WaveNet
 
 # set log level
 logging.basicConfig(level=logging.DEBUG,
@@ -28,7 +29,7 @@ def sine_generator(seq_size=100, mu=256):
     while True:
         ys = data[:seq_size]
         ys = encode_mu_law(data, mu)
-        yield Variable(torch.from_numpy(ys[:seq_size]).cuda())
+        yield Variable(torch.from_numpy(ys[:seq_size]))
 
 
 def test_forward():

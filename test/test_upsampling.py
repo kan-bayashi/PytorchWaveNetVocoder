@@ -5,11 +5,11 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 import numpy as np
-import pytest
 import torch
 from torch.autograd import Variable
 
-from wavenet import UpSampling, initialize
+from wavenet import initialize
+from wavenet import UpSampling
 
 
 def test_upsampling():
