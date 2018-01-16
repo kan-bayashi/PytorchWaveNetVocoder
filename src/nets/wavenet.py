@@ -264,8 +264,9 @@ class WaveNet(nn.Module):
         start = time.time()
         for i in range(n_samples):
             current_idx = len(samples)
-            x = Variable(torch.LongTensor(samples[-self.receptive_field:]).view(1, -1).cuda(),
-                         volatile=True)
+            x = Variable(torch.LongTensor(samples[-self.receptive_field:]).view(1, -1), volatile=True)
+            if torch.cuda.is_available():
+                x = x.cuda()
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
 
             # calculate output
