@@ -3,7 +3,8 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division, print_function
+from __future__ import division
+from __future__ import print_function
 
 import fnmatch
 import os
@@ -142,13 +143,12 @@ class BackgroundGenerator(threading.Thread):
 
     reference:
         https://stackoverflow.com/questions/7323664/python-generator-pre-fetch
+
+    Args:
+        generator (object): generator instance
+        max_prefetch (int): max number of prefetch
     """
     def __init__(self, generator, max_prefetch=1):
-        """
-        Args:
-            generator (object): generator instance
-            max_prefetch (int): max number of prefetch
-        """
         threading.Thread.__init__(self)
         if sys.version_info.major == 2:
             from Queue import Queue
@@ -177,7 +177,7 @@ class BackgroundGenerator(threading.Thread):
         return self
 
 
-class background:
+class background(object):
     """BACKGROUND GENERATOR DECORATOR"""
     def __init__(self, max_prefetch=1):
         self.max_prefetch = max_prefetch
