@@ -86,20 +86,20 @@ To synthesize your own data, things what you need are as follows:
 The procedure is as follows:
 
 ```bash
-cd egs/arctic/si-close
+$ cd egs/arctic/si-close
 
 # download pre-trained model which trained with 6 arctic speakers
-wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
+$ wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # unzip 
-unzip si-close_lr1e-4_wd0_bs20k_ns_up.zip
+$ unzip si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # make filelist of your own wav files
-find <your_wav_dir> -name "*.wav" > wav.scp
+$ find <your_wav_dir> -name "*.wav" > wav.scp
 
 # feature extraction
-. ./path.sh
-feature_extract.py \
+$ . ./path.sh
+$ feature_extract.py \
     --waveforms wav.scp \
     --wavdir wav/test \
     --hdf5dir hdf5/test \
@@ -114,10 +114,10 @@ feature_extract.py \
     --n_jobs 1 
     
 # make filelist of feature file
-find hdf5/test -name "*.h5" > feats.scp
+$ find hdf5/test -name "*.h5" > feats.scp
     
 # decode with pre-trained model
-decode.py \
+$ decode.py \
     --feats feats.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
     --outdir si-close_lr1e-4_wd0_bs20k_ns_up/wav \
@@ -128,10 +128,10 @@ decode.py \
     --n_gpus 1
 
 # make filelist of generated wav file
-find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
+$ find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
 
 # restore noise shaping
-noise_shaping.py \
+$ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
     --writedir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
