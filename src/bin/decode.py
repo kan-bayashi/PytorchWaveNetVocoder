@@ -184,7 +184,7 @@ def main():
     parser.add_argument("--n_gpus", default=1,
                         type=int, help="number of gpus")
     # other setting
-    parser.add_argument("--intervals", default=5000,
+    parser.add_argument("--intervals", default=1000,
                         type=int, help="log interval")
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
@@ -293,7 +293,6 @@ def main():
                     logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
 
     # parallel decode
-    logging.info("gpu decoding")
     processes = []
     gpu = 0
     for i, feat_list in enumerate(feat_lists):
