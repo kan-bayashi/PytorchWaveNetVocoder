@@ -72,25 +72,29 @@ class OneHot(nn.Module):
     def __init__(self, depth):
         super(OneHot, self).__init__()
         self.depth = depth
-        if torch.cuda.is_available():
-            self.ones = torch.eye(depth).cuda()
-        else:
-            self.ones = torch.eye(depth)
 
     def forward(self, x):
         """Forward calculation
 
         Arg:
-            x (Variable): long tensor variable with the shape  (1 x T)
+            x (Variable): long tensor variable with the shape  (B x T)
 
         Return:
-            (Variable): float tensor variable with the shape (1 x depth x T)
+            (Variable): float tensor variable with the shape (B x depth x T)
         """
-        x_onehot = self.ones.index_select(0, x.data[0]).unsqueeze(0)
+        x = x % self.depth
+        x = torch.unsqueeze(x, 2)
         if self.training:
-            return Variable(x_onehot)
+            x_onehot = Variable(
+                torch.FloatTensor(x.size(0), x.size(1), self.depth).zero_())
         else:
-            return Variable(x_onehot, volatile=True)
+            x_onehot = Variable(
+                torch.FloatTensor(x.size(0), x.size(1), self.depth).zero_(), volatile=True)
+
+        if torch.cuda.is_available():
+            x_onehot = x_onehot.cuda()
+
+        return x_onehot.scatter_(2, x, 1)
 
 
 class CausalConv1d(nn.Module):
@@ -110,10 +114,10 @@ class CausalConv1d(nn.Module):
         """Forward calculation
 
         Arg:
-            x (Variable): float tensor variable with the shape  (1 x C x T)
+            x (Variable): float tensor variable with the shape  (B x C x T)
 
         Return:
-            (Variable): float tensor variable with the shape (1 x C x T)
+            (Variable): float tensor variable with the shape (B x C x T)
         """
         x = self.conv(x)
         if self.padding != 0:
@@ -141,15 +145,15 @@ class UpSampling(nn.Module):
         """Forward calculation
 
         Arg:
-            x (Variable): float tensor variable with the shape  (1 x C x T)
+            x (Variable): float tensor variable with the shape  (B x C x T)
 
         Return:
-            (Variable): float tensor variable with the shape (1 x C x T')
+            (Variable): float tensor variable with the shape (B x C x T')
                         where T' = T * upsampling_factor
         """
-        x = x.unsqueeze(1)  # 1 x 1 x C x T
-        x = self.conv(x)  # 1 x 1 x C x T'
-        return x.view(1, x.size(2), -1)
+        x = x.unsqueeze(1)  # B x 1 x C x T
+        x = self.conv(x)  # B x 1 x C x T'
+        return x.squeeze(1)
 
 
 class WaveNet(nn.Module):
@@ -212,11 +216,11 @@ class WaveNet(nn.Module):
         """Forward calculation
 
         Args:
-            x (Variable): long tensor variable with the shape  (1 x T)
-            h (Variable): float tensor variable with the shape  (1 x n_aux x T)
+            x (Variable): long tensor variable with the shape  (B x T)
+            h (Variable): float tensor variable with the shape  (B x n_aux x T)
 
         Return:
-            (Variable): float tensor variable with the shape (T x n_quantize)
+            (Variable): float tensor variable with the shape (B x T x n_quantize)
         """
         # preprocess
         output = self._preprocess(x)
@@ -239,11 +243,11 @@ class WaveNet(nn.Module):
         return output
 
     def generate(self, x, h, n_samples, intervals=None, mode="sampling"):
-        """Normal generation
+        """Sample-by-sample generation
 
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
-            h (Variable): long tensor variable with the shape  (1 x n_samples + T)
+            h (Variable): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
             mode (str): "sampling" or "argmax"
@@ -283,7 +287,7 @@ class WaveNet(nn.Module):
                     self.skip_1x1[l], self.res_1x1[l])
                 skip_connections.append(skip)
             output = sum(skip_connections)
-            output = self._postprocess(output)
+            output = self._postprocess(output)[0]  # T x n_quantize
 
             # get waveform
             if mode == "sampling":
@@ -308,13 +312,13 @@ class WaveNet(nn.Module):
         return np.array(samples[-n_samples:])
 
     def fast_generate(self, x, h, n_samples, intervals=None, mode="sampling"):
-        """Fast generation
+        """Sample-by-sample fast generation
 
         Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
             x (Variable): long tensor variable with the shape  (1 x T)
-            h (Variable): long tensor variable with the shape  (1 x n_samples + T)
+            h (Variable): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
             mode (str): "sampling" or "argmax"
@@ -371,7 +375,7 @@ class WaveNet(nn.Module):
 
             # get predicted sample
             output = sum(skip_connections)
-            output = self._postprocess(output)
+            output = self._postprocess(output)[0]
             if mode == "sampling":
                 posterior = F.softmax(output[-1], dim=0)
                 dist = torch.distributions.Categorical(posterior)
@@ -393,6 +397,100 @@ class WaveNet(nn.Module):
 
         return samples[-n_samples:].cpu().numpy()
 
+    def batch_fast_generate(self, x, h, n_samples_list, intervals=None, mode="sampling"):
+        """Batch fast generation
+
+        Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
+
+        Args:
+            x (Variable): long tensor variable with the shape  (B x T)
+            h (Variable): float tensor variable with the shape  (B x max(n_samples_list) + T)
+            n_samples_list (list): list of number of samples to be generated (B)
+            intervals (int): log interval
+            mode (str): "sampling" or "argmax"
+
+        Return:
+            (ndarray): generated quantized wavenform (n_samples)
+        """
+        # set max length
+        max_samples = max(n_samples_list)
+
+        # upsampling
+        if self.upsampling_factor > 0:
+            h = self.upsampling(h)
+
+        # padding if the length less than
+        n_pad = self.receptive_field - x.size(1)
+        if n_pad > 0:
+            x = F.pad(x, (n_pad, 0), "constant", self.n_quantize // 2)
+            h = F.pad(h, (n_pad, 0), "replicate")
+
+        # prepare buffer
+        output = self._preprocess(x)
+        h_ = h[:, :, :x.size(1)]
+        output_buffer = []
+        buffer_size = []
+        for l, d in enumerate(self.dilations):
+            output, _ = self._residual_forward(
+                output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
+                self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
+                self.skip_1x1[l], self.res_1x1[l])
+            if d == 2 ** (self.dilation_depth - 1):
+                buffer_size.append(self.kernel_size - 1)
+            else:
+                buffer_size.append(d * 2 * (self.kernel_size - 1))
+            output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
+
+        # generate
+        samples = x.data  # B x T
+        start = time.time()
+        for i in range(max_samples):
+            output = Variable(samples[:, -self.kernel_size * 2 - 1:], volatile=True)
+            output = self._preprocess(output)
+            h_ = h[:, :, len(samples) - 1].contiguous().unsqueeze(2)
+            output_buffer_next = []
+            skip_connections = []
+            for l, d in enumerate(self.dilations):
+                output, skip = self._generate_residual_forward(
+                    output, h_, self.dil_sigmoid[l], self.dil_tanh[l],
+                    self.aux_1x1_sigmoid[l], self.aux_1x1_tanh[l],
+                    self.skip_1x1[l], self.res_1x1[l])
+                output = torch.cat([output_buffer[l], output], dim=2)
+                output_buffer_next.append(output[:, :, -buffer_size[l]:])
+                skip_connections.append(skip)
+
+            # update buffer
+            output_buffer = output_buffer_next
+
+            # get predicted sample
+            output = sum(skip_connections)
+            output = self._postprocess(output)[:, -1]  # B x n_quantize
+            if mode == "sampling":
+                posterior = F.softmax(output, dim=-1)
+                dist = torch.distributions.Categorical(posterior)
+                sample = dist.sample().data  # B
+            elif mode == "argmax":
+                sample = output.max(-1)[-1].data  # B
+            else:
+                logging.error("mode should be sampling or argmax")
+                sys.exit(1)
+            samples = torch.cat([samples, sample], dim=1)
+
+            # show progress
+            if intervals is not None and (i + 1) % intervals == 0:
+                logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
+                    i + 1, max_samples,
+                    (max_samples - i - 1) * ((time.time() - start) / intervals),
+                    (time.time() - start) / intervals))
+                start = time.time()
+
+        # devide into each waveform
+        samples = samples[:, -max_samples:].cpu().numpy()
+        samples_list = np.split(samples, samples.shape[0], axis=0)
+        samples_list = [s[0, :n_s] for s, n_s in zip(samples_list, n_samples_list)]
+
+        return samples_list
+
     def _preprocess(self, x):
         x = self.onehot(x).transpose(1, 2)
         output = self.causal(x)
@@ -401,8 +499,8 @@ class WaveNet(nn.Module):
     def _postprocess(self, x):
         output = F.relu(x)
         output = self.conv_post_1(output)
-        output = F.relu(output)
-        output = self.conv_post_2(output).squeeze(0).transpose(0, 1)
+        output = F.relu(output)  # B x C x T
+        output = self.conv_post_2(output).transpose(1, 2)  # B x T x C
         return output
 
     def _residual_forward(self, x, h, dil_sigmoid, dil_tanh,
@@ -428,5 +526,5 @@ class WaveNet(nn.Module):
             F.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
-        output = output + x[:, :, -1:]
+        output = output + x[:, :, -1:]  # B x T x 1
         return output, skip
