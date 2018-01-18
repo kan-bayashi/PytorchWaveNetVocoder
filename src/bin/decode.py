@@ -8,6 +8,7 @@ from __future__ import division
 
 import argparse
 import logging
+import math
 import os
 import sys
 
@@ -22,18 +23,41 @@ from torchvision import transforms
 from utils import find_files
 from utils import read_hdf5
 from utils import read_txt
+from utils import shape_hdf5
 from wavenet import decode_mu_law
 from wavenet import encode_mu_law
 from wavenet import WaveNet
 
 
-def decode_generator(feat_list, wav_transform=None,
-                     feat_transform=None, use_speaker_code=False,
-                     upsampling_factor=0):
+def pad_list(batch_list, pad_value=0.0):
+    """FUNCTION TO PAD VALUE
+
+    Args:
+        batch_list (list): list of batch, where the shape of i-th batch (T_i, C)
+        pad_value (float): value to pad
+
+    Return:
+        (ndarray): padded batch with the shape (B, T_max, C)
+
+    """
+    batch_size = len(batch_list)
+    maxlen = max([batch.shape[0] for batch in batch_list])
+    n_feats = batch_list[0].shape[-1]
+    batch_pad = np.zeros((batch_size, maxlen, n_feats))
+    for idx, batch in enumerate(batch_list):
+        batch_pad[idx, :batch.shape[0]] = batch
+
+    return batch_pad
+
+
+def decode_generator(feat_list, batch_size=32,
+                     wav_transform=None, feat_transform=None,
+                     use_speaker_code=False, upsampling_factor=0):
     """DECODE BATCH GENERATOR
 
     Args:
         featdir (str): directory including feat files
+        batch_size (int): batch size in decoding
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
         use_speaker_code (bool): whether to use speaker code
@@ -42,33 +66,102 @@ def decode_generator(feat_list, wav_transform=None,
     Return:
         (object): generator instance
     """
-    # process over all of files
-    for featfile in feat_list:
-        x = np.zeros((1))
+    # for sample-by-sample generation
+    if batch_size == 1:
+        for featfile in feat_list:
+            x = np.zeros((1))
+            if upsampling_factor == 0:
+                h = read_hdf5(featfile, "/feat")
+            else:
+                h = read_hdf5(featfile, "/feat_org")
+            if use_speaker_code:
+                sc = read_hdf5(featfile, "/speaker_code")
+                sc = np.tile(sc, [h.shape[0], 1])
+                h = np.concatenate([h, sc], axis=1)
+
+            # perform pre-processing
+            if wav_transform is not None:
+                x = wav_transform(x)
+            if feat_transform is not None:
+                h = feat_transform(h)
+
+            # convert to torch variable
+            x = Variable(torch.from_numpy(x).long(), volatile=True)
+            h = Variable(torch.from_numpy(h).float(), volatile=True)
+            if torch.cuda.is_available():
+                x = x.cuda()
+                h = h.cuda()
+            x = x.unsqueeze(0)  # 1 => 1 x 1
+            h = h.transpose(0, 1).unsqueeze(0)  # T x C => 1 x C x T
+
+            # get target length and file id
+            if upsampling_factor == 0:
+                n_samples = h.size(2) - 1
+            else:
+                n_samples = h.size(2) * upsampling_factor - 1
+            feat_id = os.path.basename(featfile).replace(".h5", "")
+
+            yield feat_id, (x, h, n_samples)
+
+    # for batch generation
+    else:
+        # sort with the feature length
         if upsampling_factor == 0:
-            h = read_hdf5(featfile, "/feat")
+            shape_list = [shape_hdf5(f, "/feat")[0] for f in feat_list]
         else:
-            h = read_hdf5(featfile, "/feat_org")
-        if use_speaker_code:
-            sc = read_hdf5(featfile, "/speaker_code")
-            sc = np.tile(sc, [h.shape[0], 1])
-            h = np.concatenate([h, sc], axis=1)
+            shape_list = [shape_hdf5(f, "/feat_org")[0] for f in feat_list]
+        idx = np.argsort(shape_list)
+        feat_list = [feat_list[i] for i in idx]
 
-        # perform pre-processing
-        if wav_transform is not None:
-            x = wav_transform(x)
-        if feat_transform is not None:
-            h = feat_transform(h)
+        # divide into batch list
+        n_batch = math.ceil(len(feat_list) / batch_size)
+        batch_lists = np.array_split(feat_list, n_batch)
+        batch_lists = [f.tolist() for f in batch_lists]
 
-        x = x.unsqueeze(0)
-        h = h.transpose(0, 1).unsqueeze(0)
-        if upsampling_factor == 0:
-            n_samples = h.size(2) - 1
-        else:
-            n_samples = h.size(2) * upsampling_factor - 1
-        feat_id = os.path.basename(featfile).replace(".h5", "")
+        for batch_list in batch_lists:
+            batch_x = []
+            batch_h = []
+            n_samples_list = []
+            feat_ids = []
+            for featfile in batch_list:
+                # make seed waveform and load aux feature
+                x = np.zeros((1))
+                if upsampling_factor == 0:
+                    h = read_hdf5(featfile, "/feat")
+                else:
+                    h = read_hdf5(featfile, "/feat_org")
+                if use_speaker_code:
+                    sc = read_hdf5(featfile, "/speaker_code")
+                    sc = np.tile(sc, [h.shape[0], 1])
+                    h = np.concatenate([h, sc], axis=1)
 
-        yield feat_id, (x, h, n_samples)
+                # perform pre-processing
+                if wav_transform is not None:
+                    x = wav_transform(x)
+                if feat_transform is not None:
+                    h = feat_transform(h)
+
+                # append to list
+                batch_x += [x]
+                batch_h += [h]
+                if upsampling_factor == 0:
+                    n_samples_list += [h.shape[0] - 1]
+                else:
+                    n_samples_list += [h.shape[0] * upsampling_factor - 1]
+                feat_ids += [os.path.basename(featfile).replace(".h5", "")]
+
+            # convert list to ndarray
+            batch_x = np.stack(batch_x, axis=0)
+            batch_h = pad_list(batch_h)
+
+            # convert to torch variable
+            batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True)
+            batch_h = Variable(torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2)
+            if torch.cuda.is_available():
+                batch_x = batch_x.cuda()
+                batch_h = batch_h.cuda()
+
+            yield feat_ids, (batch_x, batch_h, n_samples_list)
 
 
 def main():
@@ -86,8 +179,8 @@ def main():
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
-    parser.add_argument("--n_jobs", default=5,
-                        type=int, help="number of parallel jobs per gpu")
+    parser.add_argument("--batch_size", default=32,
+                        type=int, help="number of batch size in decoding")
     parser.add_argument("--n_gpus", default=1,
                         type=int, help="number of gpus")
     # other setting
@@ -142,11 +235,17 @@ def main():
         sys.exit(1)
 
     # prepare the file list for parallel decoding
-    if args.n_gpus > 0:
-        feat_lists = np.array_split(feat_list, args.n_jobs * args.n_gpus)
-    else:
-        feat_lists = np.array_split(feat_list, args.n_jobs)
+    feat_lists = np.array_split(feat_list, args.n_gpus)
     feat_lists = [f_list.tolist() for f_list in feat_lists]
+
+    # define transform
+    scaler = StandardScaler()
+    scaler.mean_ = read_hdf5(args.stats, "/mean")
+    scaler.scale_ = read_hdf5(args.stats, "/scale")
+    wav_transform = transforms.Compose([
+        lambda x: encode_mu_law(x, config.n_quantize)])
+    feat_transform = transforms.Compose([
+        lambda x: scaler.transform(x)])
 
     # define gpu decode function
     def gpu_decode(feat_list, gpu):
@@ -166,105 +265,44 @@ def main():
             model.cuda()
             torch.backends.cudnn.benchmark = True
 
-            # define transform
-            scaler = StandardScaler()
-            scaler.mean_ = read_hdf5(args.stats, "/mean")
-            scaler.scale_ = read_hdf5(args.stats, "/scale")
-            wav_transform = transforms.Compose([
-                lambda x: encode_mu_law(x, config.n_quantize),
-                lambda x: torch.from_numpy(x).long().cuda(),
-                lambda x: Variable(x, volatile=True)])
-            feat_transform = transforms.Compose([
-                lambda x: scaler.transform(x),
-                lambda x: torch.from_numpy(x).float().cuda(),
-                lambda x: Variable(x, volatile=True)])
-
             # define generator
             generator = decode_generator(
                 feat_list,
+                batch_size=args.batch_size,
                 wav_transform=wav_transform,
                 feat_transform=feat_transform,
                 use_speaker_code=config.use_speaker_code,
                 upsampling_factor=config.upsampling_factor)
 
             # decode
-            for feat_id, (x, h, n_samples) in generator:
-                if os.path.exists(args.outdir + "/" + feat_id + ".wav"):
-                    logging.info("%s already exists." % feat_id)
-                else:
+            if args.batch_size > 1:
+                for feat_ids, (batch_x, batch_h, n_samples_list) in generator:
+                    logging.info("decoding start")
+                    samples_list = model.batch_fast_generate(
+                        batch_x, batch_h, n_samples_list, args.intervals)
+                    for feat_id, samples in zip(feat_ids, samples_list):
+                        wav = decode_mu_law(samples, config.n_quantize)
+                        sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+                        logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
+            else:
+                for feat_id, (x, h, n_samples) in generator:
                     logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
                     samples = model.fast_generate(x, h, n_samples, args.intervals)
                     wav = decode_mu_law(samples, config.n_quantize)
                     sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
                     logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
 
-    # define cpu decode function
-    def cpu_decode(feat_list):
-        # define model and load parameters
-        model = WaveNet(
-            n_quantize=config.n_quantize,
-            n_aux=config.n_aux,
-            n_resch=config.n_resch,
-            n_skipch=config.n_skipch,
-            dilation_depth=config.dilation_depth,
-            dilation_repeat=config.dilation_repeat,
-            kernel_size=config.kernel_size,
-            upsampling_factor=config.upsampling_factor)
-        model.load_state_dict(torch.load(args.checkpoint)["model"])
-        model.eval()
-        model.cpu()
-
-        # define transform
-        scaler = StandardScaler()
-        scaler.mean_ = read_hdf5(args.stats, "/mean")
-        scaler.scale_ = read_hdf5(args.stats, "/scale")
-        wav_transform = transforms.Compose([
-            lambda x: encode_mu_law(x, config.n_quantize),
-            lambda x: torch.from_numpy(x).long(),
-            lambda x: Variable(x, volatile=True)])
-        feat_transform = transforms.Compose([
-            lambda x: scaler.transform(x),
-            lambda x: torch.from_numpy(x).float(),
-            lambda x: Variable(x, volatile=True)])
-
-        # define generator
-        generator = decode_generator(
-            feat_list,
-            wav_transform=wav_transform,
-            feat_transform=feat_transform,
-            use_speaker_code=config.use_speaker_code,
-            upsampling_factor=config.upsampling_factor)
-
-        # decode
-        for feat_id, (x, h, n_samples) in generator:
-            if os.path.exists(args.outdir + "/" + feat_id + ".wav"):
-                logging.info("%s already exists." % feat_id)
-            else:
-                logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                samples = model.fast_generate(x, h, n_samples, args.intervals)
-                wav = decode_mu_law(samples, config.n_quantize)
-                sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
-                logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
-
     # parallel decode
-    if args.n_gpus > 0:
-        logging.info("gpu decoding")
-        processes = []
-        gpu = 0
-        for i, feat_list in enumerate(feat_lists):
-            p = mp.Process(target=gpu_decode, args=(feat_list, gpu,))
-            p.start()
-            processes.append(p)
-            gpu += 1
-            if (i + 1) % args.n_gpus == 0:
-                gpu = 0
-    else:
-        logging.info("cpu decoding")
-        processes = []
-        for i, feat_list in enumerate(feat_lists):
-            p = mp.Process(target=cpu_decode, args=(feat_list,))
-            p.start()
-            processes.append(p)
+    logging.info("gpu decoding")
+    processes = []
+    gpu = 0
+    for i, feat_list in enumerate(feat_lists):
+        p = mp.Process(target=gpu_decode, args=(feat_list, gpu,))
+        p.start()
+        processes.append(p)
+        gpu += 1
+        if (i + 1) % args.n_gpus == 0:
+            gpu = 0
 
     # wait for all process
     for p in processes:
