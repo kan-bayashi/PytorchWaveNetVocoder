@@ -63,6 +63,25 @@ def read_hdf5(hdf5_name, hdf5_path):
     return hdf5_data
 
 
+def shape_hdf5(hdf5_name, hdf5_path):
+    """FUNCTION TO GET HDF5 DATASET SHAPE
+
+    Args:
+        hdf5_name (str): filename of hdf5 file
+        hdf5_path (str): dataset name in hdf5 file
+
+    Return:
+        (tuple): shape of dataset
+    """
+    if check_hdf5(hdf5_name, hdf5_path):
+        with h5py.File(hdf5_name, "r") as f:
+            hdf5_shape = f[hdf5_path].shape
+        return hdf5_shape
+    else:
+        print("There is no such a file or dataset")
+        sys.exit(-1)
+
+
 def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
     """FUNCTION TO WRITE DATASET TO HDF5
 
