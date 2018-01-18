@@ -43,7 +43,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -51,7 +51,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -62,7 +62,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2, 10)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -70,7 +70,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 3, 10)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -105,7 +105,7 @@ def test_generate():
     # batch generation
     batch_x = Variable(torch.from_numpy(x).long())
     batch_h = Variable(torch.from_numpy(h).float())
-    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length]*batch, 1, "argmax")
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
     gen3 = np.stack(gen3_list)
     np.testing.assert_array_equal(gen3, gen2)
 
@@ -132,7 +132,7 @@ def test_generate():
     # batch generation
     batch_x = Variable(torch.from_numpy(x).long())
     batch_h = Variable(torch.from_numpy(h).float())
-    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length]*batch, 1, "argmax")
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
     gen3 = np.stack(gen3_list)
     np.testing.assert_array_equal(gen3, gen2)
 
@@ -166,7 +166,7 @@ def test_generate():
     # batch generation
     batch_x = Variable(torch.from_numpy(x).long())
     batch_h = Variable(torch.from_numpy(h).float())
-    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length]*batch, 1, "argmax")
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
     gen3 = np.stack(gen3_list)
     np.testing.assert_array_equal(gen3, gen2)
 
@@ -193,6 +193,6 @@ def test_generate():
     # batch generation
     batch_x = Variable(torch.from_numpy(x).long())
     batch_h = Variable(torch.from_numpy(h).float())
-    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length]*batch, 1, "argmax")
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
     gen3 = np.stack(gen3_list)
     np.testing.assert_array_equal(gen3, gen2)
