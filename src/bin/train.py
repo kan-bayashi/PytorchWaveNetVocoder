@@ -417,7 +417,7 @@ def main():
     for i in six.moves.range(iterations, args.iters):
         start = time.time()
         (batch_x, batch_h), batch_t = generator.next()
-        batch_output = model(batch_x, batch_h)
+        batch_output = model(batch_x, batch_h)[0]
         batch_loss = criterion(batch_output[model.receptive_field:],
                                batch_t[model.receptive_field:])
         optimizer.zero_grad()

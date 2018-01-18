@@ -43,7 +43,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -51,7 +51,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -62,7 +62,7 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 2, 10)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
@@ -70,55 +70,129 @@ def test_forward():
     net = WaveNet(256, 28, 32, 128, 10, 1, 3, 10)
     net.apply(initialize)
     net.eval()
-    y = net(batch_input, batch_aux)
+    y = net(batch_input, batch_aux)[0]
     assert y.size(0) == batch_input.size(1)
     assert y.size(1) == 256
 
 
 def test_generate():
     # get batch
-    length = 100
-    generator = sine_generator(100)
-    batch = next(generator)
-    batch_input = batch.view(1, -1)
-    batch_aux = Variable(torch.rand(1, 28, batch_input.size(1) + length).float())
+    batch = 2
+    x = np.random.randint(0, 256, size=(batch, 1))
+    h = np.random.randn(batch, 28, 100)
+    length = h.shape[-1] - 1
 
     # define model without upsampling and with kernel size = 2
     net = WaveNet(256, 28, 16, 32, 10, 3, 2)
     net.apply(initialize)
-    net.cpu()
     net.eval()
-    gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
-    gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+
+    # sample-by-sample generation
+    gen1_list = []
+    gen2_list = []
+    for x_, h_ in zip(x, h):
+        batch_x = Variable(torch.from_numpy(np.expand_dims(x_, 0)).long())
+        batch_h = Variable(torch.from_numpy(np.expand_dims(h_, 0)).float())
+        gen1 = net.generate(batch_x, batch_h, length, 1, "argmax")
+        gen2 = net.fast_generate(batch_x, batch_h, length, 1, "argmax")
+        np.testing.assert_array_equal(gen1, gen2)
+        gen1_list += [gen1]
+        gen2_list += [gen2]
+    gen1 = np.stack(gen1_list)
+    gen2 = np.stack(gen2_list)
     np.testing.assert_array_equal(gen1, gen2)
+
+    # batch generation
+    batch_x = Variable(torch.from_numpy(x).long())
+    batch_h = Variable(torch.from_numpy(h).float())
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
+    gen3 = np.stack(gen3_list)
+    np.testing.assert_array_equal(gen3, gen2)
 
     # define model without upsampling and with kernel size = 3
     net = WaveNet(256, 28, 16, 32, 10, 3, 3)
     net.apply(initialize)
-    net.cpu()
     net.eval()
-    gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
-    gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+
+    # sample-by-sample generation
+    gen1_list = []
+    gen2_list = []
+    for x_, h_ in zip(x, h):
+        batch_x = Variable(torch.from_numpy(np.expand_dims(x_, 0)).long())
+        batch_h = Variable(torch.from_numpy(np.expand_dims(h_, 0)).float())
+        gen1 = net.generate(batch_x, batch_h, length, 1, "argmax")
+        gen2 = net.fast_generate(batch_x, batch_h, length, 1, "argmax")
+        np.testing.assert_array_equal(gen1, gen2)
+        gen1_list += [gen1]
+        gen2_list += [gen2]
+    gen1 = np.stack(gen1_list)
+    gen2 = np.stack(gen2_list)
     np.testing.assert_array_equal(gen1, gen2)
 
-    batch_input = batch.view(1, -1)
-    batch_aux = Variable(
-        torch.rand(1, 28, (batch_input.size(1) + length) // 10 * 2).float())
+    # batch generation
+    batch_x = Variable(torch.from_numpy(x).long())
+    batch_h = Variable(torch.from_numpy(h).float())
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
+    gen3 = np.stack(gen3_list)
+    np.testing.assert_array_equal(gen3, gen2)
 
-    # define model with upsampling and kernel size = 2
-    net = WaveNet(256, 28, 16, 32, 10, 3, 2, 10)
+    # get batch
+    batch = 2
+    upsampling_factor = 10
+    x = np.random.randint(0, 256, size=(batch, 1))
+    h = np.random.randn(batch, 28, 10)
+    length = h.shape[-1] * upsampling_factor - 1
+
+    # define model with upsampling and with kernel size = 2
+    net = WaveNet(256, 28, 16, 32, 10, 3, 2, upsampling_factor)
     net.apply(initialize)
-    net.cpu()
     net.eval()
-    gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
-    gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+
+    # sample-by-sample generation
+    gen1_list = []
+    gen2_list = []
+    for x_, h_ in zip(x, h):
+        batch_x = Variable(torch.from_numpy(np.expand_dims(x_, 0)).long())
+        batch_h = Variable(torch.from_numpy(np.expand_dims(h_, 0)).float())
+        gen1 = net.generate(batch_x, batch_h, length, 1, "argmax")
+        gen2 = net.fast_generate(batch_x, batch_h, length, 1, "argmax")
+        np.testing.assert_array_equal(gen1, gen2)
+        gen1_list += [gen1]
+        gen2_list += [gen2]
+    gen1 = np.stack(gen1_list)
+    gen2 = np.stack(gen2_list)
     np.testing.assert_array_equal(gen1, gen2)
 
-    # define model with upsampling and kernel size = 3
-    net = WaveNet(256, 28, 16, 32, 10, 3, 3, 10)
+    # batch generation
+    batch_x = Variable(torch.from_numpy(x).long())
+    batch_h = Variable(torch.from_numpy(h).float())
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
+    gen3 = np.stack(gen3_list)
+    np.testing.assert_array_equal(gen3, gen2)
+
+    # define model with upsampling and with kernel size = 3
+    net = WaveNet(256, 28, 16, 32, 10, 3, 2, upsampling_factor)
     net.apply(initialize)
-    net.cpu()
     net.eval()
-    gen1 = net.generate(batch_input, batch_aux, length, 1, "argmax")
-    gen2 = net.fast_generate(batch_input, batch_aux, length, 1, "argmax")
+
+    # sample-by-sample generation
+    gen1_list = []
+    gen2_list = []
+    for x_, h_ in zip(x, h):
+        batch_x = Variable(torch.from_numpy(np.expand_dims(x_, 0)).long())
+        batch_h = Variable(torch.from_numpy(np.expand_dims(h_, 0)).float())
+        gen1 = net.generate(batch_x, batch_h, length, 1, "argmax")
+        gen2 = net.fast_generate(batch_x, batch_h, length, 1, "argmax")
+        np.testing.assert_array_equal(gen1, gen2)
+        gen1_list += [gen1]
+        gen2_list += [gen2]
+    gen1 = np.stack(gen1_list)
+    gen2 = np.stack(gen2_list)
     np.testing.assert_array_equal(gen1, gen2)
+
+    # batch generation
+    batch_x = Variable(torch.from_numpy(x).long())
+    batch_h = Variable(torch.from_numpy(h).float())
+    gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
+    gen3 = np.stack(gen3_list)
+    np.testing.assert_array_equal(gen3, gen2)

@@ -97,6 +97,7 @@ outdir=
 checkpoint=
 config=
 feats=
+decode_batch_size=32
 n_gpus=1
 
 #######################################
@@ -282,7 +283,7 @@ if [ `echo ${stage} | grep 5` ];then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    ${cuda_cmd} --num-threads ${n_jobs} ${expdir}/log/decode.log \
+    ${cuda_cmd} ${expdir}/log/decode.log \
         decode.py \
             --feats ${feats} \
             --stats data/${train}/stats.h5 \
@@ -290,7 +291,7 @@ if [ `echo ${stage} | grep 5` ];then
             --checkpoint ${checkpoint} \
             --config ${expdir}/model.conf \
             --fs ${fs} \
-            --n_jobs ${n_jobs} \
+            --batch_size ${decode_batch_size} \
             --n_gpus ${n_gpus}
 fi
 # }}}
