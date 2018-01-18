@@ -358,7 +358,7 @@ class WaveNet(nn.Module):
         for i in range(n_samples):
             output = Variable(samples[-self.kernel_size * 2 - 1:].unsqueeze(0), volatile=True)
             output = self._preprocess(output)
-            h_ = h[:, :, len(samples) - 1].contiguous().view(1, self.n_aux, 1)
+            h_ = h[:, :, samples.size(0) - 1].contiguous().view(1, self.n_aux, 1)
             output_buffer_next = []
             skip_connections = []
             for l, d in enumerate(self.dilations):
@@ -381,7 +381,7 @@ class WaveNet(nn.Module):
                 dist = torch.distributions.Categorical(posterior)
                 sample = dist.sample().data
             elif mode == "argmax":
-                sample = output.max(1)[-1].data
+                sample = output.max(-1)[-1].data
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)
@@ -410,7 +410,7 @@ class WaveNet(nn.Module):
             mode (str): "sampling" or "argmax"
 
         Return:
-            (ndarray): generated quantized wavenform (n_samples)
+            (list): list of ndarray which is generated quantized wavenform
         """
         # set max length
         max_samples = max(n_samples_list)
@@ -446,8 +446,8 @@ class WaveNet(nn.Module):
         start = time.time()
         for i in range(max_samples):
             output = Variable(samples[:, -self.kernel_size * 2 - 1:], volatile=True)
-            output = self._preprocess(output)
-            h_ = h[:, :, len(samples) - 1].contiguous().unsqueeze(2)
+            output = self._preprocess(output)  # B x C x T
+            h_ = h[:, :, samples.size(-1) - 1].contiguous().unsqueeze(-1)  # B x C x 1
             output_buffer_next = []
             skip_connections = []
             for l, d in enumerate(self.dilations):
@@ -470,7 +470,7 @@ class WaveNet(nn.Module):
                 dist = torch.distributions.Categorical(posterior)
                 sample = dist.sample().data  # B
             elif mode == "argmax":
-                sample = output.max(-1)[-1].data  # B
+                sample = output.max(-1)[1].data  # B
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)
@@ -526,5 +526,5 @@ class WaveNet(nn.Module):
             F.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
-        output = output + x[:, :, -1:]  # B x T x 1
+        output = output + x[:, :, -1:]  # B x C x 1
         return output, skip
