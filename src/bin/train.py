@@ -139,6 +139,13 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if feat_transform is not None:
                         h_ = feat_transform(h_)
 
+                    # convert to torch variable
+                    x_ = Variable(torch.from_numpy(x_).long())
+                    h_ = Variable(torch.from_numpy(h_).float())
+                    if torch.cuda.is_available():
+                        x_ = x_.cuda()
+                        h_ = h_.cuda()
+
                     # remove the last and first sample for training
                     batch_x = x_[:-1].unsqueeze(0)
                     batch_h = h_[:-1].transpose(0, 1).unsqueeze(0)
@@ -174,6 +181,13 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if feat_transform is not None:
                         h_ = feat_transform(h_)
 
+                    # convert to torch variable
+                    x_ = Variable(torch.from_numpy(x_).long())
+                    h_ = Variable(torch.from_numpy(h_).float())
+                    if torch.cuda.is_available():
+                        x_ = x_.cuda()
+                        h_ = h_.cuda()
+
                     # remove the last and first sample for training
                     batch_h = h_.transpose(0, 1).unsqueeze(0)
                     batch_x = x_[:-1].unsqueeze(0)
@@ -197,6 +211,13 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 if feat_transform is not None:
                     h = feat_transform(h)
 
+                # convert to torch variable
+                x = Variable(torch.from_numpy(x).long())
+                h = Variable(torch.from_numpy(h).float())
+                if torch.cuda.is_available():
+                    x = x.cuda()
+                    h = h.cuda()
+
                 # remove the last and first sample for training
                 batch_x = x[:-1].unsqueeze(0)
                 batch_h = h[:-1].transpose(0, 1).unsqueeze(0)
@@ -215,6 +236,13 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     x = wav_transform(x)
                 if feat_transform is not None:
                     h = feat_transform(h)
+
+                # convert to torch variable
+                x = Variable(torch.from_numpy(x).long())
+                h = Variable(torch.from_numpy(h).float())
+                if torch.cuda.is_available():
+                    x = x.cuda()
+                    h = h.cuda()
 
                 # remove the last and first sample for training
                 batch_h = h.transpose(0, 1).unsqueeze(0)
@@ -362,11 +390,9 @@ def main():
     scaler.mean_ = read_hdf5(args.stats, "/mean")
     scaler.scale_ = read_hdf5(args.stats, "/scale")
     wav_transform = transforms.Compose([
-        lambda x: encode_mu_law(x, args.n_quantize),
-        lambda x: Variable(torch.from_numpy(x).long().cuda())])
+        lambda x: encode_mu_law(x, args.n_quantize)])
     feat_transform = transforms.Compose([
-        lambda x: scaler.transform(x),
-        lambda x: Variable(torch.from_numpy(x).float().cuda())])
+        lambda x: scaler.transform(x)])
 
     # define generator
     if os.path.isdir(args.waveforms):
