@@ -130,7 +130,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     x_ = x_buffer[:receptive_field + batch_size]
                     h_ = h_buffer[:receptive_field + batch_size]
 
-                    # for scalar input 
+                    # for scalar input
                     if use_scalar_input:
                         x_c = x_
 
@@ -146,6 +146,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if torch.cuda.is_available():
                         x_ = x_.cuda()
                         h_ = h_.cuda()
+
                     # for scalar input
                     if use_scalar_input:
                         x_c = Variable(torch.from_numpy(x_c).float())
@@ -184,7 +185,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     h_ = h_buffer[:h_bs]
                     x_ = x_buffer[:x_bs]
 
-                    # for scalar input 
+                    # for scalar input
                     if use_scalar_input:
                         x_c = x_
 
@@ -200,6 +201,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if torch.cuda.is_available():
                         x_ = x_.cuda()
                         h_ = h_.cuda()
+
                     # for scalar input
                     if use_scalar_input:
                         x_c = Variable(torch.from_numpy(x_c).float())
@@ -226,7 +228,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
 
             # use utterance batch without upsampling
             elif batch_size == 0 and upsampling_factor == 0:
-                # for scalar input 
+                # for scalar input
                 if use_scalar_input:
                     xc = x
 
@@ -264,7 +266,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 h = h[:-1]
                 x = x[:-upsampling_factor + 1]
 
-                # for scalar input 
+                # for scalar input
                 if use_scalar_input:
                     xc = x
 
@@ -280,6 +282,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 if torch.cuda.is_available():
                     x = x.cuda()
                     h = h.cuda()
+
                 # for scalar input
                 if use_scalar_input:
                     xc = Variable(torch.from_numpy(xc).float())
