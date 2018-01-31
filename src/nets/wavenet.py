@@ -170,10 +170,12 @@ class WaveNet(nn.Module):
         dilation_repeat (int): number of dilation repeat
         kernel_size (int): filter size of dilated causal convolution
         upsampling_factor (int): upsampling factor
+        use_scalar_input (bool): whether to use scalar input
     """
 
     def __init__(self, n_quantize=256, n_aux=28, n_resch=512, n_skipch=256,
-                 dilation_depth=10, dilation_repeat=3, kernel_size=2, upsampling_factor=0):
+                 dilation_depth=10, dilation_repeat=3, kernel_size=2,
+                 upsampling_factor=0, use_scalar_input=False):
         super(WaveNet, self).__init__()
         self.n_aux = n_aux
         self.n_quantize = n_quantize
@@ -183,13 +185,17 @@ class WaveNet(nn.Module):
         self.dilation_depth = dilation_depth
         self.dilation_repeat = dilation_repeat
         self.upsampling_factor = upsampling_factor
+        self.use_scalar_input = use_scalar_input
 
         self.dilations = [2 ** i for i in range(self.dilation_depth)] * self.dilation_repeat
         self.receptive_field = (self.kernel_size - 1) * sum(self.dilations) + 1
 
         # for preprocessing
-        self.onehot = OneHot(self.n_quantize)
-        self.causal = CausalConv1d(self.n_quantize, self.n_resch, self.kernel_size)
+        if self.use_scalar_input:
+            self.causal = CausalConv1d(1, self.n_resch, self.kernel_size)
+        else:
+            self.onehot = OneHot(self.n_quantize)
+            self.causal = CausalConv1d(self.n_quantize, self.n_resch, self.kernel_size)
         if self.upsampling_factor > 0:
             self.upsampling = UpSampling(self.upsampling_factor)
 
@@ -216,7 +222,7 @@ class WaveNet(nn.Module):
         """Forward calculation
 
         Args:
-            x (Variable): long tensor variable with the shape  (B x T)
+            x (Variable): long or float tensor variable with the shape  (B x T)
             h (Variable): float tensor variable with the shape  (B x n_aux x T)
 
         Return:
@@ -246,7 +252,7 @@ class WaveNet(nn.Module):
         """Sample-by-sample generation
 
         Args:
-            x (Variable): long tensor variable with the shape  (1 x T)
+            x (Variable): long or float tensor variable with the shape  (1 x T)
             h (Variable): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
@@ -317,7 +323,7 @@ class WaveNet(nn.Module):
         Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
-            x (Variable): long tensor variable with the shape  (1 x T)
+            x (Variable): long or float tensor variable with the shape  (1 x T)
             h (Variable): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
@@ -403,7 +409,7 @@ class WaveNet(nn.Module):
         Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
-            x (Variable): long tensor variable with the shape  (B x T)
+            x (Variable): long or float tensor variable with the shape  (B x T)
             h (Variable): float tensor variable with the shape  (B x max(n_samples_list) + T)
             n_samples_list (list): list of number of samples to be generated (B)
             intervals (int): log interval
@@ -492,7 +498,10 @@ class WaveNet(nn.Module):
         return samples_list
 
     def _preprocess(self, x):
-        x = self.onehot(x).transpose(1, 2)
+        if self.use_scalar_input:
+            x = x.unsqueeze(1)
+        else:
+            x = self.onehot(x).transpose(1, 2)
         output = self.causal(x)
         return output
 

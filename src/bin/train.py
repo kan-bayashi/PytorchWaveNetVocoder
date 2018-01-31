@@ -67,7 +67,7 @@ def validate_length(x, y, upsampling_factor=0):
 @background(max_prefetch=16)
 def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     wav_transform=None, feat_transform=None, shuffle=True,
-                    upsampling_factor=0, use_speaker_code=False):
+                    upsampling_factor=0, use_scalar_input=False, use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
@@ -79,6 +79,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
         feat_transform (func): preprocessing function for aux feats
         shuffle (bool): whether to do shuffle of the file list
         upsampling_factor (int): upsampling factor
+        use_scalar_input (bool): whether to use scalar input
         use_speaker_code (bool): whether to use speaker code
 
     Return:
@@ -113,11 +114,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 h = np.concatenate([h, sc], axis=1)
 
             # check both lengths are same
-            logging.debug("before x length = %d" % x.shape[0])
-            logging.debug("before h length = %d" % h.shape[0])
             x, h = validate_length(x, h, upsampling_factor)
-            logging.debug("after x length = %d" % x.shape[0])
-            logging.debug("after h length = %d" % h.shape[0])
 
             # use mini batch without upsampling
             if batch_size != 0 and upsampling_factor == 0:
@@ -133,6 +130,10 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     x_ = x_buffer[:receptive_field + batch_size]
                     h_ = h_buffer[:receptive_field + batch_size]
 
+                    # for scalar input 
+                    if use_scalar_input:
+                        x_c = x_
+
                     # perform pre-processing
                     if wav_transform is not None:
                         x_ = wav_transform(x_)
@@ -145,9 +146,17 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if torch.cuda.is_available():
                         x_ = x_.cuda()
                         h_ = h_.cuda()
+                    # for scalar input
+                    if use_scalar_input:
+                        x_c = Variable(torch.from_numpy(x_c).float())
+                        if torch.cuda.is_available():
+                            x_c = x_c.cuda()
 
                     # remove the last and first sample for training
-                    batch_x = x_[:-1].unsqueeze(0)
+                    if use_scalar_input:
+                        batch_x = x_c[:-1].unsqueeze(0)
+                    else:
+                        batch_x = x_[:-1].unsqueeze(0)
                     batch_h = h_[:-1].transpose(0, 1).unsqueeze(0)
                     batch_t = x_[1:]
 
@@ -175,6 +184,10 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     h_ = h_buffer[:h_bs]
                     x_ = x_buffer[:x_bs]
 
+                    # for scalar input 
+                    if use_scalar_input:
+                        x_c = x_
+
                     # perform pre-processing
                     if wav_transform is not None:
                         x_ = wav_transform(x_)
@@ -187,10 +200,18 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     if torch.cuda.is_available():
                         x_ = x_.cuda()
                         h_ = h_.cuda()
+                    # for scalar input
+                    if use_scalar_input:
+                        x_c = Variable(torch.from_numpy(x_c).float())
+                        if torch.cuda.is_available():
+                            x_c = x_c.cuda()
 
                     # remove the last and first sample for training
+                    if use_scalar_input:
+                        batch_x = x_c[:-1].unsqueeze(0)
+                    else:
+                        batch_x = x_[:-1].unsqueeze(0)
                     batch_h = h_.transpose(0, 1).unsqueeze(0)
-                    batch_x = x_[:-1].unsqueeze(0)
                     batch_t = x_[1:]
 
                     yield (batch_x, batch_h), batch_t
@@ -205,6 +226,10 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
 
             # use utterance batch without upsampling
             elif batch_size == 0 and upsampling_factor == 0:
+                # for scalar input 
+                if use_scalar_input:
+                    xc = x
+
                 # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
@@ -217,9 +242,17 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 if torch.cuda.is_available():
                     x = x.cuda()
                     h = h.cuda()
+                # for scalar input
+                if use_scalar_input:
+                    xc = Variable(torch.from_numpy(xc).float())
+                    if torch.cuda.is_available():
+                        xc = xc.cuda()
 
                 # remove the last and first sample for training
-                batch_x = x[:-1].unsqueeze(0)
+                if use_scalar_input:
+                    batch_x = xc[:-1].unsqueeze(0)
+                else:
+                    batch_x = x[:-1].unsqueeze(0)
                 batch_h = h[:-1].transpose(0, 1).unsqueeze(0)
                 batch_t = x[1:]
 
@@ -231,6 +264,10 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 h = h[:-1]
                 x = x[:-upsampling_factor + 1]
 
+                # for scalar input 
+                if use_scalar_input:
+                    xc = x
+
                 # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
@@ -243,10 +280,18 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 if torch.cuda.is_available():
                     x = x.cuda()
                     h = h.cuda()
+                # for scalar input
+                if use_scalar_input:
+                    xc = Variable(torch.from_numpy(xc).float())
+                    if torch.cuda.is_available():
+                        xc = xc.cuda()
 
                 # remove the last and first sample for training
+                if use_scalar_input:
+                    batch_x = xc[:-1].unsqueeze(0)
+                else:
+                    batch_x = x[:-1].unsqueeze(0)
                 batch_h = h.transpose(0, 1).unsqueeze(0)
-                batch_x = x[:-1].unsqueeze(0)
                 batch_t = x[1:]
 
                 yield (batch_x, batch_h), batch_t
@@ -308,6 +353,8 @@ def main():
     parser.add_argument("--upsampling_factor", default=0,
                         type=int, help="upsampling factor of aux features"
                                        "(if set 0, do not apply)")
+    parser.add_argument("--use_scalar_input", default=False,
+                        type=strtobool, help="flag to use scaler input")
     parser.add_argument("--use_speaker_code", default=False,
                         type=strtobool, help="flag to use speaker code")
     # network training setting
@@ -328,7 +375,7 @@ def main():
                         type=int, help="seed number")
     parser.add_argument("--resume", default=None,
                         type=str, help="model path to restart training")
-    parser.add_argument("--verbose", default=1,
+    parser.add_argument("--verbose", default=2,
                         type=int, help="log level")
     args = parser.parse_args()
 
@@ -374,15 +421,17 @@ def main():
         dilation_depth=args.dilation_depth,
         dilation_repeat=args.dilation_repeat,
         kernel_size=args.kernel_size,
-        upsampling_factor=args.upsampling_factor)
+        upsampling_factor=args.upsampling_factor,
+        use_scalar_input=args.use_scalar_input)
     logging.info(model)
     model.apply(initialize)
     model.train()
 
     # define loss and optimizer
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=args.lr,
-                                 weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
 
     # define transforms
@@ -415,6 +464,7 @@ def main():
         feat_transform=feat_transform,
         shuffle=True,
         upsampling_factor=args.upsampling_factor,
+        use_scalar_input=args.use_scalar_input,
         use_speaker_code=args.use_speaker_code)
     while not generator.queue.full():
         time.sleep(0.1)

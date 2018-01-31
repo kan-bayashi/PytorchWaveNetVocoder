@@ -67,7 +67,7 @@ n_jobs=10
 # use_speaker_code: true or false
 # }}}
 spk=slt
-n_quantize=256
+n_quantize=65536
 n_aux=28
 n_resch=512
 n_skipch=256
@@ -79,7 +79,8 @@ weight_decay=0.0
 iters=200000
 batch_size=20000
 checkpoints=10000
-use_upsampling=false
+use_upsampling=true
+use_scalar_input=false
 use_noise_shaping=true
 use_speaker_code=false
 
@@ -234,6 +235,9 @@ if [ ! -n "${tag}" ];then
     if ${use_upsampling};then
         expdir=${expdir}_up
     fi
+    if ${use_scalar_input};then
+        expdir=${expdir}_scalar
+    fi
 else
     expdir=exp/tr_arctic_${tag}
 fi
@@ -269,7 +273,8 @@ if [ `echo ${stage} | grep 4` ];then
             --batch_size ${batch_size} \
             --checkpoints ${checkpoints} \
             --use_speaker_code ${use_speaker_code} \
-            --upsampling_factor ${upsampling_factor}
+            --upsampling_factor ${upsampling_factor} \
+            --use_scalar_input ${use_scalar_input}
 fi
 # }}}
 
