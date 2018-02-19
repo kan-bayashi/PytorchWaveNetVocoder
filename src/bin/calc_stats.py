@@ -9,6 +9,7 @@ from __future__ import print_function
 import argparse
 
 import numpy as np
+
 from sklearn.preprocessing import StandardScaler
 
 from utils import read_hdf5

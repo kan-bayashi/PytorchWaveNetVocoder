@@ -13,11 +13,12 @@ import os
 import sys
 
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 import soundfile as sf
 import torch
-from torch.autograd import Variable
 import torch.multiprocessing as mp
+
+from sklearn.preprocessing import StandardScaler
+from torch.autograd import Variable
 from torchvision import transforms
 
 from utils import find_files

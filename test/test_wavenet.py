@@ -10,6 +10,7 @@ import logging
 
 import numpy as np
 import torch
+
 from torch.autograd import Variable
 
 from wavenet import encode_mu_law

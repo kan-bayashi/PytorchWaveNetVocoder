@@ -8,12 +8,14 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-from distutils.util import strtobool
 import multiprocessing as mp
 import os
 import sys
 
+from distutils.util import strtobool
+
 import numpy as np
+
 from scipy.io import wavfile
 from sprocket.speech.feature_extractor import FeatureExtractor
 from sprocket.speech.synthesizer import Synthesizer

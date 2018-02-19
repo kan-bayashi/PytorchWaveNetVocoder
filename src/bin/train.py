@@ -8,18 +8,20 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
-from dateutil.relativedelta import relativedelta
-from distutils.util import strtobool
 import logging
 import os
 import sys
 import time
 
+from dateutil.relativedelta import relativedelta
+from distutils.util import strtobool
+
 import numpy as np
 import six
-from sklearn.preprocessing import StandardScaler
 import soundfile as sf
 import torch
+
+from sklearn.preprocessing import StandardScaler
 from torch.autograd import Variable
 from torch import nn
 from torchvision import transforms

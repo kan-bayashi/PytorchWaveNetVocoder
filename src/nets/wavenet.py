@@ -11,9 +11,10 @@ import time
 
 import numpy as np
 import torch
+import torch.nn.functional as F
+
 from torch.autograd import Variable
 from torch import nn
-import torch.nn.functional as F
 
 
 def encode_mu_law(x, mu=256):

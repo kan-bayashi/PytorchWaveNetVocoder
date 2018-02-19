@@ -6,6 +6,7 @@
 
 import numpy as np
 import torch
+
 from torch.autograd import Variable
 
 from wavenet import initialize
