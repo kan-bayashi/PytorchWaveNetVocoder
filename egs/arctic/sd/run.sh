@@ -49,6 +49,7 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
+# n_gpus: number of gpus
 # spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
@@ -60,12 +61,15 @@ n_jobs=10
 # lr: learning rate
 # weight_decay: weight decay coef
 # iters: number of iterations
+# batch_length: batch length
 # batch_size: batch size
 # checkpoints: save model per this number
 # use_upsampling: true or false
 # use_noise_shaping: true or false
 # use_speaker_code: true or false
+# resume: checkpoint to resume
 # }}}
+n_gpus=1
 spk=slt
 n_quantize=256
 n_aux=28
@@ -77,11 +81,13 @@ kernel_size=2
 lr=1e-4
 weight_decay=0.0
 iters=200000
-batch_size=20000
+batch_length=20000
+batch_size=1
 checkpoints=10000
 use_upsampling=false
 use_noise_shaping=true
 use_speaker_code=false
+resume=
 
 #######################################
 #          DECODING SETTING           #
@@ -93,12 +99,11 @@ use_speaker_code=false
 # feats: list or directory of feature files 
 # n_gpus: number of gpus to decode
 # }}}
-outdir= 
+outdir=
 checkpoint=
 config=
 feats=
 decode_batch_size=32
-n_gpus=1
 
 #######################################
 #            OHTER SETTING            #
@@ -227,7 +232,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
@@ -251,7 +256,7 @@ if [ `echo ${stage} | grep 4` ];then
     else
         upsampling_factor=0
     fi
-    ${cuda_cmd} ${expdir}/log/${train}.log \
+    ${cuda_cmd} --gpu ${n_gpus} ${expdir}/log/${train}.log \
         train.py \
             --waveforms ${waveforms} \
             --feats data/${train}/feats.scp \
@@ -266,10 +271,13 @@ if [ `echo ${stage} | grep 4` ];then
             --lr ${lr} \
             --weight_decay ${weight_decay} \
             --iters ${iters} \
+            --batch_length ${batch_length} \
             --batch_size ${batch_size} \
+            --n_gpus ${n_gpus} \
             --checkpoints ${checkpoints} \
             --use_speaker_code ${use_speaker_code} \
-            --upsampling_factor ${upsampling_factor}
+            --upsampling_factor ${upsampling_factor} \
+            --resume ${resume}
 fi
 # }}}
 
@@ -283,13 +291,13 @@ if [ `echo ${stage} | grep 5` ];then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    ${cuda_cmd} ${expdir}/log/decode.log \
+    ${cuda_cmd} --gpu ${n_gpus} ${outdir}/log/decode.log \
         decode.py \
             --feats ${feats} \
             --stats data/${train}/stats.h5 \
             --outdir ${outdir} \
             --checkpoint ${checkpoint} \
-            --config ${expdir}/model.conf \
+            --config ${config} \
             --fs ${fs} \
             --batch_size ${decode_batch_size} \
             --n_gpus ${n_gpus}

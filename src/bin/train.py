@@ -67,7 +67,7 @@ def validate_length(x, y, upsampling_factor=0):
 
 
 @background(max_prefetch=16)
-def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
+def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_size=1,
                     wav_transform=None, feat_transform=None, shuffle=True,
                     upsampling_factor=0, use_speaker_code=False):
     """TRAINING BATCH GENERATOR
@@ -76,7 +76,8 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
         wav_list (str): list of wav files
         feat_list (str): list of feat files
         receptive_field (int): size of receptive filed
-        batch_size (int): batch size
+        batch_length (int): batch length (if set 0, utterance batch will be used.)
+        batch_size (int): batch size (if batch_length = 0, batch_size will be 1.)
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
         shuffle (bool): whether to do shuffle of the file list
@@ -93,14 +94,19 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
         wav_list = [wav_list[i] for i in idx]
         feat_list = [feat_list[i] for i in idx]
 
-    # check batch_size
-    if batch_size != 0 and upsampling_factor != 0:
-        batch_mod = (receptive_field + batch_size) % upsampling_factor
-        logging.warn("batch size is decreased due to upsampling (%d -> %d)" % (
-            batch_size, batch_size - batch_mod))
-        batch_size -= batch_mod
+    # check batch_length
+    if batch_length != 0 and upsampling_factor != 0:
+        batch_mod = (receptive_field + batch_length) % upsampling_factor
+        logging.warn("batch length is decreased due to upsampling (%d -> %d)" % (
+            batch_length, batch_length - batch_mod))
+        batch_length -= batch_mod
+
+    # show warning
+    if batch_length == 0 and batch_size > 1:
+        logging.warn("in utterance batch mode, batchsize will be 1.")
 
     while True:
+        batch_x, batch_h, batch_t = [], [], []
         # process over all of files
         for wavfile, featfile in zip(wav_list, feat_list):
             # load wavefrom and aux feature
@@ -122,7 +128,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
             logging.debug("after h length = %d" % h.shape[0])
 
             # use mini batch without upsampling
-            if batch_size != 0 and upsampling_factor == 0:
+            if batch_length != 0 and upsampling_factor == 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
@@ -130,10 +136,10 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 x_buffer = np.concatenate([x_buffer, x], axis=0)
                 h_buffer = np.concatenate([h_buffer, h], axis=0)
 
-                while len(x_buffer) > receptive_field + batch_size:
+                while len(x_buffer) > receptive_field + batch_length:
                     # get pieces
-                    x_ = x_buffer[:receptive_field + batch_size]
-                    h_ = h_buffer[:receptive_field + batch_size]
+                    x_ = x_buffer[:receptive_field + batch_length]
+                    h_ = h_buffer[:receptive_field + batch_length]
 
                     # perform pre-processing
                     if wav_transform is not None:
@@ -144,23 +150,28 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     # convert to torch variable
                     x_ = Variable(torch.from_numpy(x_).long())
                     h_ = Variable(torch.from_numpy(h_).float())
-                    if torch.cuda.is_available():
-                        x_ = x_.cuda()
-                        h_ = h_.cuda()
 
                     # remove the last and first sample for training
-                    batch_x = x_[:-1].unsqueeze(0)
-                    batch_h = h_[:-1].transpose(0, 1).unsqueeze(0)
-                    batch_t = x_[1:]
-
-                    yield (batch_x, batch_h), batch_t
+                    batch_x += [x_[:-1]]  # (T)
+                    batch_h += [h_[:-1].transpose(0, 1)]  # (D x T)
+                    batch_t += [x_[1:]]  # (T)
 
                     # update buffer
-                    x_buffer = x_buffer[batch_size:]
-                    h_buffer = h_buffer[batch_size:]
+                    x_buffer = x_buffer[batch_length:]
+                    h_buffer = h_buffer[batch_length:]
+
+                    # return mini batch
+                    if len(batch_x) == batch_size:
+                        batch_x = torch.stack(batch_x).cuda()
+                        batch_h = torch.stack(batch_h).cuda()
+                        batch_t = torch.stack(batch_t).cuda()
+
+                        yield (batch_x, batch_h), batch_t
+
+                        batch_x, batch_h, batch_t = [], [], []
 
             # use mini batch with upsampling
-            elif batch_size != 0 and upsampling_factor > 0:
+            elif batch_length != 0 and upsampling_factor > 0:
                 # make buffer array
                 if "x_buffer" not in locals():
                     x_buffer = np.empty((0), dtype=np.float32)
@@ -168,9 +179,9 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 x_buffer = np.concatenate([x_buffer, x], axis=0)
                 h_buffer = np.concatenate([h_buffer, h], axis=0)
 
-                while len(h_buffer) > (receptive_field + batch_size) // upsampling_factor:
+                while len(h_buffer) > (receptive_field + batch_length) // upsampling_factor:
                     # set batch size
-                    h_bs = (receptive_field + batch_size) // upsampling_factor
+                    h_bs = (receptive_field + batch_length) // upsampling_factor
                     x_bs = h_bs * upsampling_factor + 1
 
                     # get pieces
@@ -186,27 +197,32 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                     # convert to torch variable
                     x_ = Variable(torch.from_numpy(x_).long())
                     h_ = Variable(torch.from_numpy(h_).float())
-                    if torch.cuda.is_available():
-                        x_ = x_.cuda()
-                        h_ = h_.cuda()
 
                     # remove the last and first sample for training
-                    batch_h = h_.transpose(0, 1).unsqueeze(0)
-                    batch_x = x_[:-1].unsqueeze(0)
-                    batch_t = x_[1:]
-
-                    yield (batch_x, batch_h), batch_t
+                    batch_h += [h_.transpose(0, 1)]  # (D x T)
+                    batch_x += [x_[:-1]]  # (T)
+                    batch_t += [x_[1:]]  # (T)
 
                     # set shift size
-                    h_ss = batch_size // upsampling_factor
+                    h_ss = batch_length // upsampling_factor
                     x_ss = h_ss * upsampling_factor
 
                     # update buffer
                     h_buffer = h_buffer[h_ss:]
                     x_buffer = x_buffer[x_ss:]
 
+                    # return mini batch
+                    if len(batch_x) == batch_size:
+                        batch_x = torch.stack(batch_x).cuda()
+                        batch_h = torch.stack(batch_h).cuda()
+                        batch_t = torch.stack(batch_t).cuda()
+
+                        yield (batch_x, batch_h), batch_t
+
+                        batch_x, batch_h, batch_t = [], [], []
+
             # use utterance batch without upsampling
-            elif batch_size == 0 and upsampling_factor == 0:
+            elif batch_length == 0 and upsampling_factor == 0:
                 # perform pre-processing
                 if wav_transform is not None:
                     x = wav_transform(x)
@@ -216,14 +232,11 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 # convert to torch variable
                 x = Variable(torch.from_numpy(x).long())
                 h = Variable(torch.from_numpy(h).float())
-                if torch.cuda.is_available():
-                    x = x.cuda()
-                    h = h.cuda()
 
                 # remove the last and first sample for training
-                batch_x = x[:-1].unsqueeze(0)
-                batch_h = h[:-1].transpose(0, 1).unsqueeze(0)
-                batch_t = x[1:]
+                batch_x = x[:-1].unsqueeze(0).cuda()  # (1 x T)
+                batch_h = h[:-1].transpose(0, 1).unsqueeze(0).cuda()  # (1 x D x T)
+                batch_t = x[1:].unsqueeze(0).cuda()  # (1 x T)
 
                 yield (batch_x, batch_h), batch_t
 
@@ -242,14 +255,11 @@ def train_generator(wav_list, feat_list, receptive_field, batch_size=0,
                 # convert to torch variable
                 x = Variable(torch.from_numpy(x).long())
                 h = Variable(torch.from_numpy(h).float())
-                if torch.cuda.is_available():
-                    x = x.cuda()
-                    h = h.cuda()
 
                 # remove the last and first sample for training
-                batch_h = h.transpose(0, 1).unsqueeze(0)
-                batch_x = x[:-1].unsqueeze(0)
-                batch_t = x[1:]
+                batch_h = h.transpose(0, 1).unsqueeze(0).cuda()  # (1 x D x T')
+                batch_x = x[:-1].unsqueeze(0).cuda()  # (1 x T)
+                batch_t = x[1:].unsqueeze(0).cuda()  # (1 x T)
 
                 yield (batch_x, batch_h), batch_t
 
@@ -269,7 +279,6 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
         optimizer (Optimizer): pytorch optimizer instance
         iterations (int): number of current iterations
     """
-    model.cpu()
     checkpoint = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
@@ -277,7 +286,6 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
     if not os.path.exists(checkpoint_dir):
         os.makedirs(checkpoint_dir)
     torch.save(checkpoint, checkpoint_dir + "/checkpoint-%d.pkl" % iterations)
-    model.cuda()
     logging.info("%d-iter checkpoint created." % iterations)
 
 
@@ -317,8 +325,10 @@ def main():
                         type=float, help="learning rate")
     parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
-    parser.add_argument("--batch_size", default=20000,
-                        type=int, help="batch size (if set 0, utterance batch will be used)")
+    parser.add_argument("--batch_length", default=20000,
+                        type=int, help="batch length (if set 0, utterance batch will be used)")
+    parser.add_argument("--batch_size", default=1,
+                        type=int, help="batch size (if use utterance batch, batch_size will be 1.")
     parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
     # other setting
@@ -328,8 +338,10 @@ def main():
                         type=int, help="log interval")
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
-    parser.add_argument("--resume", default=None,
+    parser.add_argument("--resume", default=None, nargs="?",
                         type=str, help="model path to restart training")
+    parser.add_argument("--n_gpus", default=1,
+                        type=int, help="number of gpus")
     parser.add_argument("--verbose", default=1,
                         type=int, help="log level")
     args = parser.parse_args()
@@ -381,10 +393,18 @@ def main():
     model.apply(initialize)
     model.train()
 
+    if args.n_gpus > 1:
+        device_ids = range(args.n_gpus)
+        model = torch.nn.DataParallel(model, device_ids)
+        model.receptive_field = model.module.receptive_field
+        if args.n_gpus > args.batch_size:
+            logging.warn("batch size is less than number of gpus.")
+
     # define loss and optimizer
-    optimizer = torch.optim.Adam(model.parameters(),
-                                 lr=args.lr,
-                                 weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay)
     criterion = nn.CrossEntropyLoss()
 
     # define transforms
@@ -412,19 +432,25 @@ def main():
     generator = train_generator(
         wav_list, feat_list,
         receptive_field=model.receptive_field,
+        batch_length=args.batch_length,
         batch_size=args.batch_size,
         wav_transform=wav_transform,
         feat_transform=feat_transform,
         shuffle=True,
         upsampling_factor=args.upsampling_factor,
         use_speaker_code=args.use_speaker_code)
+
+    # charge minibatch in queue
     while not generator.queue.full():
         time.sleep(0.1)
 
     # resume
     if args.resume is not None:
-        checkpoint = torch.load(args.resume)
-        model.load_state_dict(checkpoint["model"])
+        checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage.cuda(0))
+        if args.n_gpus > 1:
+            model.module.load_state_dict(checkpoint["model"])
+        else:
+            model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
         iterations = checkpoint["iterations"]
         logging.info("restored from %d-iter checkpoint." % iterations)
@@ -445,9 +471,10 @@ def main():
     for i in six.moves.range(iterations, args.iters):
         start = time.time()
         (batch_x, batch_h), batch_t = generator.next()
-        batch_output = model(batch_x, batch_h)[0]
-        batch_loss = criterion(batch_output[model.receptive_field:],
-                               batch_t[model.receptive_field:])
+        batch_output = model(batch_x, batch_h)
+        batch_loss = criterion(
+            batch_output[:, model.receptive_field:].contiguous().view(-1, args.n_quantize),
+            batch_t[:, model.receptive_field:].contiguous().view(-1))
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
@@ -469,11 +496,16 @@ def main():
 
         # save intermidiate model
         if (i + 1) % args.checkpoints == 0:
-            save_checkpoint(args.expdir, model, optimizer, i + 1)
+            if args.n_gpus > 1:
+                save_checkpoint(args.expdir, model.module, optimizer, i + 1)
+            else:
+                save_checkpoint(args.expdir, model, optimizer, i + 1)
 
     # save final model
-    model.cpu()
-    torch.save({"model": model.state_dict()}, args.expdir + "/checkpoint-final.pkl")
+    if args.n_gpus > 1:
+        torch.save({"model": model.module.state_dict()}, args.expdir + "/checkpoint-final.pkl")
+    else:
+        torch.save({"model": model.state_dict()}, args.expdir + "/checkpoint-final.pkl")
     logging.info("final checkpoint created.")
 
 
