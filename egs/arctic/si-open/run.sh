@@ -61,12 +61,15 @@ n_jobs=10
 # lr: learning rate
 # weight_decay: weight decay coef
 # iters: number of iterations
+# batch_length: batch length
 # batch_size: batch size
 # checkpoints: save model per this number
 # use_upsampling: true or false
 # use_noise_shaping: true or false
 # use_speaker_code: true or false
+# resume: checkpoint to resume
 # }}}
+n_gpus=1
 train_spks=(bdl rms clb ksp jmk)
 eval_spks=(slt)
 n_quantize=256
@@ -79,11 +82,13 @@ kernel_size=2
 lr=1e-4
 weight_decay=0.0
 iters=200000
-batch_size=20000
+batch_length=20000
+batch_size=1
 checkpoints=10000
 use_upsampling=false
 use_noise_shaping=true
 use_speaker_code=false
+resume=
 
 #######################################
 #          DECODING SETTING           #
@@ -92,14 +97,13 @@ use_speaker_code=false
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files 
+# feats: list or directory of feature files
 # }}}
-outdir= 
+outdir=
 checkpoint=
 config=
 feats=
 decode_batch_size=32
-n_gpus=1
 
 #######################################
 #            OHTER SETTING            #
@@ -339,25 +343,28 @@ if [ `echo ${stage} | grep 4` ];then
     else
         upsampling_factor=0
     fi
-    ${cuda_cmd} ${expdir}/log/${train}.log \
+    ${cuda_cmd} --gpu ${n_gpus} ${expdir}/log/${train}.log \
         train.py \
             --waveforms ${waveforms} \
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
             --expdir ${expdir} \
-            --n_quantize ${n_quantize} \
-            --n_aux ${n_aux} \
-            --n_resch ${n_resch} \
-            --n_skipch ${n_skipch} \
-            --dilation_depth ${dilation_depth} \
-            --dilation_repeat ${dilation_repeat} \
+            --n-quantize ${n_quantize} \
+            --n-aux ${n_aux} \
+            --n-resch ${n_resch} \
+            --n-skipch ${n_skipch} \
+            --dilation-depth ${dilation_depth} \
+            --dilation-repeat ${dilation_repeat} \
             --lr ${lr} \
-            --weight_decay ${weight_decay} \
+            --weight-decay ${weight_decay} \
             --iters ${iters} \
-            --batch_size ${batch_size} \
+            --batch-length ${batch_length} \
+            --batch-size ${batch_size} \
+            --n-gpus ${n_gpus} \
             --checkpoints ${checkpoints} \
-            --use_speaker_code ${use_speaker_code} \
-            --upsampling_factor ${upsampling_factor}
+            --use-speaker-code ${use_speaker_code} \
+            --upsampling-factor ${upsampling_factor} \
+            --resume ${resume}
 fi
 # }}}
 
@@ -379,16 +386,16 @@ if [ `echo ${stage} | grep 5` ];then
         cat $feats | grep "\/${spk}\/" > ${scp}
 
         # decode
-        ${cuda_cmd} exp/decoding/decode_${eval}.${spk}.log \
+        ${cuda_cmd} --gpu ${n_gpus} ${outdir}/log/decode.${spk}.log \
             decode.py \
                 --feats ${scp} \
                 --stats data/${train}/stats.h5 \
                 --outdir ${outdir}/${spk} \
                 --checkpoint ${checkpoint} \
-                --config ${expdir}/model.conf \
+                --config ${config} \
                 --fs ${fs} \
-                --batch_size ${decode_batch_size} \
-                --n_gpus ${n_gpus} &
+                --batch-size ${decode_batch_size} \
+                --n-gpus ${n_gpus} &
 
         # update job counts
         nj=$(( ${nj}+1  ))
