@@ -18,3 +18,4 @@ export max_jobs=1
 # for slurm (you can change configuration file "conf/slurm.conf")
 # export train_cmd="slurm.pl --config conf/slurm.conf"
 # export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
+# export max_jobs=-1
