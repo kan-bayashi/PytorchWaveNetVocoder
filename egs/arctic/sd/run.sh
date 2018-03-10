@@ -232,7 +232,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
