@@ -87,11 +87,8 @@ def decode_generator(feat_list, batch_size=32,
                 h = feat_transform(h)
 
             # convert to torch variable
-            x = Variable(torch.from_numpy(x).long(), volatile=True)
-            h = Variable(torch.from_numpy(h).float(), volatile=True)
-            if torch.cuda.is_available():
-                x = x.cuda()
-                h = h.cuda()
+            x = Variable(torch.from_numpy(x).long(), volatile=True).cuda()
+            h = Variable(torch.from_numpy(h).float(), volatile=True).cuda()
             x = x.unsqueeze(0)  # 1 => 1 x 1
             h = h.transpose(0, 1).unsqueeze(0)  # T x C => 1 x C x T
 
@@ -156,11 +153,8 @@ def decode_generator(feat_list, batch_size=32,
             batch_h = pad_list(batch_h)
 
             # convert to torch variable
-            batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True)
-            batch_h = Variable(torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2)
-            if torch.cuda.is_available():
-                batch_x = batch_x.cuda()
-                batch_h = batch_h.cuda()
+            batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True).cuda()
+            batch_h = Variable(torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2).cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
@@ -180,9 +174,9 @@ def main():
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
-    parser.add_argument("--batch_size", default=32,
+    parser.add_argument("--batch-size", default=32,
                         type=int, help="number of batch size in decoding")
-    parser.add_argument("--n_gpus", default=1,
+    parser.add_argument("--n-gpus", default=1,
                         type=int, help="number of gpus")
     # other setting
     parser.add_argument("--intervals", default=1000,
@@ -261,7 +255,9 @@ def main():
                 dilation_repeat=config.dilation_repeat,
                 kernel_size=config.kernel_size,
                 upsampling_factor=config.upsampling_factor)
-            model.load_state_dict(torch.load(args.checkpoint)["model"])
+            model.load_state_dict(torch.load(
+                args.checkpoint,
+                map_location=lambda storage, loc: storage.cuda(gpu))["model"])
             model.eval()
             model.cuda()
             torch.backends.cudnn.benchmark = True
@@ -295,14 +291,10 @@ def main():
 
     # parallel decode
     processes = []
-    gpu = 0
-    for i, feat_list in enumerate(feat_lists):
+    for gpu, feat_list in enumerate(feat_lists):
         p = mp.Process(target=gpu_decode, args=(feat_list, gpu,))
         p.start()
         processes.append(p)
-        gpu += 1
-        if (i + 1) % args.n_gpus == 0:
-            gpu = 0
 
     # wait for all process
     for p in processes:
