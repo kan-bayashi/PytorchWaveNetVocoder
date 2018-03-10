@@ -53,7 +53,8 @@ def pad_list(batch_list, pad_value=0.0):
 
 def decode_generator(feat_list, batch_size=32,
                      wav_transform=None, feat_transform=None,
-                     use_speaker_code=False, upsampling_factor=0):
+                     use_speaker_code=False, use_scalar_input=False,
+                     upsampling_factor=0):
     """DECODE BATCH GENERATOR
 
     Args:
@@ -62,6 +63,7 @@ def decode_generator(feat_list, batch_size=32,
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
         use_speaker_code (bool): whether to use speaker code
+        use_scalar_input (bool): whether to use scalar input
         upsampling_factor (int): upsampling factor
 
     Return:
@@ -87,7 +89,10 @@ def decode_generator(feat_list, batch_size=32,
                 h = feat_transform(h)
 
             # convert to torch variable
-            x = Variable(torch.from_numpy(x).long(), volatile=True)
+            if use_scalar_input:
+                x = Variable(torch.from_numpy(x).float(), volatile=True)
+            else:
+                x = Variable(torch.from_numpy(x).long(), volatile=True)
             h = Variable(torch.from_numpy(h).float(), volatile=True)
             if torch.cuda.is_available():
                 x = x.cuda()
@@ -156,7 +161,10 @@ def decode_generator(feat_list, batch_size=32,
             batch_h = pad_list(batch_h)
 
             # convert to torch variable
-            batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True)
+            if use_scalar_input:
+                batch_x = Variable(torch.from_numpy(batch_x).float(), volatile=True)
+            else:
+                batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True)
             batch_h = Variable(torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2)
             if torch.cuda.is_available():
                 batch_x = batch_x.cuda()
@@ -243,8 +251,11 @@ def main():
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/mean")
     scaler.scale_ = read_hdf5(args.stats, "/scale")
-    wav_transform = transforms.Compose([
-        lambda x: encode_mu_law(x, config.n_quantize)])
+    if config.use_scalar_input:
+        wav_transform = None
+    else:
+        wav_transform = transforms.Compose([
+            lambda x: encode_mu_law(x, config.n_quantize)])
     feat_transform = transforms.Compose([
         lambda x: scaler.transform(x)])
 
@@ -260,6 +271,7 @@ def main():
                 dilation_depth=config.dilation_depth,
                 dilation_repeat=config.dilation_repeat,
                 kernel_size=config.kernel_size,
+                use_scalar_input=config.use_scalar_input,
                 upsampling_factor=config.upsampling_factor)
             model.load_state_dict(torch.load(args.checkpoint)["model"])
             model.eval()
