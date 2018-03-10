@@ -475,7 +475,7 @@ class WaveNet(nn.Module):
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)
-            samples = torch.cat([samples, sample], dim=1)
+            samples = torch.cat([samples, sample.view(-1, 1)], dim=1)
 
             # show progress
             if intervals is not None and (i + 1) % intervals == 0:
