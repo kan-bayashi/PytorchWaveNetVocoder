@@ -276,7 +276,7 @@ if [ `echo ${stage} | grep 4` ];then
             --n_gpus ${n_gpus} \
             --checkpoints ${checkpoints} \
             --use_speaker_code ${use_speaker_code} \
-            --upsampling-factor ${upsampling_factor} \
+            --upsampling_factor ${upsampling_factor} \
             --resume ${resume}
 fi
 # }}}
