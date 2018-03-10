@@ -153,8 +153,10 @@ def decode_generator(feat_list, batch_size=32,
             batch_h = pad_list(batch_h)
 
             # convert to torch variable
-            batch_x = Variable(torch.from_numpy(batch_x).long(), volatile=True).cuda()
-            batch_h = Variable(torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2).cuda()
+            batch_x = Variable(
+                torch.from_numpy(batch_x).long(), volatile=True).cuda()
+            batch_h = Variable(
+                torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2).cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
