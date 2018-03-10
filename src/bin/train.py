@@ -334,7 +334,7 @@ def main():
     # other setting
     parser.add_argument("--checkpoints", default=10000,
                         type=int, help="how frequent saving model")
-    parser.add_argument("--intervals", default=10,
+    parser.add_argument("--intervals", default=100,
                         type=int, help="log interval")
     parser.add_argument("--seed", default=1,
                         type=int, help="seed number")
