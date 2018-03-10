@@ -11,7 +11,7 @@ This repository is the wavenet-vocoder implementation with pytorch.
 - python 3.6
 - virtualenv
 
-Recommend to use the GPU with 10GB> memory.  
+Recommend to use the GPU with 10GB> memory and nccl 2*.0+ for multi gpu training.  
 
 ## Setup
 ```bash
@@ -25,7 +25,7 @@ All examples are based on kaldi-style recipe.
 ```bash
 # build SD model
 $ cd egs/arctic/sd
-$ ./run.sh 
+$ ./run.sh
 
 # build SI-CLOSE model
 $ cd egs/arctic/si-close
@@ -34,7 +34,11 @@ $ ./run.sh
 # build SI-OPEN model
 $ cd egs/arctic/si-open
 $ ./run.sh
+
+# Multi-GPU training and decoding
+$ ./run.sh --n_gpus 3
 ```
+
 
 If slurm is installed in your servers, you can run recipes with slurm.
 
@@ -124,7 +128,7 @@ $ decode.py \
     --checkpoint si-close_lr1e-4_wd0_bs20k_ns_up/checkpoint-final.pkl \
     --config si-close_lr1e-4_wd0_bs20k_ns_up/model.conf \
     --fs 16000 \
-    --n_jobs 1 \
+    --batch_size 32 \
     --n_gpus 1
 
 # make filelist of generated wav file

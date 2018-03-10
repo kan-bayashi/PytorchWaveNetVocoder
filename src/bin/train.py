@@ -301,33 +301,33 @@ def main():
     parser.add_argument("--expdir", required=True,
                         type=str, help="directory to save the model")
     # network structure setting
-    parser.add_argument("--n-quantize", default=256,
+    parser.add_argument("--n_quantize", default=256,
                         type=int, help="number of quantization")
-    parser.add_argument("--n-aux", default=28,
+    parser.add_argument("--n_aux", default=28,
                         type=int, help="number of dimension of aux feats")
-    parser.add_argument("--n-resch", default=512,
+    parser.add_argument("--n_resch", default=512,
                         type=int, help="number of channels of residual output")
-    parser.add_argument("--n-skipch", default=256,
+    parser.add_argument("--n_skipch", default=256,
                         type=int, help="number of channels of skip output")
-    parser.add_argument("--dilation-depth", default=10,
+    parser.add_argument("--dilation_depth", default=10,
                         type=int, help="depth of dilation")
-    parser.add_argument("--dilation-repeat", default=1,
+    parser.add_argument("--dilation_repeat", default=1,
                         type=int, help="number of repeating of dilation")
-    parser.add_argument("--kernel-size", default=2,
+    parser.add_argument("--kernel_size", default=2,
                         type=int, help="kernel size of dilated causal convolution")
-    parser.add_argument("--upsampling-factor", default=0,
+    parser.add_argument("--upsampling_factor", default=0,
                         type=int, help="upsampling factor of aux features"
                                        "(if set 0, do not apply)")
-    parser.add_argument("--use-speaker-code", default=False,
+    parser.add_argument("--use_speaker_code", default=False,
                         type=strtobool, help="flag to use speaker code")
     # network training setting
     parser.add_argument("--lr", default=1e-4,
                         type=float, help="learning rate")
-    parser.add_argument("--weight-decay", default=0.0,
+    parser.add_argument("--weight_decay", default=0.0,
                         type=float, help="weight decay coefficient")
-    parser.add_argument("--batch-length", default=20000,
+    parser.add_argument("--batch_length", default=20000,
                         type=int, help="batch length (if set 0, utterance batch will be used)")
-    parser.add_argument("--batch-size", default=1,
+    parser.add_argument("--batch_size", default=1,
                         type=int, help="batch size (if use utterance batch, batch_size will be 1.")
     parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
@@ -340,7 +340,7 @@ def main():
                         type=int, help="seed number")
     parser.add_argument("--resume", default=None, nargs="?",
                         type=str, help="model path to restart training")
-    parser.add_argument("--n-gpus", default=1,
+    parser.add_argument("--n_gpus", default=1,
                         type=int, help="number of gpus")
     parser.add_argument("--verbose", default=1,
                         type=int, help="log level")

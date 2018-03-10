@@ -174,9 +174,9 @@ def main():
                         type=str, help="directory to save generated samples")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
-    parser.add_argument("--batch-size", default=32,
+    parser.add_argument("--batch_size", default=32,
                         type=int, help="number of batch size in decoding")
-    parser.add_argument("--n-gpus", default=1,
+    parser.add_argument("--n_gpus", default=1,
                         type=int, help="number of gpus")
     # other setting
     parser.add_argument("--intervals", default=1000,

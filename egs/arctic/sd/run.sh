@@ -262,20 +262,20 @@ if [ `echo ${stage} | grep 4` ];then
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
             --expdir ${expdir} \
-            --n-quantize ${n_quantize} \
-            --n-aux ${n_aux} \
-            --n-resch ${n_resch} \
-            --n-skipch ${n_skipch} \
-            --dilation-depth ${dilation_depth} \
-            --dilation-repeat ${dilation_repeat} \
+            --n_quantize ${n_quantize} \
+            --n_aux ${n_aux} \
+            --n_resch ${n_resch} \
+            --n_skipch ${n_skipch} \
+            --dilation_depth ${dilation_depth} \
+            --dilation_repeat ${dilation_repeat} \
             --lr ${lr} \
-            --weight-decay ${weight_decay} \
+            --weight_decay ${weight_decay} \
             --iters ${iters} \
-            --batch-length ${batch_length} \
-            --batch-size ${batch_size} \
-            --n-gpus ${n_gpus} \
+            --batch_length ${batch_length} \
+            --batch_size ${batch_size} \
+            --n_gpus ${n_gpus} \
             --checkpoints ${checkpoints} \
-            --use-speaker-code ${use_speaker_code} \
+            --use_speaker_code ${use_speaker_code} \
             --upsampling-factor ${upsampling_factor} \
             --resume ${resume}
 fi
@@ -299,8 +299,8 @@ if [ `echo ${stage} | grep 5` ];then
             --checkpoint ${checkpoint} \
             --config ${config} \
             --fs ${fs} \
-            --batch-size ${decode_batch_size} \
-            --n-gpus ${n_gpus}
+            --batch_size ${decode_batch_size} \
+            --n_gpus ${n_gpus}
 fi
 # }}}
 
