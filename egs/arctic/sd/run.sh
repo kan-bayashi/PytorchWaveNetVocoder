@@ -258,6 +258,7 @@ if [ `echo ${stage} | grep 4` ];then
     fi
     ${cuda_cmd} --gpu ${n_gpus} ${expdir}/log/${train}.log \
         train.py \
+            --n_gpus ${n_gpus} \
             --waveforms ${waveforms} \
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
@@ -273,7 +274,6 @@ if [ `echo ${stage} | grep 4` ];then
             --iters ${iters} \
             --batch_length ${batch_length} \
             --batch_size ${batch_size} \
-            --n_gpus ${n_gpus} \
             --checkpoints ${checkpoints} \
             --use_speaker_code ${use_speaker_code} \
             --upsampling_factor ${upsampling_factor} \
@@ -293,14 +293,14 @@ if [ `echo ${stage} | grep 5` ];then
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
     ${cuda_cmd} --gpu ${n_gpus} ${outdir}/log/decode.log \
         decode.py \
+            --n_gpus ${n_gpus} \
             --feats ${feats} \
             --stats data/${train}/stats.h5 \
             --outdir ${outdir} \
             --checkpoint ${checkpoint} \
             --config ${config} \
             --fs ${fs} \
-            --batch_size ${decode_batch_size} \
-            --n_gpus ${n_gpus}
+            --batch_size ${decode_batch_size}
 fi
 # }}}
 
