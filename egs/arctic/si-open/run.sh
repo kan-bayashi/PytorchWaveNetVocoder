@@ -255,7 +255,7 @@ fi
 
 
 # STAGE 2 {{{
-if [ `echo ${stage} | grep 2` ] && ${use_noise_shaping};then
+if [ `echo ${stage} | grep 2` ];then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
