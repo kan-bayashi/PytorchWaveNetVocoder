@@ -166,7 +166,7 @@ if [ `echo ${stage} | grep 1` ];then
         scp=exp/feature_extract/${train}/wav.${spk}.scp
         cat data/${train}/wav.scp | grep ${spk} > ${scp}
 
-        # set f0 range 
+        # set f0 range
         minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
         maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
 
@@ -185,7 +185,7 @@ if [ `echo ${stage} | grep 1` ];then
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
-                --n_jobs ${n_jobs} & 
+                --n_jobs ${n_jobs} &
 
         # update job counts
         nj=$(( ${nj}+1  ))
@@ -202,7 +202,11 @@ if [ `echo ${stage} | grep 1` ];then
     echo "${n_feats}/${n_wavs} files are successfully processed."
 
     # make scp files
-    find wav/${train} -name "*.wav" | sort > data/${train}/wav_filtered.scp
+    if [ ${highpass_cutoff} -eq 0 ];then
+        cp data/${train}/wav.scp data/${train}/wav_filtered.scp
+    else
+        find wav/${train} -name "*.wav" | sort > data/${train}/wav_filtered.scp
+    fi
     find hdf5/${train} -name "*.h5" | sort > data/${train}/feats.scp
 
     nj=0
@@ -212,7 +216,7 @@ if [ `echo ${stage} | grep 1` ];then
         scp=exp/feature_extract/${eval}/wav.${spk}.scp
         cat data/${eval}/wav.scp | grep ${spk} > ${scp}
 
-        # set f0 range 
+        # set f0 range
         minf0=`cat conf/${spk}.f0 | awk '{print $1}'`
         maxf0=`cat conf/${spk}.f0 | awk '{print $2}'`
 
@@ -231,7 +235,7 @@ if [ `echo ${stage} | grep 1` ];then
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
-                --n_jobs ${n_jobs} & 
+                --n_jobs ${n_jobs} &
 
         # update job counts
         nj=$(( ${nj}+1  ))
@@ -248,7 +252,11 @@ if [ `echo ${stage} | grep 1` ];then
     echo "${n_feats}/${n_wavs} files are successfully processed."
 
     # make scp files
-    find wav/${eval} -name "*.wav" | sort > data/${eval}/wav_filtered.scp
+    if [ ${highpass_cutoff} -eq 0 ];then
+        cp data/${eval}/wav.scp data/${eval}/wav_filtered.scp
+    else
+        find wav/${eval} -name "*.wav" | sort > data/${eval}/wav_filtered.scp
+    fi
     find hdf5/${eval} -name "*.h5" | sort > data/${eval}/feats.scp
 fi
 # }}}
@@ -279,7 +287,7 @@ if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
         # make scp of each speaker
         scp=exp/noise_shaping/wav_filtered.${spk}.scp
         cat data/${train}/wav_filtered.scp | grep "\/${spk}\/" > ${scp}
-        
+
         # apply noise shaping
         ${train_cmd} --num-threads ${n_jobs} \
             exp/noise_shaping/noise_shaping_apply.${spk}.log \
@@ -295,7 +303,7 @@ if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
                 --mcep_alpha ${mcep_alpha} \
                 --mag ${mag} \
                 --inv true \
-                --n_jobs ${n_jobs} & 
+                --n_jobs ${n_jobs} &
 
         # update job counts
         nj=$(( ${nj}+1  ))
@@ -436,7 +444,7 @@ if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
                 --mcep_alpha ${mcep_alpha} \
                 --mag ${mag} \
                 --inv false \
-                --n_jobs ${n_jobs} & 
+                --n_jobs ${n_jobs} &
 
         # update job counts
         nj=$(( ${nj}+1  ))

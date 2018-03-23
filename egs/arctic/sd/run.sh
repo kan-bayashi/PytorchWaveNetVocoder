@@ -178,7 +178,11 @@ if [ `echo ${stage} | grep 1` ];then
         echo "${n_feats}/${n_wavs} files are successfully processed."
 
         # make scp files
-        find wav/${set} -name "*.wav" | sort > data/${set}/wav_filtered.scp
+        if [ ${highpass_cutoff} -eq 0 ];then
+            cp data/${set}/wav.scp data/${set}/wav_filtered.scp
+        else
+            find wav/${set} -name "*.wav" | sort > data/${set}/wav_filtered.scp
+        fi
         find hdf5/${set} -name "*.h5" | sort > data/${set}/feats.scp
     done
 fi
