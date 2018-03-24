@@ -84,7 +84,7 @@ To synthesize your own data, things what you need are as follows:
 - checkpoint-final.pkl (model parameter file)
 - model.conf (model configuration file)
 - stats.h5 (feature statistics file)
-- *.wav (your own wav file)
+- *.wav (your own wav file, should be 16000 Hz)
 ```
 
 The procedure is as follows:
