@@ -36,7 +36,7 @@ $ cd egs/arctic/si-open
 $ ./run.sh
 
 # Multi-GPU training and decoding
-$ ./run.sh --n_gpus 3
+$ ./run.sh --n_gpus 3 --batch_size 3
 ```
 
 
