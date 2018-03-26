@@ -33,7 +33,6 @@ MCEP_DIM = 34
 MCEP_ALPHA = 0.455
 FFTL = 1024
 HIGHPASS_CUTOFF = 70
-OVERWRITE = True
 
 
 def low_cut_filter(x, fs, cutoff=70):
@@ -120,6 +119,9 @@ def convert_continuos_f0(f0):
     uv = np.float32(f0 != 0)
 
     # get start and end of f0
+    if f0.all() == 0:
+        print("WARNING: all of the f0 values are 0.")
+        return uv, f0
     start_f0 = f0[f0 != 0][0]
     end_f0 = f0[f0 != 0][-1]
 
@@ -137,6 +139,56 @@ def convert_continuos_f0(f0):
     cont_f0 = f(np.arange(0, f0.shape[0]))
 
     return uv, cont_f0
+
+
+def feature_extract(wav_list, args):
+    """EXTRACT FEATURE VECTOR"""
+    # define feature extractor
+    feature_extractor = FeatureExtractor(
+        analyzer="world",
+        fs=args.fs,
+        shiftms=args.shiftms,
+        minf0=args.minf0,
+        maxf0=args.maxf0,
+        fftl=args.fftl)
+
+    for wav_name in wav_list:
+        # load wavfile and apply low cut filter
+        fs, x = wavfile.read(wav_name)
+        x = np.array(x, dtype=np.float32)
+        if args.highpass_cutoff != 0:
+            x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
+
+        # check sampling frequency
+        if not fs == args.fs:
+            print("ERROR: sampling frequency is not matched.")
+            sys.exit(1)
+
+        # extract features
+        f0, _, _ = feature_extractor.analyze(x)
+        uv, cont_f0 = convert_continuos_f0(f0)
+        cont_f0_lpf = low_pass_filter(cont_f0, int(1.0 / (args.shiftms * 0.001)), cutoff=20)
+        codeap = feature_extractor.codeap()
+        mcep = feature_extractor.mcep(dim=args.mcep_dim, alpha=args.mcep_alpha)
+
+        # concatenate
+        cont_f0_lpf = np.expand_dims(cont_f0_lpf, axis=-1)
+        uv = np.expand_dims(uv, axis=-1)
+        feats = np.concatenate([uv, cont_f0_lpf, mcep, codeap], axis=1)
+
+        # extend time resolution
+        upsampling_factor = int(args.shiftms * fs * 0.001)
+        feats_extended = extend_time(feats, upsampling_factor)
+
+        # save to hdf5
+        feats_extended = feats_extended.astype(np.float32)
+        hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
+        write_hdf5(hdf5name, "/feat_org", feats)
+        write_hdf5(hdf5name, "/feat", feats_extended)
+
+        # overwrite wav file
+        if args.highpass_cutoff != 0:
+            wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
 
 
 def main():
@@ -191,59 +243,11 @@ def main():
     else:
         file_list = read_txt(args.waveforms)
 
-    # define feature extractor
-    feature_extractor = FeatureExtractor(
-        analyzer="world",
-        fs=args.fs,
-        shiftms=args.shiftms,
-        minf0=args.minf0,
-        maxf0=args.maxf0,
-        fftl=args.fftl)
-
     # check directory existence
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
     if not os.path.exists(args.hdf5dir):
         os.makedirs(args.hdf5dir)
-
-    def feature_extract(wav_list):
-        for wav_name in wav_list:
-            # load wavfile and apply low cut filter
-            fs, x = wavfile.read(wav_name)
-            x = np.array(x, dtype=np.float32)
-            if args.highpass_cutoff != 0:
-                x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
-
-            # check sampling frequency
-            if not fs == args.fs:
-                print("ERROR: sampling frequency is not matched.")
-                sys.exit(1)
-
-            # extract features
-            f0, spc, ap = feature_extractor.analyze(x)
-            uv, cont_f0 = convert_continuos_f0(f0)
-            cont_f0_lpf = low_pass_filter(cont_f0, int(1.0 / (args.shiftms * 0.001)), cutoff=20)
-            codeap = feature_extractor.codeap()
-            mcep = feature_extractor.mcep(dim=args.mcep_dim, alpha=args.mcep_alpha)
-
-            # concatenate
-            cont_f0_lpf = np.expand_dims(cont_f0_lpf, axis=-1)
-            uv = np.expand_dims(uv, axis=-1)
-            feats = np.concatenate([uv, cont_f0_lpf, mcep, codeap], axis=1)
-
-            # extend time resolution
-            upsampling_factor = int(args.shiftms * fs * 0.001)
-            feats_extended = extend_time(feats, upsampling_factor)
-
-            # save to hdf5
-            feats_extended = feats_extended.astype(np.float32)
-            hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
-            write_hdf5(hdf5name, "/feat_org", feats)
-            write_hdf5(hdf5name, "/feat", feats_extended)
-
-            # overwrite wav file
-            if args.highpass_cutoff != 0:
-                wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
 
     # divie list
     file_lists = np.array_split(file_list, args.n_jobs)
@@ -252,7 +256,7 @@ def main():
     # multi processing
     processes = []
     for f in file_lists:
-        p = mp.Process(target=feature_extract, args=(f,))
+        p = mp.Process(target=feature_extract, args=(f, args,))
         p.start()
         processes.append(p)
 
