@@ -57,6 +57,5 @@ def main():
     calc_stats(file_list, args)
 
 
-
 if __name__ == "__main__":
     main()

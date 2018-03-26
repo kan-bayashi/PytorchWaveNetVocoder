@@ -16,9 +16,10 @@ install:
   - pip3 install numpy
   - pip3 install http://download.pytorch.org/whl/cpu/torch-0.3.1-cp36-cp36m-linux_x86_64.whl
   - pip3 install torchvision
+  - pip3 install soundfile
 
 script:
-  - flake8 src test 
+  - flake8 src test
   - autopep8 -r src test --exclude src/utils --global-config .pep8 --diff --max-line-length 120 | tee check_autopep8
   - test ! -s check_autopep8
   - pytest
