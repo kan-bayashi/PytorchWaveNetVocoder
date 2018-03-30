@@ -119,7 +119,7 @@ def convert_continuos_f0(f0):
     uv = np.float32(f0 != 0)
 
     # get start and end of f0
-    if f0.all() == 0:
+    if (f0 == 0).all():
         print("WARNING: all of the f0 values are 0.")
         return uv, f0
     start_f0 = f0[f0 != 0][0]
