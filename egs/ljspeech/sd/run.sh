@@ -325,7 +325,7 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
         noise_shaping.py \
             --waveforms data/${eval}/wav_generated.scp \
             --stats data/${train}/stats.h5 \
-            --writedir "${outdir}"_restored \
+            --writedir "${outdir}_restored" \
             --fs ${fs} \
             --shiftms ${shiftms} \
             --fftl ${fftl} \

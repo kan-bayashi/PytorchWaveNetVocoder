@@ -159,6 +159,11 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
+    if ${use_upsampling};then
+        save_extended=false
+    else
+        save_extended=true
+    fi
     nj=0
     for spk in "${train_spks[@]}";do
         [ ! -e "exp/feature_extract/${train}" ] && mkdir -p "exp/feature_extract/${train}"
@@ -185,6 +190,7 @@ if echo ${stage} | grep -q 1; then
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
+                --save_extended ${save_extended} \
                 --n_jobs ${n_jobs} &
 
         # update job counts
@@ -235,6 +241,7 @@ if echo ${stage} | grep -q 1; then
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
+                --save_extended ${save_extended} \
                 --n_jobs ${n_jobs} &
 
         # update job counts

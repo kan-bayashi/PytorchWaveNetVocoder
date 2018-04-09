@@ -153,6 +153,11 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
+    if ${use_upsampling};then
+        save_extended=false
+    else
+        save_extended=true
+    fi
     minf0=$(awk '{print $1}' conf/${spk}.f0)
     maxf0=$(awk '{print $2}' conf/${spk}.f0)
     for set in ${train} ${eval};do
@@ -170,6 +175,7 @@ if echo ${stage} | grep -q 1; then
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
+                --save_extended ${save_extended} \
                 --n_jobs ${n_jobs}
 
         # check the number of feature files
