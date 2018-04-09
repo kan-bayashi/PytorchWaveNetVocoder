@@ -12,6 +12,9 @@ import multiprocessing as mp
 import os
 import sys
 
+from distutils.util import strtobool
+
+import librosa
 import numpy as np
 
 from numpy.matlib import repmat
@@ -141,8 +144,8 @@ def convert_continuos_f0(f0):
     return uv, cont_f0
 
 
-def feature_extract(wav_list, args):
-    """EXTRACT FEATURE VECTOR"""
+def world_feature_extract(wav_list, args):
+    """EXTRACT WORLD FEATURE VECTOR"""
     # define feature extractor
     feature_extractor = FeatureExtractor(
         analyzer="world",
@@ -176,15 +179,55 @@ def feature_extract(wav_list, args):
         uv = np.expand_dims(uv, axis=-1)
         feats = np.concatenate([uv, cont_f0_lpf, mcep, codeap], axis=1)
 
-        # extend time resolution
-        upsampling_factor = int(args.shiftms * fs * 0.001)
-        feats_extended = extend_time(feats, upsampling_factor)
-
         # save to hdf5
-        feats_extended = feats_extended.astype(np.float32)
         hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
         write_hdf5(hdf5name, "/feat_org", feats)
-        write_hdf5(hdf5name, "/feat", feats_extended)
+        if args.save_extended:
+            # extend time resolution
+            upsampling_factor = int(args.shiftms * fs * 0.001)
+            feats_extended = extend_time(feats, upsampling_factor)
+            feats_extended = feats_extended.astype(np.float32)
+            write_hdf5(hdf5name, "/feat", feats_extended)
+
+        # overwrite wav file
+        if args.highpass_cutoff != 0:
+            wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
+
+
+def spectrum_feature_extract(wav_list, args):
+    """EXTRACT SPECTRUM FEATURE VECTOR"""
+    # define feature extractor
+    for wav_name in wav_list:
+        # load wavfile and apply low cut filter
+        fs, x = wavfile.read(wav_name)
+        x = np.array(x, dtype=np.float32)
+        if args.highpass_cutoff != 0:
+            x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
+
+        # check sampling frequency
+        if not fs == args.fs:
+            print("ERROR: sampling frequency is not matched.")
+            sys.exit(1)
+
+        # extract features
+
+        # concatenate
+        feats = librosa.feature.melspectrogram(
+            x, fs,
+            n_fft=args.fftl,
+            hop_length=int(args.shiftms * fs * 0.001),
+            n_mels=args.mcep_dim,
+            fmax=fs // 2)
+
+        # save to hdf5
+        hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
+        write_hdf5(hdf5name, "/feat_org", feats)
+        if args.save_extended:
+            # extend time resolution
+            upsampling_factor = int(args.shiftms * fs * 0.001)
+            feats_extended = extend_time(feats, upsampling_factor)
+            feats_extended = feats_extended.astype(np.float32)
+            write_hdf5(hdf5name, "/feat", feats_extended)
 
         # overwrite wav file
         if args.highpass_cutoff != 0:
@@ -211,6 +254,9 @@ def main():
         "--shiftms", default=SHIFTMS,
         type=int, help="Frame shift in msec")
     parser.add_argument(
+        "--feature_type", default="world", choices=['world', 'spectrum'],
+        type=str, help="feature type (world or spectrum)")
+    parser.add_argument(
         "--minf0", default=MINF0,
         type=int, help="minimum f0")
     parser.add_argument(
@@ -228,6 +274,9 @@ def main():
     parser.add_argument(
         "--highpass_cutoff", default=HIGHPASS_CUTOFF,
         type=int, help="Cut off frequency in lowpass filter")
+    parser.add_argument(
+        "--save_extended", default=False,
+        type=strtobool, help="if set true, exteneded feature will be saved")
     parser.add_argument(
         "--n_jobs", default=10,
         type=int, help="number of parallel jobs")
@@ -256,7 +305,12 @@ def main():
     # multi processing
     processes = []
     for f in file_lists:
-        p = mp.Process(target=feature_extract, args=(f, args,))
+        if args.feature_type == "world":
+            p = mp.Process(target=world_feature_extract, args=(f, args,))
+        else:
+            # TODO(kan-bayashi): implement feature extraction of mel spectrum
+            raise NotImplementedError("currently, support only world.")
+            p = mp.Process(target=spectrum_feature_extract, args=(f, args,))
         p.start()
         processes.append(p)
 
