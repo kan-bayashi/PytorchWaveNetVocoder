@@ -4,9 +4,8 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import print_function
-
 import argparse
+import logging
 
 import numpy as np
 
@@ -23,6 +22,7 @@ def calc_stats(file_list, args):
 
     # process over all of data
     for filename in file_list:
+        logging.info("now processing %s" % filename)
         feat = read_hdf5(filename, "/feat_org")
         scaler.partial_fit(feat[:, 1:])
 
@@ -46,12 +46,30 @@ def main():
     parser.add_argument(
         "--stats", default=None, required=True,
         help="filename of hdf5 format")
+    parser.add_argument(
+        "--verbose", default=1,
+        type=int, help="log message level")
 
     args = parser.parse_args()
 
+    # set log level
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    elif args.verbose > 1:
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    else:
+        logging.basicConfig(level=logging.WARN,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+        logging.warn("logging is disabled.")
+
     # read file list
     file_list = read_txt(args.feats)
-    print("number of training utterances =", len(file_list))
+    logging.info("number of training utterances =", len(file_list))
 
     # calculate statistics
     calc_stats(file_list, args)

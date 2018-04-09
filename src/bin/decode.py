@@ -197,21 +197,15 @@ def main():
     if args.verbose > 0:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.outdir + "/decode.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
     elif args.verbose > 1:
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.outdir + "/decode.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
     else:
         logging.basicConfig(level=logging.WARN,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.outdir + "/decode.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
 
     # fix seed

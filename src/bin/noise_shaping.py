@@ -5,9 +5,9 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import division
-from __future__ import print_function
 
 import argparse
+import logging
 import multiprocessing as mp
 import os
 import sys
@@ -50,6 +50,7 @@ def noise_shaping(wav_list, args):
         fftl=args.fftl)
 
     for wav_name in wav_list:
+        logging.info("now processing %s" % wav_name)
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         wav_type = x.dtype
@@ -57,7 +58,7 @@ def noise_shaping(wav_list, args):
 
         # check sampling frequency
         if not fs == args.fs:
-            print("ERROR: sampling frequency is not matched.")
+            logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
         # extract features (only for get the number of frames)
@@ -127,6 +128,21 @@ def main():
         '--inv', default=False, type=strtobool,
         help="if True, inverse filtering will be performed")
     args = parser.parse_args()
+
+    # set log level
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    elif args.verbose > 1:
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    else:
+        logging.basicConfig(level=logging.WARN,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+        logging.warn("logging is disabled.")
 
     # read list
     if os.path.isdir(args.waveforms):

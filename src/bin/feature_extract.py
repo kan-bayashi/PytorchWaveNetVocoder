@@ -5,9 +5,9 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import division
-from __future__ import print_function
 
 import argparse
+import logging
 import multiprocessing as mp
 import os
 import sys
@@ -122,7 +122,7 @@ def convert_continuos_f0(f0):
 
     # get start and end of f0
     if (f0 == 0).all():
-        print("WARNING: all of the f0 values are 0.")
+        logging.warn("all of the f0 values are 0.")
         return uv, f0
     start_f0 = f0[f0 != 0][0]
     end_f0 = f0[f0 != 0][-1]
@@ -155,6 +155,7 @@ def world_feature_extract(wav_list, args):
         fftl=args.fftl)
 
     for wav_name in wav_list:
+        logging.info("now processing %s" % wav_name)
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         x = np.array(x, dtype=np.float32)
@@ -163,7 +164,7 @@ def world_feature_extract(wav_list, args):
 
         # check sampling frequency
         if not fs == args.fs:
-            print("ERROR: sampling frequency is not matched.")
+            logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
         # extract features
@@ -244,6 +245,20 @@ def main():
         type=int, help="log message level")
 
     args = parser.parse_args()
+    # set log level
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    elif args.verbose > 1:
+        logging.basicConfig(level=logging.DEBUG,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+    else:
+        logging.basicConfig(level=logging.WARN,
+                            format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
+                            datefmt='%m/%d/%Y %I:%M:%S')
+        logging.warn("logging is disabled.")
 
     # read list
     if os.path.isdir(args.waveforms):

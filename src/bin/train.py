@@ -5,7 +5,6 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import division
-from __future__ import print_function
 
 import argparse
 import logging
@@ -354,21 +353,15 @@ def main():
     if args.verbose == 1:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.expdir + "/train.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
     elif args.verbose > 1:
         logging.basicConfig(level=logging.DEBUG,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.expdir + "/train.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
     else:
         logging.basicConfig(level=logging.WARN,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S',
-                            filename=args.expdir + "/train.log")
-        logging.getLogger().addHandler(logging.StreamHandler())
+                            datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
 
     # fix seed
