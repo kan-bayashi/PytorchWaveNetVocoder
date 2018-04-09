@@ -264,7 +264,7 @@ if echo ${stage} | grep -q 4; then
     else
         upsampling_factor=0
     fi
-    ${cuda_cmd} --gpu ${n_gpus} "${expdir}"/log/${train}.log \
+    ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \
             --n_gpus ${n_gpus} \
             --waveforms ${waveforms} \
