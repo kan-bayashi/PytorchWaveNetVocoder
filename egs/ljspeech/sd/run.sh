@@ -38,6 +38,7 @@ stage=0123456
 # }}}
 shiftms=5
 fftl=1024
+feature_type=world
 highpass_cutoff=70
 minf0=40
 maxf0=400
@@ -81,8 +82,8 @@ dilation_repeat=3
 kernel_size=3
 lr=1e-4
 weight_decay=0.0
-iters=1000000
-batch_length=10000
+iters=200000
+batch_length=15000
 batch_size=1
 checkpoints=10000
 use_upsampling=true
@@ -125,7 +126,7 @@ set -e
 
 
 # STAGE 0 {{{
-if [ `echo ${stage} | grep 0` ];then
+if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
@@ -133,8 +134,8 @@ if [ `echo ${stage} | grep 0` ];then
         mkdir -p ${LJSPEECH_DB_ROOT}
         cd ${LJSPEECH_DB_ROOT}
         wget http://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
-        tar -vxf *.tar.bz2
-        rm *.tar.bz2
+        tar -vxf ./*.tar.bz2
+        rm ./*.tar.bz2
         cd ../
     fi
     [ ! -e data/${train} ] && mkdir -p data/${train}
@@ -148,10 +149,15 @@ fi
 
 
 # STAGE 1 {{{
-if [ `echo ${stage} | grep 1` ];then
+if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
+    if ${use_upsampling};then
+        save_extended=false
+    else
+        save_extended=true
+    fi
     for set in ${train} ${eval};do
         # training data feature extraction
         ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${set}.log \
@@ -161,17 +167,19 @@ if [ `echo ${stage} | grep 1` ];then
                 --hdf5dir hdf5/${set} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
+                --feature_type ${feature_type} \
                 --minf0 ${minf0} \
                 --maxf0 ${maxf0} \
                 --mcep_dim ${mcep_dim} \
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
+                --save_extended ${save_extended} \
                 --fftl ${fftl} \
                 --n_jobs ${n_jobs}
 
         # check the number of feature files
-        n_wavs=`cat data/${set}/wav.scp | wc -l`
-        n_feats=`find hdf5/${set} -name "*.h5" | wc -l`
+        n_wavs=$(wc -l data/${set}/wav.scp)
+        n_feats=$(find hdf5/${set} -name "*.h5" | wc -l)
         echo "${n_feats}/${n_wavs} files are successfully processed."
 
         # make scp files
@@ -187,7 +195,7 @@ fi
 
 
 # STAGE 2 {{{
-if [ `echo ${stage} | grep 2` ];then
+if echo ${stage} | grep -q 2; then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
@@ -201,7 +209,7 @@ fi
 
 
 # STAGE 3 {{{
-if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
+if echo ${stage} | -q grep 3 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
@@ -221,8 +229,8 @@ if [ `echo ${stage} | grep 3` ] && ${use_noise_shaping};then
             --n_jobs ${n_jobs}
 
     # check the number of feature files
-    n_wavs=`cat data/${train}/wav_filtered.scp | wc -l`
-    n_ns=`find wav_ns/${train} -name "*.wav" | wc -l`
+    n_wavs=$(wc -l data/${train}/wav_filtered.scp)
+    n_ns=$(find wav_ns/${train} -name "*.wav" | wc -l)
     echo "${n_ns}/${n_wavs} files are successfully processed."
 
     # make scp files
@@ -233,7 +241,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
+    expdir=exp/tr_ljspeech_22k_sd_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
@@ -241,9 +249,9 @@ if [ ! -n "${tag}" ];then
         expdir=${expdir}_up
     fi
 else
-    expdir=exp/tr_arctic_${tag}
+    expdir=exp/tr_ljspeech_22k_${tag}
 fi
-if [ `echo ${stage} | grep 4` ];then
+if echo ${stage} | grep -q 4; then
     echo "###########################################################"
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
@@ -253,23 +261,24 @@ if [ `echo ${stage} | grep 4` ];then
         waveforms=data/${train}/wav_filtered.scp
     fi
     if ${use_upsampling};then
-        upsampling_factor=`echo "${shiftms} * ${fs} / 1000" | bc`
+        upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     else
         upsampling_factor=0
     fi
-    ${cuda_cmd} --gpu ${n_gpus} ${expdir}/log/${train}.log \
+    ${cuda_cmd} --gpu ${n_gpus} "${expdir}"/log/${train}.log \
         train.py \
             --n_gpus ${n_gpus} \
             --waveforms ${waveforms} \
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
-            --expdir ${expdir} \
+            --expdir "${expdir}" \
             --n_quantize ${n_quantize} \
             --n_aux ${n_aux} \
             --n_resch ${n_resch} \
             --n_skipch ${n_skipch} \
             --dilation_depth ${dilation_depth} \
             --dilation_repeat ${dilation_repeat} \
+            --kernel_size ${kernel_size} \
             --lr ${lr} \
             --weight_decay ${weight_decay} \
             --iters ${iters} \
@@ -278,13 +287,13 @@ if [ `echo ${stage} | grep 4` ];then
             --checkpoints ${checkpoints} \
             --use_speaker_code ${use_speaker_code} \
             --upsampling_factor ${upsampling_factor} \
-            --resume ${resume}
+            --resume "${resume}"
 fi
 # }}}
 
 
 # STAGE 5 {{{
-if [ `echo ${stage} | grep 5` ];then
+if echo ${stage} | grep -q 5; then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
     echo "###########################################################"
@@ -292,14 +301,14 @@ if [ `echo ${stage} | grep 5` ];then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    ${cuda_cmd} --gpu ${n_gpus} ${outdir}/log/decode.log \
+    ${cuda_cmd} --gpu ${n_gpus} "${outdir}"/log/decode.log \
         decode.py \
             --n_gpus ${n_gpus} \
             --feats ${feats} \
             --stats data/${train}/stats.h5 \
-            --outdir ${outdir} \
-            --checkpoint ${checkpoint} \
-            --config ${config} \
+            --outdir "${outdir}" \
+            --checkpoint "${checkpoint}" \
+            --config "${config}" \
             --fs ${fs} \
             --batch_size ${decode_batch_size}
 fi
@@ -307,22 +316,22 @@ fi
 
 
 # STAGE 6 {{{
-if [ `echo ${stage} | grep 6` ] && ${use_noise_shaping};then
+if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    find ${outdir} -name "*.wav" | sort > data/${eval}/wav_generated.scp
+    find "${outdir}" -name "*.wav" | sort > data/${eval}/wav_generated.scp
     ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_restore_${eval}.log \
         noise_shaping.py \
             --waveforms data/${eval}/wav_generated.scp \
             --stats data/${train}/stats.h5 \
-            --writedir ${outdir}_restored \
+            --writedir "${outdir}"_restored \
             --fs ${fs} \
             --shiftms ${shiftms} \
             --fftl ${fftl} \
             --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+            --mcep_dim_end $(( 2 + mcep_dim + 1 )) \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --n_jobs ${n_jobs} \
