@@ -31,6 +31,8 @@ stage=0123456
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
+# minf0: minimum f0 value
+# maxf0: maximum f0 value
 # mcep_dim: dimension of mel-cepstrum
 # mcep_alpha: alpha value of mel-cepstrum
 # mag: coefficient of noise shaping (default=0.5)
@@ -38,7 +40,6 @@ stage=0123456
 # }}}
 shiftms=5
 fftl=1024
-feature_type=world
 highpass_cutoff=70
 minf0=40
 maxf0=400
@@ -53,7 +54,6 @@ n_jobs=10
 #######################################
 # {{{
 # n_gpus: number of gpus
-# spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -98,7 +98,7 @@ resume=
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files 
+# feats: list or directory of feature files
 # n_gpus: number of gpus to decode
 # }}}
 outdir=
@@ -167,7 +167,6 @@ if echo ${stage} | grep -q 1; then
                 --hdf5dir hdf5/${set} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --feature_type ${feature_type} \
                 --minf0 ${minf0} \
                 --maxf0 ${maxf0} \
                 --mcep_dim ${mcep_dim} \
@@ -222,7 +221,7 @@ if echo ${stage} | -q grep 3 && ${use_noise_shaping}; then
             --shiftms ${shiftms} \
             --fftl ${fftl} \
             --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+            --mcep_dim_end $(( 2 + mcep_dim + 1 )) \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --inv true \
