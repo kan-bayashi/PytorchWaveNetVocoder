@@ -14,7 +14,7 @@ import numpy as np
 import soundfile as sf
 
 from calc_stats import calc_stats
-from feature_extract import feature_extract
+from feature_extract import world_feature_extract
 from noise_shaping import noise_shaping
 from utils import find_files
 
@@ -42,7 +42,8 @@ def make_args(**kwargs):
         mcep_dim_start=2,
         mcep_dim_end=25,
         mag=0.5,
-        inv=False
+        inv=False,
+        save_extended=True
     )
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
@@ -63,7 +64,7 @@ def test_preprocessing():
     wav_list = find_files(wavdir, "*.wav")
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
-    feature_extract(wav_list, args)
+    world_feature_extract(wav_list, args)
 
     # calc_stats
     file_list = find_files(args.hdf5dir, "*.h5")

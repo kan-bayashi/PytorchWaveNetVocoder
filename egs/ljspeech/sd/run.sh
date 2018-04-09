@@ -31,6 +31,8 @@ stage=0123456
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
+# minf0: minimum f0 value
+# maxf0: maximum f0 value
 # mcep_dim: dimension of mel-cepstrum
 # mcep_alpha: alpha value of mel-cepstrum
 # mag: coefficient of noise shaping (default=0.5)
@@ -39,9 +41,11 @@ stage=0123456
 shiftms=5
 fftl=1024
 highpass_cutoff=70
-fs=16000
-mcep_dim=24
-mcep_alpha=0.410
+minf0=40
+maxf0=400
+fs=22050
+mcep_dim=34
+mcep_alpha=0.455
 mag=0.5
 n_jobs=10
 
@@ -50,7 +54,6 @@ n_jobs=10
 #######################################
 # {{{
 # n_gpus: number of gpus
-# spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -70,18 +73,17 @@ n_jobs=10
 # resume: checkpoint to resume
 # }}}
 n_gpus=1
-spk=slt
 n_quantize=256
-n_aux=28
+n_aux=39
 n_resch=512
 n_skipch=256
 dilation_depth=10
 dilation_repeat=3
-kernel_size=2
+kernel_size=3
 lr=1e-4
 weight_decay=0.0
 iters=200000
-batch_length=20000
+batch_length=15000
 batch_size=1
 checkpoints=10000
 use_upsampling=true
@@ -96,7 +98,7 @@ resume=
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files 
+# feats: list or directory of feature files
 # n_gpus: number of gpus to decode
 # }}}
 outdir=
@@ -108,15 +110,15 @@ decode_batch_size=32
 #######################################
 #            OHTER SETTING            #
 #######################################
-ARCTIC_DB_ROOT=downloads
+LJSPEECH_DB_ROOT=downloads
 tag=
 
 # parse options
 . parse_options.sh
 
 # set params
-train=tr_${spk}
-eval=ev_${spk}
+train=tr
+eval=ev
 
 # stop when error occured
 set -e
@@ -128,22 +130,20 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${ARCTIC_DB_ROOT} ];then
-        mkdir -p ${ARCTIC_DB_ROOT}
-        cd ${ARCTIC_DB_ROOT}
-        for id in bdl slt rms clb jmk ksp awb;do
-            wget http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_${id}_arctic-0.95-release.tar.bz2
-            tar xf cmu_us_${id}*.tar.bz2
-        done
+    if [ ! -e ${LJSPEECH_DB_ROOT} ];then
+        mkdir -p ${LJSPEECH_DB_ROOT}
+        cd ${LJSPEECH_DB_ROOT}
+        wget http://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
+        tar -vxf ./*.tar.bz2
         rm ./*.tar.bz2
         cd ../
     fi
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 1028 > data/${train}/wav.scp
+    find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
+        | sort | grep -v LJ050 > data/${train}/wav.scp
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | tail -n 104 > data/${eval}/wav.scp
+    find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
+       | sort | grep LJ050 > data/${eval}/wav.scp
 fi
 # }}}
 
@@ -158,8 +158,6 @@ if echo ${stage} | grep -q 1; then
     else
         save_extended=true
     fi
-    minf0=$(awk '{print $1}' conf/${spk}.f0)
-    maxf0=$(awk '{print $2}' conf/${spk}.f0)
     for set in ${train} ${eval};do
         # training data feature extraction
         ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${set}.log \
@@ -169,13 +167,13 @@ if echo ${stage} | grep -q 1; then
                 --hdf5dir hdf5/${set} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --minf0 "${minf0}" \
-                --maxf0 "${maxf0}" \
+                --minf0 ${minf0} \
+                --maxf0 ${maxf0} \
                 --mcep_dim ${mcep_dim} \
                 --mcep_alpha ${mcep_alpha} \
                 --highpass_cutoff ${highpass_cutoff} \
-                --fftl ${fftl} \
                 --save_extended ${save_extended} \
+                --fftl ${fftl} \
                 --n_jobs ${n_jobs}
 
         # check the number of feature files
@@ -223,7 +221,7 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
             --shiftms ${shiftms} \
             --fftl ${fftl} \
             --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+            --mcep_dim_end $(( 2 + mcep_dim + 1 )) \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --inv true \
@@ -242,7 +240,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_sd_${spk}_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
+    expdir=exp/tr_ljspeech_22k_sd_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
@@ -250,7 +248,7 @@ if [ ! -n "${tag}" ];then
         expdir=${expdir}_up
     fi
 else
-    expdir=exp/tr_arctic_${tag}
+    expdir=exp/tr_ljspeech_22k_${tag}
 fi
 if echo ${stage} | grep -q 4; then
     echo "###########################################################"
@@ -302,7 +300,7 @@ if echo ${stage} | grep -q 5; then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    ${cuda_cmd} --gpu ${n_gpus} "${outdir}/log/decode.log" \
+    ${cuda_cmd} --gpu ${n_gpus} "${outdir}"/log/decode.log \
         decode.py \
             --n_gpus ${n_gpus} \
             --feats ${feats} \
@@ -327,12 +325,12 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
         noise_shaping.py \
             --waveforms data/${eval}/wav_generated.scp \
             --stats data/${train}/stats.h5 \
-            --writedir "${outdir}"_restored \
+            --writedir "${outdir}_restored" \
             --fs ${fs} \
             --shiftms ${shiftms} \
             --fftl ${fftl} \
             --mcep_dim_start 2 \
-            --mcep_dim_end $(( 2 + mcep_dim +1 )) \
+            --mcep_dim_end $(( 2 + mcep_dim + 1 )) \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --n_jobs ${n_jobs} \
