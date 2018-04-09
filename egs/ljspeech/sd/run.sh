@@ -73,7 +73,7 @@ n_jobs=10
 # }}}
 n_gpus=1
 n_quantize=256
-n_aux=28
+n_aux=39
 n_resch=512
 n_skipch=256
 dilation_depth=10
@@ -81,7 +81,7 @@ dilation_repeat=3
 kernel_size=3
 lr=1e-4
 weight_decay=0.0
-iters=100000
+iters=1000000
 batch_length=10000
 batch_size=1
 checkpoints=10000
