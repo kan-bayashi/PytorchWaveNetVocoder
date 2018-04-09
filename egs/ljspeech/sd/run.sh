@@ -208,7 +208,7 @@ fi
 
 
 # STAGE 3 {{{
-if echo ${stage} | -q grep 3 && ${use_noise_shaping}; then
+if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
