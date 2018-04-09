@@ -213,8 +213,8 @@ def main():
         "--shiftms", default=SHIFTMS,
         type=int, help="Frame shift in msec")
     parser.add_argument(
-        "--feature_type", default="world", choices=['world'],
-        type=str, help="feature type (world or spectrum)")
+        "--feature_type", default="world", choices=["world"],
+        type=str, help="feature type")
     parser.add_argument(
         "--minf0", default=MINF0,
         type=int, help="minimum f0")
