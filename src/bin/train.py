@@ -445,7 +445,7 @@ def main():
         time.sleep(0.1)
 
     # resume
-    if args.resume is not None:
+    if args.resume is not None and len(args.resume) != 0:
         checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage.cuda(0))
         if args.n_gpus > 1:
             model.module.load_state_dict(checkpoint["model"])
