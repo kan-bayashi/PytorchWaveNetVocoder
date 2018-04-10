@@ -189,10 +189,6 @@ def main():
                         type=int, help="log level")
     args = parser.parse_args()
 
-    # check directory existence
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
-
     # set log level
     if args.verbose > 0:
         logging.basicConfig(level=logging.INFO,
@@ -207,6 +203,14 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
+
+    # show argmument
+    for key, value in vars(args).items():
+        logging.info("%s = %s" % (key, str(value)))
+
+    # check directory existence
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
 
     # fix seed
     os.environ['PYTHONHASHSEED'] = str(args.seed)
