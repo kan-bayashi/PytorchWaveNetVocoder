@@ -27,15 +27,6 @@ from utils import find_files
 from utils import read_txt
 from utils import write_hdf5
 
-FS = 22050
-SHIFTMS = 5
-MINF0 = 70
-MAXF0 = 210
-MCEP_DIM = 34
-MCEP_ALPHA = 0.455
-FFTL = 1024
-HIGHPASS_CUTOFF = 70
-
 
 def low_cut_filter(x, fs, cutoff=70):
     """FUNCTION TO APPLY LOW CUT FILTER
@@ -154,8 +145,8 @@ def world_feature_extract(wav_list, args):
         maxf0=args.maxf0,
         fftl=args.fftl)
 
-    for wav_name in wav_list:
-        logging.info("now processing %s" % wav_name)
+    for i, wav_name in enumerate(wav_list):
+        logging.info("now processing %s (%d/%d)" % (wav_name, i, len(wav_list)))
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         x = np.array(x, dtype=np.float32)
@@ -208,31 +199,31 @@ def main():
         "--wavdir", default=None,
         help="directory to save of preprocessed wav file")
     parser.add_argument(
-        "--fs", default=FS,
+        "--fs", default=16000,
         type=int, help="Sampling frequency")
     parser.add_argument(
-        "--shiftms", default=SHIFTMS,
+        "--shiftms", default=5,
         type=int, help="Frame shift in msec")
     parser.add_argument(
         "--feature_type", default="world", choices=["world"],
         type=str, help="feature type")
     parser.add_argument(
-        "--minf0", default=MINF0,
+        "--minf0", default=40,
         type=int, help="minimum f0")
     parser.add_argument(
-        "--maxf0", default=MAXF0,
+        "--maxf0", default=400,
         type=int, help="maximum f0")
     parser.add_argument(
-        "--mcep_dim", default=MCEP_DIM,
+        "--mcep_dim", default=24,
         type=int, help="Dimension of mel cepstrum")
     parser.add_argument(
-        "--mcep_alpha", default=MCEP_ALPHA,
+        "--mcep_alpha", default=0.41,
         type=float, help="Alpha of mel cepstrum")
     parser.add_argument(
-        "--fftl", default=FFTL,
+        "--fftl", default=1024,
         type=int, help="FFT length")
     parser.add_argument(
-        "--highpass_cutoff", default=HIGHPASS_CUTOFF,
+        "--highpass_cutoff", default=70,
         type=int, help="Cut off frequency in lowpass filter")
     parser.add_argument(
         "--save_extended", default=False,
@@ -245,6 +236,7 @@ def main():
         type=int, help="log message level")
 
     args = parser.parse_args()
+
     # set log level
     if args.verbose == 1:
         logging.basicConfig(level=logging.INFO,
@@ -260,11 +252,16 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
 
+    # show argmument
+    for key, value in vars(args).items():
+        logging.info("%s = %s" % (key, str(value)))
+
     # read list
     if os.path.isdir(args.waveforms):
         file_list = sorted(find_files(args.waveforms, "*.wav"))
     else:
         file_list = read_txt(args.waveforms)
+    logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
     if not os.path.exists(args.wavdir):

@@ -67,9 +67,13 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
 
+    # show argmument
+    for key, value in vars(args).items():
+        logging.info("%s = %s" % (key, str(value)))
+
     # read file list
     file_list = read_txt(args.feats)
-    logging.info("number of training utterances =", len(file_list))
+    logging.info("number of utterances = %d" % len(file_list))
 
     # calculate statistics
     calc_stats(file_list, args)

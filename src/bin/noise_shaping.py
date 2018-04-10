@@ -25,14 +25,6 @@ from utils import find_files
 from utils import read_hdf5
 from utils import read_txt
 
-FS = 22050
-SHIFTMS = 5
-FFTL = 1024
-MCEP_DIM_START = 2
-MCEP_DIM_END = 37
-MCEP_ALPHA = 0.455
-MAG = 0.5
-
 
 def noise_shaping(wav_list, args):
     """APPLY NOISE SHAPING"""
@@ -98,35 +90,36 @@ def main():
         "--writedir", default=None,
         help="directory to save preprocessed wav file")
     parser.add_argument(
-        "--fs", default=FS,
+        "--fs", default=16000,
         type=int, help="Sampling frequency")
     parser.add_argument(
-        "--shiftms", default=SHIFTMS,
+        "--shiftms", default=5,
         type=int, help="Frame shift in msec")
     parser.add_argument(
-        "--fftl", default=FFTL,
+        "--fftl", default=1024,
         type=int, help="FFT length")
     parser.add_argument(
-        "--mcep_dim_start", default=MCEP_DIM_START,
+        "--mcep_dim_start", default=2,
         type=int, help="Start index of mel cepstrum")
     parser.add_argument(
-        "--mcep_dim_end", default=MCEP_DIM_END,
+        "--mcep_dim_end", default=27,
         type=int, help="End index of mel cepstrum")
     parser.add_argument(
-        "--mcep_alpha", default=MCEP_ALPHA,
+        "--mcep_alpha", default=0.41,
         type=float, help="Alpha of mel cepstrum")
     parser.add_argument(
-        "--mag", default=MAG,
+        "--mag", default=0.5,
         type=float, help="magnification of noise shaping")
     parser.add_argument(
         "--verbose", default=1,
         type=int, help="log message level")
     parser.add_argument(
-        '--n_jobs', default=1,
+        '--n_jobs', default=10,
         type=int, help="number of parallel jobs")
     parser.add_argument(
         '--inv', default=False, type=strtobool,
         help="if True, inverse filtering will be performed")
+
     args = parser.parse_args()
 
     # set log level
@@ -144,11 +137,16 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warn("logging is disabled.")
 
+    # show argmument
+    for key, value in vars(args).items():
+        logging.info("%s = %s" % (key, str(value)))
+
     # read list
     if os.path.isdir(args.waveforms):
         file_list = sorted(find_files(args.waveforms, "*.wav"))
     else:
         file_list = read_txt(args.waveforms)
+    logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
     if not os.path.exists(args.writedir):
