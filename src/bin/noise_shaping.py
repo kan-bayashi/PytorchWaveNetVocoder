@@ -41,8 +41,8 @@ def noise_shaping(wav_list, args):
         shiftms=args.shiftms,
         fftl=args.fftl)
 
-    for wav_name in wav_list:
-        logging.info("now processing %s" % wav_name)
+    for i, wav_name in enumerate(wav_list):
+        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         wav_type = x.dtype

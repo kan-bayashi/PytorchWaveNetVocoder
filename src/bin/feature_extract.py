@@ -146,7 +146,7 @@ def world_feature_extract(wav_list, args):
         fftl=args.fftl)
 
     for i, wav_name in enumerate(wav_list):
-        logging.info("now processing %s (%d/%d)" % (wav_name, i, len(wav_list)))
+        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         x = np.array(x, dtype=np.float32)

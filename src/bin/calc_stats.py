@@ -21,8 +21,8 @@ def calc_stats(file_list, args):
     scaler = StandardScaler()
 
     # process over all of data
-    for filename in file_list:
-        logging.info("now processing %s" % filename)
+    for i, filename in enumerate(file_list):
+        logging.info("now processing %s (%d/%d)" % (filename, i + 1, len(file_list)))
         feat = read_hdf5(filename, "/feat_org")
         scaler.partial_fit(feat[:, 1:])
 
