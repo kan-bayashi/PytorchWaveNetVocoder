@@ -11,11 +11,11 @@
 # or search for the string 'default_config' in utils/queue.pl or utils/slurm.pl.
 
 # for local
-# export train_cmd="run.pl"
-# export cuda_cmd="run.pl --gpu 1"
-# export max_jobs=1
+export train_cmd="run.pl"
+export cuda_cmd="run.pl --gpu 1"
+export max_jobs=1
 
 # for slurm (you can change configuration file "conf/slurm.conf")
-export train_cmd="slurm.pl --config conf/slurm.conf"
-export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
-export max_jobs=-1
+# export train_cmd="slurm.pl --config conf/slurm.conf"
+# export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
+# export max_jobs=-1
