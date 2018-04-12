@@ -262,7 +262,7 @@ fi # }}}
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_ljspeech_22k_sd_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
+    expdir=exp/tr_mai_16k_sd_${spk}_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
