@@ -80,7 +80,7 @@ n_resch=512
 n_skipch=256
 dilation_depth=10
 dilation_repeat=3
-kernel_size=3
+kernel_size=2
 lr=1e-4
 weight_decay=0.0
 iters=200000
@@ -136,28 +136,28 @@ if echo ${stage} | grep -q 0; then
         cd ${DB_ROOT}
         wget -O en_US.tgz http://www.m-ailabs.bayern/?ddownload=411
         wget -O en_UK.tgz http://www.m-ailabs.bayern/?ddownload=412
-        tar -vxf ./*.tgz
-        rm ./*.taz
+        tar xzvf ./*.tgz
+        rm ./*.tgz
         cd ../
     fi
     [ ! -e data/${train} ] && mkdir -p data/${train}
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
-    if ${spk} = "elizabeth"; then
+    if [ ${spk} = "elizabeth" ]; then
         find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep -v "wives_and_daughters_060_" > data/${train}/wav.scp
+           | sort | grep -v "wives_and_daughters_60_" > data/${train}/wav.scp
         find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep "wives_and_daughters_060_" > data/${eval}/wav.scp
-    elif ${spk} = "judy"; then
+           | sort | grep "wives_and_daughters_60_" > data/${eval}/wav.scp
+    elif [ ${spk} = "judy" ]; then
         find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
            | sort | grep -v "the_sea_faries_22_" > data/${train}/wav.scp
         find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
            | sort | grep "the_sea_faries_22_" > data/${eval}/wav.scp
-    elif ${spk} = "mary"; then
+    elif [ ${spk} = "mary" ]; then
         find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
            | sort | grep -v "northandsouth_52_" > data/${train}/wav.scp
         find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
            | sort | grep "northandsouth_52_" > data/${eval}/wav.scp
-    elif ${spk} = "elliot"; then
+    elif [ ${spk} = "elliot" ]; then
         find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
            | sort | grep -v "silent_bullet_13_" > data/${train}/wav.scp
         find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
