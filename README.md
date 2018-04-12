@@ -6,10 +6,17 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
 
+You can build above WaveNet vocoder using following datasets:
+- [CMU Arctic database](http://www.festvox.org/cmu_arctic/): `egs/arctic`
+- [LJ Speech database](https://keithito.com/LJ-Speech-Dataset/): `egs/ljspeech`
+- [M-AILABS speech database](http://www.m-ailabs.bayern/en/the-mailabs-speech-dataset/): `egs/m-ailab-speech`
+
 ## Requirements
-- cuda 8.0
 - python 3.6
 - virtualenv
+- cuda 8.0
+- cndnn 6
+- nccl 2.0+ (for the use of multi-gpus)
 
 Recommend to use the GPU with 10GB> memory and nccl 2*.0+ for multi gpu training.  
 
@@ -23,7 +30,7 @@ $ make -j
 ## Run example
 All examples are based on kaldi-style recipe.  
 ```bash
-# build SD model
+# build SD model using arctic data
 $ cd egs/arctic/sd
 $ ./run.sh
 
@@ -159,7 +166,7 @@ Generated examples are available from [here](https://kan-bayashi.github.io/WaveN
 
 ## References
 
-Please cite the following articles.  
+Please cite the following articles.
 
 ```
 @article{hayashi2018sp,
