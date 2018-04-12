@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder.svg?branch=master)](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder)
 
-This repository is the wavenet-vocoder implementation with pytorch.  
+This repository is the wavenet-vocoder implementation with pytorch.
 
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
 
@@ -18,7 +18,7 @@ You can build above WaveNet vocoder using following datasets:
 - cndnn 6
 - nccl 2.0+ (for the use of multi-gpus)
 
-Recommend to use the GPU with 10GB> memory and nccl 2*.0+ for multi gpu training.  
+Recommend to use the GPU with 10GB> memory.
 
 ## Setup
 ```bash
@@ -28,7 +28,7 @@ $ make -j
 ```
 
 ## Run example
-All examples are based on kaldi-style recipe.  
+All examples are based on kaldi-style recipe.
 ```bash
 # build SD model using arctic data
 $ cd egs/arctic/sd
@@ -36,7 +36,7 @@ $ ./run.sh
 
 # build SI-CLOSE model
 $ cd egs/arctic/si-close
-$ ./run.sh 
+$ ./run.sh
 
 # build SI-OPEN model
 $ cd egs/arctic/si-open
@@ -102,7 +102,7 @@ $ cd egs/arctic/si-close
 # download pre-trained model which trained with 6 arctic speakers
 $ wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
-# unzip 
+# unzip
 $ unzip si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # make filelist of your own wav files
@@ -122,11 +122,11 @@ $ feature_extract.py \
     --mcep_alpha 0.41 \
     --highpass_cutoff 70 \
     --fftl 1024 \
-    --n_jobs 1 
-    
+    --n_jobs 1
+
 # make filelist of feature file
 $ find hdf5/test -name "*.h5" > feats.scp
-    
+
 # decode with pre-trained model
 $ decode.py \
     --feats feats.scp \
@@ -192,4 +192,4 @@ Please cite the following articles.
 
 ## Author
 Tomoki Hayashi @ Nagoya University  
-e-mail:hayashi.tomoki@g.sp.m.is.nagoya-u.ac.jp  
+e-mail:hayashi.tomoki@g.sp.m.is.nagoya-u.ac.jp
