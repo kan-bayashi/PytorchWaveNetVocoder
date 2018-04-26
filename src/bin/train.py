@@ -72,7 +72,6 @@ def train_generator(wav_list, feat_list, receptive_field,
     """TRAINING BATCH GENERATOR
 
     Args:
-        device (torch.device): torch device
         wav_list (str): list of wav files
         feat_list (str): list of feat files
         receptive_field (int): size of receptive filed

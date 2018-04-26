@@ -367,7 +367,7 @@ class WaveNet(nn.Module):
             if mode == "sampling":
                 posterior = F.softmax(output[-1], dim=0)
                 dist = torch.distributions.Categorical(posterior)
-                sample = dist.sample()
+                sample = dist.sample().unsqueeze(0)
             elif mode == "argmax":
                 sample = output.argmax(-1)
             else:

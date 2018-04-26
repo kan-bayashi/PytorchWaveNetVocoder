@@ -75,6 +75,25 @@ def test_forward():
 
 
 def test_generate():
+    batch = 2
+    x = np.random.randint(0, 256, size=(batch, 1))
+    h = np.random.randn(batch, 28, 100)
+    length = h.shape[-1] - 1
+    with torch.no_grad():
+        net = WaveNet(256, 28, 16, 32, 10, 3, 2)
+        net.apply(initialize)
+        net.eval()
+        for x_, h_ in zip(x, h):
+            batch_x = torch.from_numpy(np.expand_dims(x_, 0)).long()
+            batch_h = torch.from_numpy(np.expand_dims(h_, 0)).float()
+            net.generate(batch_x, batch_h, length, 1, "sampling")
+            net.fast_generate(batch_x, batch_h, length, 1, "sampling")
+        batch_x = torch.from_numpy(x).long()
+        batch_h = torch.from_numpy(h).float()
+        net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "sampling")
+
+
+def test_assert_generation():
     # get batch
     batch = 2
     x = np.random.randint(0, 256, size=(batch, 1))
