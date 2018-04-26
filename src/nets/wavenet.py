@@ -13,7 +13,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from torch.autograd import Variable
 from torch import nn
 
 
@@ -55,12 +54,12 @@ def initialize(m):
         m (torch.nn.Module): torch nn module instance
     """
     if isinstance(m, nn.Conv1d):
-        nn.init.xavier_uniform(m.weight)
-        nn.init.constant(m.bias, 0.0)
+        nn.init.xavier_uniform_(m.weight)
+        nn.init.constant_(m.bias, 0.0)
 
     if isinstance(m, nn.ConvTranspose2d):
-        nn.init.constant(m.weight, 1.0)
-        nn.init.constant(m.bias, 0.0)
+        nn.init.constant_(m.weight, 1.0)
+        nn.init.constant_(m.bias, 0.0)
 
 
 class OneHot(nn.Module):
@@ -78,22 +77,14 @@ class OneHot(nn.Module):
         """Forward calculation
 
         Arg:
-            x (Variable): long tensor variable with the shape  (B x T)
+            x (tensor): long tensor variable with the shape  (B x T)
 
         Return:
-            (Variable): float tensor variable with the shape (B x depth x T)
+            (tensor): float tensor variable with the shape (B x depth x T)
         """
         x = x % self.depth
         x = torch.unsqueeze(x, 2)
-        if self.training:
-            x_onehot = Variable(
-                torch.FloatTensor(x.size(0), x.size(1), self.depth).zero_())
-        else:
-            x_onehot = Variable(
-                torch.FloatTensor(x.size(0), x.size(1), self.depth).zero_(), volatile=True)
-
-        if torch.cuda.is_available():
-            x_onehot = x_onehot.cuda()
+        x_onehot = x.new_zeros(x.size(0), x.size(1), self.depth).float()
 
         return x_onehot.scatter_(2, x, 1)
 
@@ -115,10 +106,10 @@ class CausalConv1d(nn.Module):
         """Forward calculation
 
         Arg:
-            x (Variable): float tensor variable with the shape  (B x C x T)
+            x (tensor): float tensor variable with the shape  (B x C x T)
 
         Return:
-            (Variable): float tensor variable with the shape (B x C x T)
+            (tensor): float tensor variable with the shape (B x C x T)
         """
         x = self.conv(x)
         if self.padding != 0:
@@ -146,10 +137,10 @@ class UpSampling(nn.Module):
         """Forward calculation
 
         Arg:
-            x (Variable): float tensor variable with the shape  (B x C x T)
+            x (tensor): float tensor variable with the shape  (B x C x T)
 
         Return:
-            (Variable): float tensor variable with the shape (B x C x T')
+            (tensor): float tensor variable with the shape (B x C x T')
                         where T' = T * upsampling_factor
         """
         x = x.unsqueeze(1)  # B x 1 x C x T
@@ -217,11 +208,11 @@ class WaveNet(nn.Module):
         """Forward calculation
 
         Args:
-            x (Variable): long tensor variable with the shape  (B x T)
-            h (Variable): float tensor variable with the shape  (B x n_aux x T)
+            x (tensor): long tensor variable with the shape  (B x T)
+            h (tensor): float tensor variable with the shape  (B x n_aux x T)
 
         Return:
-            (Variable): float tensor variable with the shape (B x T x n_quantize)
+            (tensor): float tensor variable with the shape (B x T x n_quantize)
         """
         # preprocess
         output = self._preprocess(x)
@@ -247,8 +238,8 @@ class WaveNet(nn.Module):
         """Sample-by-sample generation
 
         Args:
-            x (Variable): long tensor variable with the shape  (1 x T)
-            h (Variable): float tensor variable with the shape  (1 x n_samples + T)
+            x (tensor): long tensor variable with the shape  (1 x T)
+            h (tensor): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
             mode (str): "sampling" or "argmax"
@@ -267,15 +258,11 @@ class WaveNet(nn.Module):
             h = F.pad(h, (n_pad, 0), "replicate")
 
         # generate
-        samples = x.data[0].tolist()
+        samples = x[0].tolist()
         start = time.time()
         for i in range(n_samples):
             current_idx = len(samples)
-            x = Variable(
-                torch.LongTensor(samples[-self.receptive_field:]).view(1, -1),
-                volatile=True)
-            if torch.cuda.is_available():
-                x = x.cuda()
+            x = torch.tensor(samples[-self.receptive_field:]).long().view(1, -1)
             h_ = h[:, :, current_idx - self.receptive_field: current_idx]
 
             # calculate output
@@ -294,9 +281,9 @@ class WaveNet(nn.Module):
             if mode == "sampling":
                 posterior = F.softmax(output[-1], dim=0)
                 dist = torch.distributions.Categorical(posterior)
-                sample = dist.sample().data[0]
+                sample = dist.sample()
             elif mode == "argmax":
-                sample = output.max(1)[-1].data[-1]
+                sample = output[-1].argmax()
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)
@@ -318,8 +305,8 @@ class WaveNet(nn.Module):
         Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
-            x (Variable): long tensor variable with the shape  (1 x T)
-            h (Variable): float tensor variable with the shape  (1 x n_samples + T)
+            x (tensor): long tensor variable with the shape  (1 x T)
+            h (tensor): float tensor variable with the shape  (1 x n_samples + T)
             n_samples (int): number of samples to be generated
             intervals (int): log interval
             mode (str): "sampling" or "argmax"
@@ -354,10 +341,10 @@ class WaveNet(nn.Module):
             output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
 
         # generate
-        samples = x.data[0]
+        samples = x[0]
         start = time.time()
         for i in range(n_samples):
-            output = Variable(samples[-self.kernel_size * 2 - 1:].unsqueeze(0), volatile=True)
+            output = samples[-self.kernel_size * 2 - 1:].unsqueeze(0)
             output = self._preprocess(output)
             h_ = h[:, :, samples.size(0) - 1].contiguous().view(1, self.n_aux, 1)
             output_buffer_next = []
@@ -380,9 +367,9 @@ class WaveNet(nn.Module):
             if mode == "sampling":
                 posterior = F.softmax(output[-1], dim=0)
                 dist = torch.distributions.Categorical(posterior)
-                sample = dist.sample().data
+                sample = dist.sample()
             elif mode == "argmax":
-                sample = output.max(-1)[-1].data
+                sample = output.argmax(-1)
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)
@@ -404,8 +391,8 @@ class WaveNet(nn.Module):
         Reference [Fast Wavenet Generation Algorithm](https://arxiv.org/abs/1611.09482)
 
         Args:
-            x (Variable): long tensor variable with the shape  (B x T)
-            h (Variable): float tensor variable with the shape  (B x max(n_samples_list) + T)
+            x (tensor): long tensor variable with the shape  (B x T)
+            h (tensor): float tensor variable with the shape  (B x max(n_samples_list) + T)
             n_samples_list (list): list of number of samples to be generated (B)
             intervals (int): log interval
             mode (str): "sampling" or "argmax"
@@ -443,10 +430,10 @@ class WaveNet(nn.Module):
             output_buffer.append(output[:, :, -buffer_size[l] - 1: -1])
 
         # generate
-        samples = x.data  # B x T
+        samples = x  # B x T
         start = time.time()
         for i in range(max_samples):
-            output = Variable(samples[:, -self.kernel_size * 2 - 1:], volatile=True)
+            output = samples[:, -self.kernel_size * 2 - 1:]
             output = self._preprocess(output)  # B x C x T
             h_ = h[:, :, samples.size(-1) - 1].contiguous().unsqueeze(-1)  # B x C x 1
             output_buffer_next = []
@@ -469,9 +456,9 @@ class WaveNet(nn.Module):
             if mode == "sampling":
                 posterior = F.softmax(output, dim=-1)
                 dist = torch.distributions.Categorical(posterior)
-                sample = dist.sample().data  # B
+                sample = dist.sample()  # B
             elif mode == "argmax":
-                sample = output.max(-1)[1].data  # B
+                sample = output.argmax(-1)  # B
             else:
                 logging.error("mode should be sampling or argmax")
                 sys.exit(1)

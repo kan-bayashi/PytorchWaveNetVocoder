@@ -21,7 +21,6 @@ import soundfile as sf
 import torch
 
 from sklearn.preprocessing import StandardScaler
-from torch.autograd import Variable
 from torch import nn
 from torchvision import transforms
 
@@ -66,12 +65,14 @@ def validate_length(x, y, upsampling_factor=0):
 
 
 @background(max_prefetch=16)
-def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_size=1,
-                    wav_transform=None, feat_transform=None, shuffle=True,
+def train_generator(wav_list, feat_list, receptive_field,
+                    batch_length=0, batch_size=1, wav_transform=None,
+                    feat_transform=None, shuffle=True,
                     upsampling_factor=0, use_speaker_code=False):
     """TRAINING BATCH GENERATOR
 
     Args:
+        device (torch.device): torch device
         wav_list (str): list of wav files
         feat_list (str): list of feat files
         receptive_field (int): size of receptive filed
@@ -79,7 +80,7 @@ def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_
         batch_size (int): batch size (if batch_length = 0, batch_size will be 1.)
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
-        shuffle (bool): whether to do shuffle of the file list
+        shuffle (bool): whether to shuffle the file list
         upsampling_factor (int): upsampling factor
         use_speaker_code (bool): whether to use speaker code
 
@@ -147,8 +148,8 @@ def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_
                         h_ = feat_transform(h_)
 
                     # convert to torch variable
-                    x_ = Variable(torch.from_numpy(x_).long())
-                    h_ = Variable(torch.from_numpy(h_).float())
+                    x_ = torch.from_numpy(x_).long()
+                    h_ = torch.from_numpy(h_).float()
 
                     # remove the last and first sample for training
                     batch_x += [x_[:-1]]  # (T)
@@ -194,8 +195,8 @@ def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_
                         h_ = feat_transform(h_)
 
                     # convert to torch variable
-                    x_ = Variable(torch.from_numpy(x_).long())
-                    h_ = Variable(torch.from_numpy(h_).float())
+                    x_ = torch.from_numpy(x_).long()
+                    h_ = torch.from_numpy(h_).float()
 
                     # remove the last and first sample for training
                     batch_h += [h_.transpose(0, 1)]  # (D x T)
@@ -229,8 +230,8 @@ def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_
                     h = feat_transform(h)
 
                 # convert to torch variable
-                x = Variable(torch.from_numpy(x).long())
-                h = Variable(torch.from_numpy(h).float())
+                x = torch.from_numpy(x).long()
+                h = torch.from_numpy(h).float()
 
                 # remove the last and first sample for training
                 batch_x = x[:-1].unsqueeze(0).cuda()  # (1 x T)
@@ -252,8 +253,8 @@ def train_generator(wav_list, feat_list, receptive_field, batch_length=0, batch_
                     h = feat_transform(h)
 
                 # convert to torch variable
-                x = Variable(torch.from_numpy(x).long())
-                h = Variable(torch.from_numpy(h).float())
+                x = torch.from_numpy(x).long()
+                h = torch.from_numpy(h).float()
 
                 # remove the last and first sample for training
                 batch_h = h.transpose(0, 1).unsqueeze(0).cuda()  # (1 x D x T')
@@ -454,7 +455,7 @@ def main():
     else:
         iterations = 0
 
-    # send to gpu
+    # check gpu is available or not
     if torch.cuda.is_available():
         model.cuda()
         criterion.cuda()
@@ -475,10 +476,10 @@ def main():
         optimizer.zero_grad()
         batch_loss.backward()
         optimizer.step()
-        loss += batch_loss.data[0]
+        loss += batch_loss.item()
         total += time.time() - start
         logging.debug("batch loss = %.3f (%.3f sec / batch)" % (
-            batch_loss.data[0], time.time() - start))
+            batch_loss.item(), time.time() - start))
 
         # report progress
         if (i + 1) % args.intervals == 0:
