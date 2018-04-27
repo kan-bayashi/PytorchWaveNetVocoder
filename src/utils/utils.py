@@ -14,6 +14,8 @@ import threading
 import h5py
 import numpy as np
 
+from numpy.matlib import repmat
+
 
 def check_hdf5(hdf5_name, hdf5_path):
     """FUNCTION TO CHECK HDF5 EXISTENCE
@@ -207,3 +209,27 @@ class background(object):
         def bg_generator(*args, **kwargs):
             return BackgroundGenerator(gen(*args, **kwargs))
         return bg_generator
+
+
+def extend_time(feats, upsampling_factor):
+    """FUNCTION TO EXTEND TIME RESOLUTION
+
+    Args:
+        feats (ndarray): feature vector with the shape (T x D)
+        upsampling_factor (int): upsampling_factor
+
+    Return:
+        (ndarray): extend feats with the shape (upsampling_factor*T x D)
+    """
+    # get number
+    n_frames = feats.shape[0]
+    n_dims = feats.shape[1]
+
+    # extend time
+    feats_extended = np.zeros((n_frames * upsampling_factor, n_dims))
+    for j in range(n_frames):
+        start_idx = j * upsampling_factor
+        end_idx = (j + 1) * upsampling_factor
+        feats_extended[start_idx: end_idx] = repmat(feats[j, :], upsampling_factor, 1)
+
+    return feats_extended

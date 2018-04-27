@@ -12,11 +12,9 @@ import multiprocessing as mp
 import os
 import sys
 
-from distutils.util import strtobool
-
+import librosa
 import numpy as np
 
-from numpy.matlib import repmat
 from scipy.interpolate import interp1d
 from scipy.io import wavfile
 from scipy.signal import firwin
@@ -75,30 +73,6 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
     return lpf_x
 
 
-def extend_time(feats, upsampling_factor):
-    """FUNCTION TO EXTEND TIME RESOLUTION
-
-    Args:
-        feats (ndarray): feature vector with the shape (T x D)
-        upsampling_factor (int): upsampling_factor
-
-    Return:
-        (ndarray): extend feats with the shape (upsampling_factor*T x D)
-    """
-    # get number
-    n_frames = feats.shape[0]
-    n_dims = feats.shape[1]
-
-    # extend time
-    feats_extended = np.zeros((n_frames * upsampling_factor, n_dims))
-    for j in range(n_frames):
-        start_idx = j * upsampling_factor
-        end_idx = (j + 1) * upsampling_factor
-        feats_extended[start_idx: end_idx] = repmat(feats[j, :], upsampling_factor, 1)
-
-    return feats_extended
-
-
 def convert_continuos_f0(f0):
     """CONVERT F0 TO CONTINUOUS F0
 
@@ -149,6 +123,8 @@ def world_feature_extract(wav_list, args):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
+        if x.dtype != np.int16:
+            logging.warn("wav file format is not 16 bit PCM.")
         x = np.array(x, dtype=np.float32)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
@@ -172,13 +148,41 @@ def world_feature_extract(wav_list, args):
 
         # save to hdf5
         hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
-        write_hdf5(hdf5name, "/feat_org", feats)
-        if args.save_extended:
-            # extend time resolution
-            upsampling_factor = int(args.shiftms * fs * 0.001)
-            feats_extended = extend_time(feats, upsampling_factor)
-            feats_extended = feats_extended.astype(np.float32)
-            write_hdf5(hdf5name, "/feat", feats_extended)
+        write_hdf5(hdf5name, "/world", feats)
+
+        # overwrite wav file
+        if args.highpass_cutoff != 0:
+            wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
+
+
+def melspectrogram_extract(wav_list, args):
+    """EXTRACT MEL SPECTROGRAM"""
+    # define feature extractor
+    for i, wav_name in enumerate(wav_list):
+        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+        # load wavfile and apply low cut filter
+        fs, x = wavfile.read(wav_name)
+        if x.dtype != np.int16:
+            logging.warn("wav file format is not 16 bit PCM.")
+        x = np.array(x, dtype=np.float32)
+        if args.highpass_cutoff != 0:
+            x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
+
+        # check sampling frequency
+        if not fs == args.fs:
+            logging.error("sampling frequency is not matched.")
+            sys.exit(1)
+
+        # extract features
+        x_norm = x / (np.iinfo(np.int16).max + 1)
+        shiftl = int(args.shiftms * fs * 0.001)
+        mspc = librosa.feature.melspectrogram(
+            x_norm, fs, n_fft=args.fftl, hop_length=shiftl, n_mels=args.mspc_dim)
+        mspc = np.log10(mspc.T)
+
+        # save to hdf5
+        hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
+        write_hdf5(hdf5name, "/melspc", np.float32(mspc))
 
         # overwrite wav file
         if args.highpass_cutoff != 0:
@@ -205,8 +209,11 @@ def main():
         "--shiftms", default=5,
         type=int, help="Frame shift in msec")
     parser.add_argument(
-        "--feature_type", default="world", choices=["world"],
+        "--feature_type", default="world", choices=["world", "melspc"],
         type=str, help="feature type")
+    parser.add_argument(
+        "--mspc_dim", default=80,
+        type=int, help="Dimension of mel spectrogram")
     parser.add_argument(
         "--minf0", default=40,
         type=int, help="minimum f0")
@@ -225,9 +232,6 @@ def main():
     parser.add_argument(
         "--highpass_cutoff", default=70,
         type=int, help="Cut off frequency in lowpass filter")
-    parser.add_argument(
-        "--save_extended", default=False,
-        type=strtobool, help="if set true, exteneded feature will be saved")
     parser.add_argument(
         "--n_jobs", default=10,
         type=int, help="number of parallel jobs")

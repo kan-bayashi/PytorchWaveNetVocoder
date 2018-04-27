@@ -21,6 +21,7 @@ from sprocket.speech.feature_extractor import FeatureExtractor
 from sprocket.speech.synthesizer import Synthesizer
 
 from feature_extract import low_cut_filter
+from utils import check_hdf5
 from utils import find_files
 from utils import read_hdf5
 from utils import read_txt
@@ -46,7 +47,7 @@ def noise_shaping(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         wav_type = x.dtype
-        x = np.array(x, dtype=np.float64)
+        x = np.float64(x)
 
         # check sampling frequency
         if not fs == args.fs:
@@ -58,7 +59,7 @@ def noise_shaping(wav_list, args):
         num_frames = f0.shape[0]
 
         # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/mean")
+        mlsa_coef = read_hdf5(args.stats, "/world/mean")
         mlsa_coef = mlsa_coef[args.mcep_dim_start:args.mcep_dim_end] * args.mag
         mlsa_coef[0] = 0.0
         if args.inv:
