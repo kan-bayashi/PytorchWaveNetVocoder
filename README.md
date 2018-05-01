@@ -24,14 +24,19 @@ Recommend to use the GPU with 10GB> memory.
 ```bash
 $ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
 $ cd PytorchWaveNetVocoder/tools
-$ make -j
+$ make
 ```
 
 ## Run example
 All examples are based on kaldi-style recipe.
+
 ```bash
-# build SD model using arctic data
+# build SD model with world features
 $ cd egs/arctic/sd
+$ ./run.sh
+
+# build SD model with mel-spectrogram
+$ cd egs/arctic/sd-melspc
 $ ./run.sh
 
 # build SI-CLOSE model
@@ -44,8 +49,10 @@ $ ./run.sh
 
 # Multi-GPU training and decoding
 $ ./run.sh --n_gpus 3 --batch_size 3
-```
 
+# You can also change hyperparameters as follows
+$ ./run.sh --n_gpus 3 --
+```
 
 If slurm is installed in your servers, you can run recipes with slurm.
 
@@ -99,7 +106,7 @@ The procedure is as follows:
 ```bash
 $ cd egs/arctic/si-close
 
-# download pre-trained model which trained with 6 arctic speakers
+# download pre-trained model which trained with 6 arctic speakers and world features
 $ wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # unzip
@@ -114,6 +121,7 @@ $ feature_extract.py \
     --waveforms wav.scp \
     --wavdir wav/test \
     --hdf5dir hdf5/test \
+    --feature_type world \
     --fs 16000 \
     --shiftms 5 \
     --minf0 <set_appropriate_value> \
@@ -146,6 +154,7 @@ $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
     --writedir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
+    --feature_type world \
     --fs 16000 \
     --shiftms 5 \
     --fftl 1024 \
