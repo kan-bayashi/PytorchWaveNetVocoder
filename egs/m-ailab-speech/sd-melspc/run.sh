@@ -66,7 +66,7 @@ n_jobs=10
 # }}}
 n_gpus=1
 n_quantize=256
-n_aux=28
+n_aux=80
 n_resch=512
 n_skipch=256
 dilation_depth=10
