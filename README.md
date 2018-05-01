@@ -11,6 +11,48 @@ You can build above WaveNet vocoder using following datasets:
 - [LJ Speech database](https://keithito.com/LJ-Speech-Dataset/): `egs/ljspeech`
 - [M-AILABS speech database](http://www.m-ailabs.bayern/en/the-mailabs-speech-dataset/): `egs/m-ailab-speech`
 
+## News
+
+### 2018/05/01: Major update
+
+- Updated to be compatible with pytorch v0.4
+- Updated to be able to use melspectrogram as auxiliary feature
+
+Due to above update, some parts are changed (see below)
+
+```
+# -------------------- #
+# feature path in hdf5 #
+# -------------------- #
+old -> new
+/feat_org -> /world or /melspc
+/feat_org -> no more saving extended featrue (it is replicated when loading)
+
+# ----------------------- #
+# statistics path in hdf5 #
+# ----------------------- #
+old -> new
+/mean -> /world/mean or /melspc/mean
+/scale -> /world/scale or /melspc/scale
+
+# ----------------------- #
+# new options in training #
+# ----------------------- #
+--feature_type: Auxiliary feature type (world or melspc)
+--use_upsampling_layer: Flag to decide whether to use upsampling layer in WaveNet
+--upsampling_factor: Changed to be alway needed because feature extension is performed in loading
+```
+
+Note that old model file `checkpoint-*.pkl` can be used, but it is necessary to modify `model.conf` file as follows.
+
+```python
+import torch
+args = torch.load("old_model.conf")
+args.use_upsampling_layer = True
+args.feature_type = "world"
+torch.save(args, "new_model.conf")
+```
+
 ## Requirements
 - python 3.6
 - virtualenv
