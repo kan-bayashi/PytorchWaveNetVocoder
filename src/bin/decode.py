@@ -160,7 +160,7 @@ def decode_generator(feat_list,
 
             # convert to torch variable
             batch_x = torch.from_numpy(batch_x).long().cuda()
-            batch_h = torch.from_numpy(batch_h).float().cuda()
+            batch_h = torch.from_numpy(batch_h).float().transpose(1, 2).cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
