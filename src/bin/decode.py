@@ -18,7 +18,6 @@ import torch
 import torch.multiprocessing as mp
 
 from sklearn.preprocessing import StandardScaler
-from torch.autograd import Variable
 from torchvision import transforms
 
 from utils import find_files
@@ -87,8 +86,8 @@ def decode_generator(feat_list, batch_size=32,
                 h = feat_transform(h)
 
             # convert to torch variable
-            x = Variable(torch.from_numpy(x).long(), volatile=True).cuda()
-            h = Variable(torch.from_numpy(h).float(), volatile=True).cuda()
+            x = torch.from_numpy(x).long().cuda()
+            h = torch.from_numpy(h).float().cuda()
             x = x.unsqueeze(0)  # 1 => 1 x 1
             h = h.transpose(0, 1).unsqueeze(0)  # T x C => 1 x C x T
 
@@ -153,10 +152,8 @@ def decode_generator(feat_list, batch_size=32,
             batch_h = pad_list(batch_h)
 
             # convert to torch variable
-            batch_x = Variable(
-                torch.from_numpy(batch_x).long(), volatile=True).cuda()
-            batch_h = Variable(
-                torch.from_numpy(batch_h).float(), volatile=True).transpose(1, 2).cuda()
+            batch_x = torch.from_numpy(batch_x).long().cuda()
+            batch_h = torch.from_numpy(batch_h).float().cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
@@ -244,7 +241,7 @@ def main():
 
     # define gpu decode function
     def gpu_decode(feat_list, gpu):
-        with torch.cuda.device(gpu):
+        with torch.cuda.device(gpu) and torch.no_grad():
             # define model and load parameters
             model = WaveNet(
                 n_quantize=config.n_quantize,
