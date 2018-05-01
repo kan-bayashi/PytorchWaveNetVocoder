@@ -25,6 +25,8 @@ from utils import find_files
 from utils import read_txt
 from utils import write_hdf5
 
+EPS = 1e-10
+
 
 def low_cut_filter(x, fs, cutoff=70):
     """FUNCTION TO APPLY LOW CUT FILTER
@@ -180,7 +182,7 @@ def melspectrogram_extract(wav_list, args):
         shiftl = int(args.shiftms * fs * 0.001)
         mspc = librosa.feature.melspectrogram(
             x_norm, fs, n_fft=args.fftl, hop_length=shiftl, n_mels=args.mspc_dim)
-        mspc = np.log10(mspc.T)
+        mspc = np.log10(mspc.T + EPS)
 
         # save to hdf5
         hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
