@@ -251,9 +251,9 @@ def main():
         with torch.cuda.device(gpu) and torch.no_grad():
             # define model and load parameters
             if config.use_upsampling_layer:
-                upsampling_factor = 0
-            else:
                 upsampling_factor = config.upsampling_factor
+            else:
+                upsampling_factor = 0
             model = WaveNet(
                 n_quantize=config.n_quantize,
                 n_aux=config.n_aux,

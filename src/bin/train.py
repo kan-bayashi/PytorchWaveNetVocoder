@@ -400,9 +400,9 @@ def main():
 
     # define network
     if args.use_upsampling_layer:
-        upsampling_factor = 0
-    else:
         upsampling_factor = args.upsampling_factor
+    else:
+        upsampling_factor = 0
     model = WaveNet(
         n_quantize=args.n_quantize,
         n_aux=args.n_aux,
@@ -450,6 +450,7 @@ def main():
         receptive_field=model.receptive_field,
         batch_length=args.batch_length,
         batch_size=args.batch_size,
+        feature_type=args.feature_type,
         wav_transform=wav_transform,
         feat_transform=feat_transform,
         shuffle=True,
@@ -492,8 +493,8 @@ def main():
 
     # check gpu is available or not
     if torch.cuda.is_available():
-        model.cuda()
-        criterion.cuda()
+        model = model.cuda()
+        criterion = criterion.cuda()
     else:
         logging.error("gpu is not available. please check the setting.")
         sys.exit(1)
@@ -504,6 +505,9 @@ def main():
     for i in six.moves.range(iterations, args.iters):
         start = time.time()
         (batch_x, batch_h), batch_t = generator.next()
+        logging.info(batch_x.size())
+        logging.info(batch_h.size())
+        logging.info(batch_t.size())
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(
             batch_output[:, model.receptive_field:].contiguous().view(-1, args.n_quantize),
