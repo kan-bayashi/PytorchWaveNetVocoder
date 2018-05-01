@@ -17,7 +17,7 @@ from scipy.io import wavfile
 from calc_stats import calc_stats
 from feature_extract import melspectrogram_extract
 from feature_extract import world_feature_extract
-from noise_shaping import noise_shaping
+from noise_shaping import world_noise_shaping
 from utils import find_files
 
 
@@ -69,18 +69,23 @@ def test_preprocessing():
     wav_list = find_files(wavdir, "*.wav")
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
-    world_feature_extract(wav_list, args)
+    args.feature_type = "melspc"
     melspectrogram_extract(wav_list, args)
+    args.feature_type = "world"
+    world_feature_extract(wav_list, args)
 
     # calc_stats
     file_list = find_files(args.hdf5dir, "*.h5")
+    args.feature_type = "melspc"
+    calc_stats(file_list, args)
+    args.feature_type = "world"
     calc_stats(file_list, args)
 
     # noise shaping
     wav_list = find_files(args.wavdir, "*.wav")
     if not os.path.exists(args.writedir):
         os.makedirs(args.writedir)
-    noise_shaping(wav_list, args)
+    world_noise_shaping(wav_list, args)
 
     # assert list length
     wav_ns_list = find_files(args.writedir, "*.wav")
