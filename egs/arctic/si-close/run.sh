@@ -69,6 +69,7 @@ n_jobs=10
 # use_speaker_code: true or false
 # resume: checkpoint to resume
 # }}}
+feature_type=world
 n_gpus=1
 spks=(bdl rms clb slt ksp jmk)
 n_quantize=256
@@ -156,11 +157,6 @@ if echo ${stage} | grep -q 1 ;then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
-    if ${use_upsampling};then
-        save_extended=false
-    else
-        save_extended=true
-    fi
     nj=0
     for set in ${train} ${eval};do
         for spk in "${spks[@]}";do
@@ -180,6 +176,7 @@ if echo ${stage} | grep -q 1 ;then
                     --waveforms "${scp}" \
                     --wavdir "wav/${set}/${spk}" \
                     --hdf5dir "hdf5/${set}/${spk}" \
+                    --feature_type ${feature_type} \
                     --fs ${fs} \
                     --shiftms ${shiftms} \
                     --minf0 "${minf0}" \
@@ -188,7 +185,6 @@ if echo ${stage} | grep -q 1 ;then
                     --mcep_alpha ${mcep_alpha} \
                     --highpass_cutoff ${highpass_cutoff} \
                     --fftl ${fftl} \
-                    --save_extended ${save_extended} \
                     --n_jobs ${n_jobs} &
 
             # update job counts
@@ -225,7 +221,8 @@ if echo ${stage} | grep -q 2 ;then
     ${train_cmd} "exp/calculate_statistics/calc_stats_${train}.log" \
         calc_stats.py \
             --feats "data/${train}/feats.scp" \
-            --stats "data/${train}/stats.h5"
+            --stats "data/${train}/stats.h5" \
+            --feature_type ${feature_type}
     echo "statistics are successfully calculated."
 fi
 # }}}
@@ -250,6 +247,7 @@ if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
                 --waveforms ${scp} \
                 --stats "data/${train}/stats.h5" \
                 --writedir "wav_ns/${train}/${spk}" \
+                --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
                 --fftl ${fftl} \
@@ -260,7 +258,7 @@ if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
                 --inv true \
                 --n_jobs ${n_jobs} &
 
-        # update job counts  
+        # update job counts
         nj=$(( nj + 1  ))
         if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
             wait
@@ -283,7 +281,7 @@ fi
 # STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
-    expdir=exp/tr_arctic_16k_si_close_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
+    expdir=exp/tr_arctic_16k_si_close_${feature_type}_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
     if ${use_noise_shaping};then
         expdir=${expdir}_ns
     fi
@@ -302,11 +300,7 @@ if echo ${stage} | grep -q 4 ;then
     else
         waveforms=data/${train}/wav_filtered.scp
     fi
-    if ${use_upsampling};then
-        upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
-    else
-        upsampling_factor=0
-    fi
+    upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/train_${train}.log" \
         train.py \
             --n_gpus ${n_gpus} \
@@ -314,6 +308,7 @@ if echo ${stage} | grep -q 4 ;then
             --feats "data/${train}/feats.scp" \
             --stats "data/${train}/stats.h5" \
             --expdir "${expdir}" \
+            --feature_type ${feature_type} \
             --n_quantize ${n_quantize} \
             --n_aux ${n_aux} \
             --n_resch ${n_resch} \
@@ -327,8 +322,9 @@ if echo ${stage} | grep -q 4 ;then
             --batch_length ${batch_length} \
             --batch_size ${batch_size} \
             --checkpoints ${checkpoints} \
+            --upsampling_factor "${upsampling_factor}" \
+            --use_upsampling_layer ${use_upsampling} \
             --use_speaker_code ${use_speaker_code} \
-            --upsampling_factor ${upsampling_factor} \
             --resume "${resume}"
 fi
 # }}}
@@ -393,6 +389,7 @@ if echo ${stage} | grep -q 6  && ${use_noise_shaping};then
                 --waveforms ${scp} \
                 --stats "data/${train}/stats.h5" \
                 --writedir "${outdir}_restored/${spk}" \
+                --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
                 --fftl ${fftl} \

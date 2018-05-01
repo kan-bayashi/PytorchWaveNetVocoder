@@ -20,6 +20,7 @@ import torch.multiprocessing as mp
 from sklearn.preprocessing import StandardScaler
 from torchvision import transforms
 
+from utils import extend_time
 from utils import find_files
 from utils import read_hdf5
 from utils import read_txt
@@ -50,30 +51,38 @@ def pad_list(batch_list, pad_value=0.0):
     return batch_pad
 
 
-def decode_generator(feat_list, batch_size=32,
-                     wav_transform=None, feat_transform=None,
-                     use_speaker_code=False, upsampling_factor=0):
+def decode_generator(feat_list,
+                     batch_size=32,
+                     feature_type="world",
+                     wav_transform=None,
+                     feat_transform=None,
+                     upsampling_factor=80,
+                     use_upsampling_layer=True,
+                     use_speaker_code=False):
     """DECODE BATCH GENERATOR
 
     Args:
         featdir (str): directory including feat files
         batch_size (int): batch size in decoding
+        feature_type (str): feature type
         wav_transform (func): preprocessing function for waveform
         feat_transform (func): preprocessing function for aux feats
-        use_speaker_code (bool): whether to use speaker code
         upsampling_factor (int): upsampling factor
+        use_upsampling_layer (bool): whether to use upsampling layer
+        use_speaker_code (bool): whether to use speaker code
 
     Return:
         (object): generator instance
     """
-    # for sample-by-sample generation
+    # ---------------------------
+    # sample-by-sample generation
+    # ---------------------------
     if batch_size == 1:
         for featfile in feat_list:
             x = np.zeros((1))
-            if upsampling_factor == 0:
-                h = read_hdf5(featfile, "/feat")
-            else:
-                h = read_hdf5(featfile, "/feat_org")
+            h = read_hdf5(featfile, "/" + feature_type)
+            if not use_upsampling_layer:
+                h = extend_time(h, upsampling_factor)
             if use_speaker_code:
                 sc = read_hdf5(featfile, "/speaker_code")
                 sc = np.tile(sc, [h.shape[0], 1])
@@ -92,7 +101,7 @@ def decode_generator(feat_list, batch_size=32,
             h = h.transpose(0, 1).unsqueeze(0)  # T x C => 1 x C x T
 
             # get target length and file id
-            if upsampling_factor == 0:
+            if not use_upsampling_layer:
                 n_samples = h.size(2) - 1
             else:
                 n_samples = h.size(2) * upsampling_factor - 1
@@ -100,13 +109,12 @@ def decode_generator(feat_list, batch_size=32,
 
             yield feat_id, (x, h, n_samples)
 
-    # for batch generation
+    # ----------------
+    # batch generation
+    # ----------------
     else:
         # sort with the feature length
-        if upsampling_factor == 0:
-            shape_list = [shape_hdf5(f, "/feat")[0] for f in feat_list]
-        else:
-            shape_list = [shape_hdf5(f, "/feat_org")[0] for f in feat_list]
+        shape_list = [shape_hdf5(f, "/" + feature_type)[0] for f in feat_list]
         idx = np.argsort(shape_list)
         feat_list = [feat_list[i] for i in idx]
 
@@ -123,10 +131,9 @@ def decode_generator(feat_list, batch_size=32,
             for featfile in batch_list:
                 # make seed waveform and load aux feature
                 x = np.zeros((1))
-                if upsampling_factor == 0:
-                    h = read_hdf5(featfile, "/feat")
-                else:
-                    h = read_hdf5(featfile, "/feat_org")
+                h = read_hdf5(featfile, "/" + feature_type)
+                if not use_upsampling_layer:
+                    h = extend_time(h, upsampling_factor)
                 if use_speaker_code:
                     sc = read_hdf5(featfile, "/speaker_code")
                     sc = np.tile(sc, [h.shape[0], 1])
@@ -141,7 +148,7 @@ def decode_generator(feat_list, batch_size=32,
                 # append to list
                 batch_x += [x]
                 batch_h += [h]
-                if upsampling_factor == 0:
+                if not use_upsampling_layer:
                     n_samples_list += [h.shape[0] - 1]
                 else:
                     n_samples_list += [h.shape[0] * upsampling_factor - 1]
@@ -153,7 +160,7 @@ def decode_generator(feat_list, batch_size=32,
 
             # convert to torch variable
             batch_x = torch.from_numpy(batch_x).long().cuda()
-            batch_h = torch.from_numpy(batch_h).float().cuda()
+            batch_h = torch.from_numpy(batch_h).float().transpose(1, 2).cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
@@ -232,8 +239,8 @@ def main():
 
     # define transform
     scaler = StandardScaler()
-    scaler.mean_ = read_hdf5(args.stats, "/mean")
-    scaler.scale_ = read_hdf5(args.stats, "/scale")
+    scaler.mean_ = read_hdf5(args.stats, "/" + config.feature_type + "/mean")
+    scaler.scale_ = read_hdf5(args.stats, "/" + config.feature_type + "/scale")
     wav_transform = transforms.Compose([
         lambda x: encode_mu_law(x, config.n_quantize)])
     feat_transform = transforms.Compose([
@@ -243,6 +250,10 @@ def main():
     def gpu_decode(feat_list, gpu):
         with torch.cuda.device(gpu) and torch.no_grad():
             # define model and load parameters
+            if config.use_upsampling_layer:
+                upsampling_factor = config.upsampling_factor
+            else:
+                upsampling_factor = 0
             model = WaveNet(
                 n_quantize=config.n_quantize,
                 n_aux=config.n_aux,
@@ -251,7 +262,7 @@ def main():
                 dilation_depth=config.dilation_depth,
                 dilation_repeat=config.dilation_repeat,
                 kernel_size=config.kernel_size,
-                upsampling_factor=config.upsampling_factor)
+                upsampling_factor=upsampling_factor)
             model.load_state_dict(torch.load(
                 args.checkpoint,
                 map_location=lambda storage, loc: storage.cuda(gpu))["model"])
@@ -263,10 +274,12 @@ def main():
             generator = decode_generator(
                 feat_list,
                 batch_size=args.batch_size,
+                feature_type=config.feature_type,
                 wav_transform=wav_transform,
                 feat_transform=feat_transform,
-                use_speaker_code=config.use_speaker_code,
-                upsampling_factor=config.upsampling_factor)
+                upsampling_factor=config.upsampling_factor,
+                use_upsampling_layer=config.use_upsampling_layer,
+                use_speaker_code=config.use_speaker_code)
 
             # decode
             if args.batch_size > 1:

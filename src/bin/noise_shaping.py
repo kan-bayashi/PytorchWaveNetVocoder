@@ -17,7 +17,6 @@ from distutils.util import strtobool
 import numpy as np
 
 from scipy.io import wavfile
-from sprocket.speech.feature_extractor import FeatureExtractor
 from sprocket.speech.synthesizer import Synthesizer
 
 from feature_extract import low_cut_filter
@@ -26,15 +25,8 @@ from utils import read_hdf5
 from utils import read_txt
 
 
-def noise_shaping(wav_list, args):
-    """APPLY NOISE SHAPING"""
-    # define feature extractor
-    feature_extractor = FeatureExtractor(
-        analyzer="world",
-        fs=args.fs,
-        shiftms=args.shiftms,
-        fftl=args.fftl)
-
+def world_noise_shaping(wav_list, args):
+    """APPLY NOISE SHAPING USING WORLD MCEP"""
     # define synthesizer
     synthesizer = Synthesizer(
         fs=args.fs,
@@ -43,37 +35,35 @@ def noise_shaping(wav_list, args):
 
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
-        wav_type = x.dtype
-        x = np.array(x, dtype=np.float64)
+        if x.dtype != np.int16:
+            logging.warn("wav file format is not 16 bit PCM.")
+        x = np.float64(x)
 
         # check sampling frequency
         if not fs == args.fs:
             logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
-        # extract features (only for get the number of frames)
-        f0, _, _ = feature_extractor.analyze(x)
-        num_frames = f0.shape[0]
+        # get frame number
+        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
 
         # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/mean")
+        mlsa_coef = read_hdf5(args.stats, "/world/mean")
         mlsa_coef = mlsa_coef[args.mcep_dim_start:args.mcep_dim_end] * args.mag
         mlsa_coef[0] = 0.0
         if args.inv:
             mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
-        mlsa_coef = np.tile(mlsa_coef, [num_frames, 1])
+        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
 
         # synthesis and write
         x_ns = synthesizer.synthesis_diff(
             x, mlsa_coef, alpha=args.mcep_alpha)
         x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
-        if wav_type == np.int16:
-            write_name = args.writedir + "/" + os.path.basename(wav_name)
-            wavfile.write(write_name, args.fs, np.int16(x_ns))
-        else:
-            wavfile.write(write_name, args.fs, x_ns)
+        write_name = args.writedir + "/" + os.path.basename(wav_name)
+        wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
 def main():
@@ -98,6 +88,9 @@ def main():
     parser.add_argument(
         "--fftl", default=1024,
         type=int, help="FFT length")
+    parser.add_argument(
+        "--feature_type", default="world", choices=["world", "melspc"],
+        type=str, help="feature type")
     parser.add_argument(
         "--mcep_dim_start", default=2,
         type=int, help="Start index of mel cepstrum")
@@ -158,8 +151,13 @@ def main():
 
     # multi processing
     processes = []
+    if args.feature_type == "world":
+        target_fn = world_noise_shaping
+    else:
+        # TODO(kan-bayashi): implement noise shaping using melspectrogram
+        NotImplementedError("currently, support only world.")
     for f in file_lists:
-        p = mp.Process(target=noise_shaping, args=(f, args,))
+        p = mp.Process(target=target_fn, args=(f, args,))
         p.start()
         processes.append(p)
 

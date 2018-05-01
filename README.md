@@ -11,6 +11,48 @@ You can build above WaveNet vocoder using following datasets:
 - [LJ Speech database](https://keithito.com/LJ-Speech-Dataset/): `egs/ljspeech`
 - [M-AILABS speech database](http://www.m-ailabs.bayern/en/the-mailabs-speech-dataset/): `egs/m-ailab-speech`
 
+## News
+
+### 2018/05/01: Major update
+
+- Updated to be compatible with pytorch v0.4
+- Updated to be able to use melspectrogram as auxiliary feature
+
+Due to above update, some parts are changed (see below)
+
+```
+# -------------------- #
+# feature path in hdf5 #
+# -------------------- #
+old -> new
+/feat_org -> /world or /melspc
+/feat_org -> no more saving extended featrue (it is replicated when loading)
+
+# ----------------------- #
+# statistics path in hdf5 #
+# ----------------------- #
+old -> new
+/mean -> /world/mean or /melspc/mean
+/scale -> /world/scale or /melspc/scale
+
+# ----------------------- #
+# new options in training #
+# ----------------------- #
+--feature_type: Auxiliary feature type (world or melspc)
+--use_upsampling_layer: Flag to decide whether to use upsampling layer in WaveNet
+--upsampling_factor: Changed to be alway needed because feature extension is performed in loading
+```
+
+Note that old model file `checkpoint-*.pkl` can be used, but it is necessary to modify `model.conf` file as follows.
+
+```python
+import torch
+args = torch.load("old_model.conf")
+args.use_upsampling_layer = True
+args.feature_type = "world"
+torch.save(args, "new_model.conf")
+```
+
 ## Requirements
 - python 3.6
 - virtualenv
@@ -24,14 +66,19 @@ Recommend to use the GPU with 10GB> memory.
 ```bash
 $ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
 $ cd PytorchWaveNetVocoder/tools
-$ make -j
+$ make
 ```
 
 ## Run example
 All examples are based on kaldi-style recipe.
+
 ```bash
-# build SD model using arctic data
+# build SD model with world features
 $ cd egs/arctic/sd
+$ ./run.sh
+
+# build SD model with mel-spectrogram
+$ cd egs/arctic/sd-melspc
 $ ./run.sh
 
 # build SI-CLOSE model
@@ -44,8 +91,10 @@ $ ./run.sh
 
 # Multi-GPU training and decoding
 $ ./run.sh --n_gpus 3 --batch_size 3
-```
 
+# You can also change hyperparameters as follows
+$ ./run.sh --n_gpus 3 --
+```
 
 If slurm is installed in your servers, you can run recipes with slurm.
 
@@ -99,7 +148,7 @@ The procedure is as follows:
 ```bash
 $ cd egs/arctic/si-close
 
-# download pre-trained model which trained with 6 arctic speakers
+# download pre-trained model which trained with 6 arctic speakers and world features
 $ wget "https://www.dropbox.com/s/xt7qqmfgamwpqqg/si-close_lr1e-4_wd0_bs20k_ns_up.zip?dl=0" -O si-close_lr1e-4_wd0_bs20k_ns_up.zip
 
 # unzip
@@ -114,6 +163,7 @@ $ feature_extract.py \
     --waveforms wav.scp \
     --wavdir wav/test \
     --hdf5dir hdf5/test \
+    --feature_type world \
     --fs 16000 \
     --shiftms 5 \
     --minf0 <set_appropriate_value> \
@@ -146,6 +196,7 @@ $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
     --writedir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
+    --feature_type world \
     --fs 16000 \
     --shiftms 5 \
     --fftl 1024 \

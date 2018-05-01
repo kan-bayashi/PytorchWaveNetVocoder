@@ -23,18 +23,19 @@ def calc_stats(file_list, args):
     # process over all of data
     for i, filename in enumerate(file_list):
         logging.info("now processing %s (%d/%d)" % (filename, i + 1, len(file_list)))
-        feat = read_hdf5(filename, "/feat_org")
-        scaler.partial_fit(feat[:, 1:])
+        feat = read_hdf5(filename, "/" + args.feature_type)
+        scaler.partial_fit(feat)
 
     # add uv term
-    mean = np.zeros((feat.shape[1]))
-    scale = np.ones((feat.shape[1]))
-    mean[1:] = scaler.mean_
-    scale[1:] = scaler.scale_
+    mean = scaler.mean_
+    scale = scaler.scale_
+    if args.feature_type == "world":
+        mean[0] = 0.0
+        scale[0] = 1.0
 
     # write to hdf5
-    write_hdf5(args.stats, "/mean", mean)
-    write_hdf5(args.stats, "/scale", scale)
+    write_hdf5(args.stats, "/" + args.feature_type + "/mean", np.float32(mean))
+    write_hdf5(args.stats, "/" + args.feature_type + "/scale", np.float32(scale))
 
 
 def main():
@@ -42,10 +43,13 @@ def main():
 
     parser.add_argument(
         "--feats", default=None, required=True,
-        help="name of the list of hdf5 files")
+        type=str, help="name of the list of hdf5 files")
     parser.add_argument(
         "--stats", default=None, required=True,
-        help="filename of hdf5 format")
+        type=str, help="filename of hdf5 format")
+    parser.add_argument(
+        "--feature_type", default="world", choices=["world", "melspc"],
+        type=str, help="feature type")
     parser.add_argument(
         "--verbose", default=1,
         type=int, help="log message level")

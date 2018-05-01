@@ -93,7 +93,7 @@ def test_generate():
         net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "sampling")
 
 
-def test_assert_generation():
+def test_assert_fast_generation():
     # get batch
     batch = 2
     x = np.random.randint(0, 256, size=(batch, 1))
