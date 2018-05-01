@@ -36,6 +36,7 @@ stage=0123456
 # mag: coefficient of noise shaping (default=0.5)
 # n_jobs: number of parallel jobs
 # }}}
+feature_type=world
 shiftms=5
 fftl=1024
 highpass_cutoff=70
@@ -69,7 +70,6 @@ n_jobs=10
 # use_speaker_code: true or false
 # resume: checkpoint to resume
 # }}}
-feature_type=world
 n_gpus=1
 spks=(bdl rms clb slt ksp jmk)
 n_quantize=256
