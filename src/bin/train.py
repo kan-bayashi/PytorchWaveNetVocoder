@@ -505,9 +505,6 @@ def main():
     for i in six.moves.range(iterations, args.iters):
         start = time.time()
         (batch_x, batch_h), batch_t = generator.next()
-        logging.info(batch_x.size())
-        logging.info(batch_h.size())
-        logging.info(batch_t.size())
         batch_output = model(batch_x, batch_h)
         batch_loss = criterion(
             batch_output[:, model.receptive_field:].contiguous().view(-1, args.n_quantize),
