@@ -182,7 +182,7 @@ def melspectrogram_extract(wav_list, args):
         shiftl = int(args.shiftms * fs * 0.001)
         mspc = librosa.feature.melspectrogram(
             x_norm, fs, n_fft=args.fftl, hop_length=shiftl, n_mels=args.mspc_dim)
-        mspc = np.log10(mspc.T + EPS)
+        mspc = np.log10(mspc.T + np.random.uniform(EPS, 2 * EPS, mspc.T.shape))
 
         # save to hdf5
         hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
