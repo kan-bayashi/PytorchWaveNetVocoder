@@ -454,7 +454,7 @@ def main():
         feat_transform=feat_transform,
         shuffle=True,
         upsampling_factor=args.upsampling_factor,
-        use_upsampling_factor=args.use_upsampling_layer,
+        use_upsampling_layer=args.use_upsampling_layer,
         use_speaker_code=args.use_speaker_code)
 
     # charge minibatch in queue
