@@ -121,6 +121,7 @@ def world_feature_extract(wav_list, args):
 
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
@@ -160,6 +161,7 @@ def melspectrogram_extract(wav_list, args):
     # define feature extractor
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
@@ -282,8 +284,7 @@ def main():
     if args.feature_type == "world":
         target_fn = world_feature_extract
     else:
-        # TODO(kan-bayashi): implement feature extraction of mel spectrum
-        raise NotImplementedError("currently, support only world.")
+        target_fn = melspectrogram_extract
     for f in file_lists:
         p = mp.Process(target=target_fn, args=(f, args,))
         p.start()

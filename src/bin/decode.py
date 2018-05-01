@@ -74,7 +74,9 @@ def decode_generator(feat_list,
     Return:
         (object): generator instance
     """
-    # for sample-by-sample generation
+    # ---------------------------
+    # sample-by-sample generation
+    # ---------------------------
     if batch_size == 1:
         for featfile in feat_list:
             x = np.zeros((1))
@@ -107,7 +109,9 @@ def decode_generator(feat_list,
 
             yield feat_id, (x, h, n_samples)
 
-    # for batch generation
+    # ----------------
+    # batch generation
+    # ----------------
     else:
         # sort with the feature length
         shape_list = [shape_hdf5(f, "/" + feature_type)[0] for f in feat_list]

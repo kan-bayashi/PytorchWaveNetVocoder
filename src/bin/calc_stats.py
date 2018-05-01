@@ -34,8 +34,8 @@ def calc_stats(file_list, args):
         scale[0] = 1.0
 
     # write to hdf5
-    write_hdf5(args.stats, "/" + args.feature_type + "/mean", np.float64(mean))
-    write_hdf5(args.stats, "/" + args.feature_type + "/scale", np.float64(scale))
+    write_hdf5(args.stats, "/" + args.feature_type + "/mean", np.float32(mean))
+    write_hdf5(args.stats, "/" + args.feature_type + "/scale", np.float32(scale))
 
 
 def main():
