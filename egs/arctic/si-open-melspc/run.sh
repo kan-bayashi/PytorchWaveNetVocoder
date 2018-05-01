@@ -17,12 +17,10 @@
 # 0: data preparation step
 # 1: feature extraction step
 # 2: statistics calculation step
-# 3: apply noise shaping step
-# 4: training step
-# 5: decoding step
-# 6: restore noise shaping step
+# 3: training step
+# 4: decoding step
 # }}}
-stage=0123456
+stage=01234
 
 #######################################
 #          FEATURE SETTING            #
@@ -36,14 +34,12 @@ stage=0123456
 # mag: coefficient of noise shaping (default=0.5)
 # n_jobs: number of parallel jobs
 # }}}
-feature_type=world
+feature_type=melspc
 shiftms=5
 fftl=1024
 highpass_cutoff=70
 fs=16000
-mcep_dim=24
-mcep_alpha=0.410
-mag=0.5
+mspc_dim=80
 n_jobs=10
 
 #######################################
@@ -74,7 +70,7 @@ n_gpus=1
 train_spks=(bdl rms clb ksp jmk)
 eval_spks=(slt)
 n_quantize=256
-n_aux=28
+n_aux=80
 n_resch=512
 n_skipch=256
 dilation_depth=10
@@ -87,7 +83,6 @@ batch_length=20000
 batch_size=1
 checkpoints=10000
 use_upsampling=true
-use_noise_shaping=true
 use_speaker_code=false
 resume=
 
@@ -167,10 +162,6 @@ if echo ${stage} | grep -q 1; then
         scp=exp/feature_extract/${train}/wav.${spk}.scp
         grep ${spk} "data/${train}/wav.scp"  > "${scp}"
 
-        # set f0 range
-        minf0=$(awk '{print $1}' conf/${spk}.f0)
-        maxf0=$(awk '{print $2}' conf/${spk}.f0)
-
         # feature extract
         ${train_cmd} --num-threads ${n_jobs} \
             "exp/feature_extract/feature_extract_${train}.${spk}.log" \
@@ -181,10 +172,7 @@ if echo ${stage} | grep -q 1; then
                 --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --minf0 "${minf0}" \
-                --maxf0 "${maxf0}" \
-                --mcep_dim ${mcep_dim} \
-                --mcep_alpha ${mcep_alpha} \
+                --mspc_dim ${mspc_dim} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
                 --n_jobs ${n_jobs} &
@@ -218,10 +206,6 @@ if echo ${stage} | grep -q 1; then
         scp=exp/feature_extract/${eval}/wav.${spk}.scp
         grep ${spk} "data/${eval}/wav.scp" > "${scp}"
 
-        # set f0 range
-        minf0=$(awk '{print $1}' conf/${spk}.f0)
-        maxf0=$(awk '{print $2}' conf/${spk}.f0)
-
         # feature extract
         ${train_cmd} --num-threads ${n_jobs} \
             "exp/feature_extract/feature_extract_${eval}.${spk}.log" \
@@ -232,10 +216,7 @@ if echo ${stage} | grep -q 1; then
                 --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --minf0 "${minf0}" \
-                --maxf0 "${maxf0}" \
-                --mcep_dim ${mcep_dim} \
-                --mcep_alpha ${mcep_alpha} \
+                --mspc_dim ${mspc_dim} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
                 --n_jobs ${n_jobs} &
@@ -281,76 +262,20 @@ fi
 
 
 # STAGE 3 {{{
-if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
-    echo "###########################################################"
-    echo "#                   NOISE SHAPING STEP                    #"
-    echo "###########################################################"
-    nj=0
-    [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
-    for spk in "${train_spks[@]}";do
-        # make scp of each speaker
-        scp=exp/noise_shaping/wav_filtered.${spk}.scp
-        grep "\/${spk}\/" "data/${train}/wav_filtered.scp" > ${scp}
-
-        # apply noise shaping
-        ${train_cmd} --num-threads ${n_jobs} \
-            exp/noise_shaping/noise_shaping_apply.${spk}.log \
-            noise_shaping.py \
-                --waveforms ${scp} \
-                --stats "data/${train}/stats.h5" \
-                --writedir "wav_ns/${train}/${spk}" \
-                --feature_type ${feature_type} \
-                --fs ${fs} \
-                --shiftms ${shiftms} \
-                --fftl ${fftl} \
-                --mcep_dim_start 2 \
-                --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-                --mcep_alpha ${mcep_alpha} \
-                --mag ${mag} \
-                --inv true \
-                --n_jobs ${n_jobs} &
-
-        # update job counts
-        nj=$(( nj + 1  ))
-        if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
-            wait
-            nj=0
-        fi
-    done
-    wait
-
-    # check the number of feature files
-    n_wavs=$(wc -l data/"${train}"/wav_filtered.scp)
-    n_ns=$(find wav_ns/"${train}" -name "*.wav" | wc -l)
-    echo "${n_ns}/${n_wavs} files are successfully processed."
-
-    # make scp files
-    find wav_ns/"${train}" -name "*.wav" | sort > data/"${train}"/wav_ns.scp
-fi # }}}
-
-
-# STAGE 4 {{{
 # set variables
 if [ ! -n "${tag}" ];then
     expdir=exp/tr_arctic_16k_si_open_${feature_type}_"$(IFS=_; echo "${eval_spks[*]}")"_nq${n_quantize}_na${n_aux}_nrc${n_resch}_nsc${n_skipch}_ks${kernel_size}_dp${dilation_depth}_dr${dilation_repeat}_lr${lr}_wd${weight_decay}_bl${batch_length}_bs${batch_size}
-    if ${use_noise_shaping};then
-        expdir=${expdir}_ns
-    fi
     if ${use_upsampling};then
         expdir=${expdir}_up
     fi
 else
     expdir=exp/tr_arctic_${tag}
 fi
-if echo ${stage} | grep -q 4 ; then
+if echo ${stage} | grep -q 3 ; then
     echo "###########################################################"
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
-    if ${use_noise_shaping};then
-        waveforms=data/${train}/wav_ns.scp
-    else
-        waveforms=data/${train}/wav_filtered.scp
-    fi
+    waveforms=data/${train}/wav_filtered.scp
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \
@@ -381,8 +306,8 @@ fi
 # }}}
 
 
-# STAGE 5 {{{
-if echo ${stage} | grep -q 5 ; then
+# STAGE 4 {{{
+if echo ${stage} | grep -q 4 ; then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
     echo "###########################################################"
@@ -408,48 +333,6 @@ if echo ${stage} | grep -q 5 ; then
                 --config "${config}" \
                 --fs ${fs} \
                 --batch_size ${decode_batch_size} &
-
-        # update job counts
-        nj=$(( nj + 1  ))
-        if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
-            wait
-            nj=0
-        fi
-    done
-    wait
-fi
-# }}}
-
-
-# STAGE 6 {{{
-if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
-    echo "###########################################################"
-    echo "#             RESTORE NOISE SHAPING STEP                  #"
-    echo "###########################################################"
-    [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    nj=0
-    for spk in "${eval_spks[@]}";do
-        # make scp of each speaker
-        scp=exp/noise_shaping/wav_generated.${spk}.scp
-        find "${outdir}/${spk}" -name "*.wav" | grep "\/${spk}\/" | sort > ${scp}
-
-        # restore noise shaping
-        ${train_cmd} --num-threads ${n_jobs} \
-            exp/noise_shaping/noise_shaping_restore.${spk}.log \
-            noise_shaping.py \
-                --waveforms ${scp} \
-                --stats "data/${train}/stats.h5" \
-                --writedir "${outdir}_restored/${spk}" \
-                --feature_type ${feature_type} \
-                --fs ${fs} \
-                --shiftms ${shiftms} \
-                --fftl ${fftl} \
-                --mcep_dim_start 2 \
-                --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-                --mcep_alpha ${mcep_alpha} \
-                --mag ${mag} \
-                --inv false \
-                --n_jobs ${n_jobs} &
 
         # update job counts
         nj=$(( nj + 1  ))
