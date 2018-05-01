@@ -270,7 +270,7 @@ if [ ! -n "${tag}" ];then
         expdir=${expdir}_up
     fi
 else
-    expdir=exp/tr_ljspeech_22k_${tag}
+    expdir=exp/tr_mai_16k_${tag}
 fi
 if echo ${stage} | grep -q 4; then
     echo "###########################################################"
