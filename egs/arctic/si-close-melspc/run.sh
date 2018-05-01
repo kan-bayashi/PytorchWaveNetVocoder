@@ -32,7 +32,7 @@ stage=01234
 # mspc_dim: dimension of mel-spectrogram
 # n_jobs: number of parallel jobs
 # }}}
-feature_type=world
+feature_type=melspc
 shiftms=5
 fftl=1024
 highpass_cutoff=70
