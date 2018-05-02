@@ -21,7 +21,8 @@ from noise_shaping import world_noise_shaping
 from utils import find_files
 
 
-def make_dummy_wav(name, length, fs=16000):
+def make_dummy_wav(name, maxlen=32000, fs=16000):
+    length = np.random.randint(maxlen // 2, maxlen)
     x = np.random.randn(length)
     x = x / np.abs(x).max()
     x = np.int16(x * (np.iinfo(np.int16).max + 1))
@@ -48,7 +49,6 @@ def make_args(**kwargs):
         mcep_dim_end=25,
         mag=0.5,
         inv=False,
-        save_extended=True
     )
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
