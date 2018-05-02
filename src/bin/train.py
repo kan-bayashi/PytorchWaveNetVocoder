@@ -174,9 +174,15 @@ def train_generator(wav_list, feat_list, receptive_field,
 
                     # return mini batch
                     if len(batch_x) == batch_size:
-                        batch_x = torch.stack(batch_x).cuda()
-                        batch_h = torch.stack(batch_h).cuda()
-                        batch_t = torch.stack(batch_t).cuda()
+                        batch_x = torch.stack(batch_x)
+                        batch_h = torch.stack(batch_h)
+                        batch_t = torch.stack(batch_t)
+
+                        # send to cuda
+                        if torch.cuda.is_available():
+                            batch_x = batch_x.cuda()
+                            batch_h = batch_h.cuda()
+                            batch_t = batch_t.cuda()
 
                         yield (batch_x, batch_h), batch_t
 
@@ -227,9 +233,15 @@ def train_generator(wav_list, feat_list, receptive_field,
 
                     # return mini batch
                     if len(batch_x) == batch_size:
-                        batch_x = torch.stack(batch_x).cuda()
-                        batch_h = torch.stack(batch_h).cuda()
-                        batch_t = torch.stack(batch_t).cuda()
+                        batch_x = torch.stack(batch_x)
+                        batch_h = torch.stack(batch_h)
+                        batch_t = torch.stack(batch_t)
+
+                        # send to cuda
+                        if torch.cuda.is_available():
+                            batch_x = batch_x.cuda()
+                            batch_h = batch_h.cuda()
+                            batch_t = batch_t.cuda()
 
                         yield (batch_x, batch_h), batch_t
 
@@ -250,9 +262,15 @@ def train_generator(wav_list, feat_list, receptive_field,
                 h = torch.from_numpy(h).float()
 
                 # remove the last and first sample for training
-                batch_x = x[:-1].unsqueeze(0).cuda()  # (1 x T)
-                batch_h = h[:-1].transpose(0, 1).unsqueeze(0).cuda()  # (1 x D x T)
-                batch_t = x[1:].unsqueeze(0).cuda()  # (1 x T)
+                batch_x = x[:-1].unsqueeze(0)  # (1 x T)
+                batch_h = h[:-1].transpose(0, 1).unsqueeze(0)  # (1 x D x T)
+                batch_t = x[1:].unsqueeze(0)  # (1 x T)
+
+                # send to cuda
+                if torch.cuda.is_available():
+                    batch_x = batch_x.cuda()
+                    batch_h = batch_h.cuda()
+                    batch_t = batch_t.cuda()
 
                 yield (batch_x, batch_h), batch_t
 
@@ -275,9 +293,15 @@ def train_generator(wav_list, feat_list, receptive_field,
                 h = torch.from_numpy(h).float()
 
                 # remove the last and first sample for training
-                batch_h = h.transpose(0, 1).unsqueeze(0).cuda()  # (1 x D x T')
-                batch_x = x[:-1].unsqueeze(0).cuda()  # (1 x T)
-                batch_t = x[1:].unsqueeze(0).cuda()  # (1 x T)
+                batch_h = h.transpose(0, 1).unsqueeze(0)  # (1 x D x T')
+                batch_x = x[:-1].unsqueeze(0)  # (1 x T)
+                batch_t = x[1:].unsqueeze(0)  # (1 x T)
+
+                # send to cuda
+                if torch.cuda.is_available():
+                    batch_x = batch_x.cuda()
+                    batch_h = batch_h.cuda()
+                    batch_t = batch_t.cuda()
 
                 yield (batch_x, batch_h), batch_t
 

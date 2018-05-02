@@ -95,10 +95,15 @@ def decode_generator(feat_list,
                 h = feat_transform(h)
 
             # convert to torch variable
-            x = torch.from_numpy(x).long().cuda()
-            h = torch.from_numpy(h).float().cuda()
+            x = torch.from_numpy(x).long()
+            h = torch.from_numpy(h).float()
             x = x.unsqueeze(0)  # 1 => 1 x 1
             h = h.transpose(0, 1).unsqueeze(0)  # T x C => 1 x C x T
+
+            # send to cuda
+            if torch.cuda.is_available():
+                x = x.cuda()
+                h = h.cuda()
 
             # get target length and file id
             if not use_upsampling_layer:
@@ -159,8 +164,13 @@ def decode_generator(feat_list,
             batch_h = pad_list(batch_h)
 
             # convert to torch variable
-            batch_x = torch.from_numpy(batch_x).long().cuda()
-            batch_h = torch.from_numpy(batch_h).float().transpose(1, 2).cuda()
+            batch_x = torch.from_numpy(batch_x).long()
+            batch_h = torch.from_numpy(batch_h).float().transpose(1, 2)
+
+            # send to cuda
+            if torch.cuda.is_available():
+                batch_x = batch_x.cuda()
+                batch_h = batch_h.cuda()
 
             yield feat_ids, (batch_x, batch_h, n_samples_list)
 
