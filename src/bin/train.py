@@ -447,6 +447,13 @@ def main():
         if args.n_gpus > args.batch_size:
             logging.warn("batch size is less than number of gpus.")
 
+    # define optimizer and loss
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay)
+    criterion = nn.CrossEntropyLoss()
+
     # define transforms
     scaler = StandardScaler()
     scaler.mean_ = read_hdf5(args.stats, "/" + args.feature_type + "/mean")
@@ -488,37 +495,25 @@ def main():
 
     # resume model and optimizer
     if args.resume is not None and len(args.resume) != 0:
-        checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage.cuda())
+        checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage)
         iterations = checkpoint["iterations"]
         if args.n_gpus > 1:
             model.module.load_state_dict(checkpoint["model"])
         else:
             model.load_state_dict(checkpoint["model"])
-        optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=args.lr,
-            weight_decay=args.weight_decay)
         optimizer.load_state_dict(checkpoint["optimizer"])
-        # move parameters of optimizer to cuda
+        logging.info("restored from %d-iter checkpoint." % iterations)
+    else:
+        iterations = 0
+
+    # check gpu and then send to gpu
+    if torch.cuda.is_available():
+        model.cuda()
+        criterion.cuda()
         for state in optimizer.state.values():
             for key, value in state.items():
                 if torch.is_tensor(value):
                     state[key] = value.cuda()
-        logging.info("restored from %d-iter checkpoint." % iterations)
-    else:
-        optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=args.lr,
-            weight_decay=args.weight_decay)
-        iterations = 0
-
-    # define loss
-    criterion = nn.CrossEntropyLoss()
-
-    # check gpu is available or not
-    if torch.cuda.is_available():
-        model = model.cuda()
-        criterion = criterion.cuda()
     else:
         logging.error("gpu is not available. please check the setting.")
         sys.exit(1)
