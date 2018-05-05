@@ -258,58 +258,60 @@ def main():
 
     # define gpu decode function
     def gpu_decode(feat_list, gpu):
+        # set default gpu and do not track gradient
         torch.cuda.set_device(gpu)
-        with torch.no_grad():
-            # define model and load parameters
-            if config.use_upsampling_layer:
-                upsampling_factor = config.upsampling_factor
-            else:
-                upsampling_factor = 0
-            model = WaveNet(
-                n_quantize=config.n_quantize,
-                n_aux=config.n_aux,
-                n_resch=config.n_resch,
-                n_skipch=config.n_skipch,
-                dilation_depth=config.dilation_depth,
-                dilation_repeat=config.dilation_repeat,
-                kernel_size=config.kernel_size,
-                upsampling_factor=upsampling_factor)
-            model.load_state_dict(torch.load(
-                args.checkpoint,
-                map_location=lambda storage,
-                loc: storage)["model"])
-            model.eval()
-            model.cuda()
-            torch.backends.cudnn.benchmark = True
+        torch.set_grad_enabled(False)
 
-            # define generator
-            generator = decode_generator(
-                feat_list,
-                batch_size=args.batch_size,
-                feature_type=config.feature_type,
-                wav_transform=wav_transform,
-                feat_transform=feat_transform,
-                upsampling_factor=config.upsampling_factor,
-                use_upsampling_layer=config.use_upsampling_layer,
-                use_speaker_code=config.use_speaker_code)
+        # define model and load parameters
+        if config.use_upsampling_layer:
+            upsampling_factor = config.upsampling_factor
+        else:
+            upsampling_factor = 0
+        model = WaveNet(
+            n_quantize=config.n_quantize,
+            n_aux=config.n_aux,
+            n_resch=config.n_resch,
+            n_skipch=config.n_skipch,
+            dilation_depth=config.dilation_depth,
+            dilation_repeat=config.dilation_repeat,
+            kernel_size=config.kernel_size,
+            upsampling_factor=upsampling_factor)
+        model.load_state_dict(torch.load(
+            args.checkpoint,
+            map_location=lambda storage,
+            loc: storage)["model"])
+        model.eval()
+        model.cuda()
+        torch.backends.cudnn.benchmark = True
 
-            # decode
-            if args.batch_size > 1:
-                for feat_ids, (batch_x, batch_h, n_samples_list) in generator:
-                    logging.info("decoding start")
-                    samples_list = model.batch_fast_generate(
-                        batch_x, batch_h, n_samples_list, args.intervals)
-                    for feat_id, samples in zip(feat_ids, samples_list):
-                        wav = decode_mu_law(samples, config.n_quantize)
-                        sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
-                        logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
-            else:
-                for feat_id, (x, h, n_samples) in generator:
-                    logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
-                    samples = model.fast_generate(x, h, n_samples, args.intervals)
+        # define generator
+        generator = decode_generator(
+            feat_list,
+            batch_size=args.batch_size,
+            feature_type=config.feature_type,
+            wav_transform=wav_transform,
+            feat_transform=feat_transform,
+            upsampling_factor=config.upsampling_factor,
+            use_upsampling_layer=config.use_upsampling_layer,
+            use_speaker_code=config.use_speaker_code)
+
+        # decode
+        if args.batch_size > 1:
+            for feat_ids, (batch_x, batch_h, n_samples_list) in generator:
+                logging.info("decoding start")
+                samples_list = model.batch_fast_generate(
+                    batch_x, batch_h, n_samples_list, args.intervals)
+                for feat_id, samples in zip(feat_ids, samples_list):
                     wav = decode_mu_law(samples, config.n_quantize)
                     sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
                     logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
+        else:
+            for feat_id, (x, h, n_samples) in generator:
+                logging.info("decoding %s (length = %d)" % (feat_id, n_samples))
+                samples = model.fast_generate(x, h, n_samples, args.intervals)
+                wav = decode_mu_law(samples, config.n_quantize)
+                sf.write(args.outdir + "/" + feat_id + ".wav", wav, args.fs, "PCM_16")
+                logging.info("wrote %s.wav in %s." % (feat_id, args.outdir))
 
     # parallel decode
     processes = []
