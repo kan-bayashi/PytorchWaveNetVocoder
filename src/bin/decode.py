@@ -282,7 +282,6 @@ def main():
             loc: storage)["model"])
         model.eval()
         model.cuda()
-        torch.backends.cudnn.benchmark = True
 
         # define generator
         generator = decode_generator(
