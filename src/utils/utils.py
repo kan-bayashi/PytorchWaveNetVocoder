@@ -4,9 +4,9 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import division
-from __future__ import print_function
 
 import fnmatch
+import logging
 import os
 import sys
 import threading
@@ -48,16 +48,14 @@ def read_hdf5(hdf5_name, hdf5_path):
         dataset values
     """
     if not os.path.exists(hdf5_name):
-        print("ERROR: There is no such a hdf5 file. (%s)" % hdf5_name)
-        print("Please check the hdf5 file path.")
-        sys.exit(-1)
+        logging.error("there is no such a hdf5 file (%s)." % hdf5_name)
+        sys.exit(1)
 
     hdf5_file = h5py.File(hdf5_name, "r")
 
     if hdf5_path not in hdf5_file:
-        print("ERROR: There is no such a data in hdf5 file. (%s)" % hdf5_path)
-        print("Please check the data path in hdf5 file.")
-        sys.exit(-1)
+        logging.error("there is no such a data in hdf5 file. (%s)" % hdf5_path)
+        sys.exit(1)
 
     hdf5_data = hdf5_file[hdf5_path].value
     hdf5_file.close()
@@ -80,8 +78,8 @@ def shape_hdf5(hdf5_name, hdf5_path):
             hdf5_shape = f[hdf5_path].shape
         return hdf5_shape
     else:
-        print("There is no such a file or dataset")
-        sys.exit(-1)
+        logging.error("there is no such a file or dataset")
+        sys.exit(1)
 
 
 def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
@@ -108,11 +106,12 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
         # check dataset existence
         if hdf5_path in hdf5_file:
             if is_overwrite:
-                print("Warning: data in hdf5 file already exists. recreate dataset in hdf5.")
+                logging.warn("dataset in hdf5 file already exists.")
+                logging.warn("recreate dataset in hdf5.")
                 hdf5_file.__delitem__(hdf5_path)
             else:
-                print("ERROR: there is already dataset.")
-                print("if you want to overwrite, please set is_overwrite = True.")
+                logging.error("dataset in hdf5 file already exists.")
+                logging.error("if you want to overwrite, please set is_overwrite = True.")
                 hdf5_file.close()
                 sys.exit(1)
     else:
