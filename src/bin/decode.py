@@ -258,7 +258,8 @@ def main():
 
     # define gpu decode function
     def gpu_decode(feat_list, gpu):
-        with torch.cuda.device(gpu) and torch.no_grad():
+        torch.cuda.set_device(gpu)
+        with torch.no_grad():
             # define model and load parameters
             if config.use_upsampling_layer:
                 upsampling_factor = config.upsampling_factor
@@ -275,7 +276,8 @@ def main():
                 upsampling_factor=upsampling_factor)
             model.load_state_dict(torch.load(
                 args.checkpoint,
-                map_location=lambda storage, loc: storage.cuda(gpu))["model"])
+                map_location=lambda storage,
+                loc: storage)["model"])
             model.eval()
             model.cuda()
             torch.backends.cudnn.benchmark = True
