@@ -106,7 +106,7 @@ outdir=
 checkpoint=
 config=
 feats=
-decode_batch_size=32
+decode_batch_size=16
 
 #######################################
 #            OHTER SETTING            #
