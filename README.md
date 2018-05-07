@@ -84,7 +84,8 @@ If slurm is installed in your servers, you can run recipes with slurm.
 $ cd egs/arctic/sd
 
 # edit configuration
-$ vim cmd.sh # please edit as follows
+$ vim cmd.sh
+# please edit as follows
 -- cmd.sh --
 # for local
 # export train_cmd="run.pl"
@@ -94,7 +95,8 @@ $ vim cmd.sh # please edit as follows
 export train_cmd="slurm.pl --config conf/slurm.conf"
 export cuda_cmd="slurm.pl --gpu 1 --config conf/slurm.conf"
 
-$ vim conf/slurm.conf # edit <your_partition_name>
+$ vim conf/slurm.conf
+# edit <your_partition_name>
 -- slurm.conf --
 command sbatch --export=PATH  --ntasks-per-node=1
 option time=* --time $0
