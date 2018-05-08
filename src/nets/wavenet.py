@@ -400,8 +400,10 @@ class WaveNet(nn.Module):
         Return:
             (list): list of ndarray which is generated quantized wavenform
         """
-        # set max length
-        max_samples = max(n_samples_list)
+        # get min max length
+        max_n_samples = max(n_samples_list)
+        min_n_samples = min(n_samples_list)
+        min_idx = np.argmin(n_samples_list)
 
         # upsampling
         if self.upsampling_factor > 0:
@@ -431,8 +433,9 @@ class WaveNet(nn.Module):
 
         # generate
         samples = x  # B x T
+        end_samples = []
         start = time.time()
-        for i in range(max_samples):
+        for i in range(max_n_samples):
             output = samples[:, -self.kernel_size * 2 - 1:]
             output = self._preprocess(output)  # B x C x T
             h_ = h[:, :, samples.size(-1) - 1].contiguous().unsqueeze(-1)  # B x C x 1
@@ -467,17 +470,37 @@ class WaveNet(nn.Module):
             # show progress
             if intervals is not None and (i + 1) % intervals == 0:
                 logging.info("%d/%d estimated time = %.3f sec (%.3f sec / sample)" % (
-                    i + 1, max_samples,
-                    (max_samples - i - 1) * ((time.time() - start) / intervals),
+                    i + 1, max_n_samples,
+                    (max_n_samples - i - 1) * ((time.time() - start) / intervals),
                     (time.time() - start) / intervals))
                 start = time.time()
 
-        # devide into each waveform
-        samples = samples[:, -max_samples:].cpu().numpy()
-        samples_list = np.split(samples, samples.shape[0], axis=0)
-        samples_list = [s[0, :n_s] for s, n_s in zip(samples_list, n_samples_list)]
+            # check length
+            if (i + 1) == min_n_samples:
+                while True:
+                    # get finished sample
+                    end_samples += [samples[min_idx, -min_n_samples:].cpu().numpy()]
+                    # get index of unfinished samples
+                    idx_list = [idx for idx in range(len(n_samples_list)) if idx != min_idx]
+                    if len(idx_list) == 0:
+                        # break when all of samples are finished
+                        break
+                    else:
+                        # remove finished sample
+                        samples = samples[idx_list]
+                        h = h[idx_list]
+                        output_buffer = [out_[idx_list] for out_ in output_buffer]
+                        del n_samples_list[min_idx]
+                        # update min length
+                        prev_min_n_samples = min_n_samples
+                        min_n_samples = min(n_samples_list)
+                        min_idx = np.argmin(n_samples_list)
 
-        return samples_list
+                    # break when there is no same length samples
+                    if min_n_samples != prev_min_n_samples:
+                        break
+
+        return end_samples
 
     def _preprocess(self, x):
         x = self.onehot(x).transpose(1, 2)

@@ -77,7 +77,7 @@ def test_forward():
 def test_generate():
     batch = 2
     x = np.random.randint(0, 256, size=(batch, 1))
-    h = np.random.randn(batch, 28, 100)
+    h = np.random.randn(batch, 28, 32)
     length = h.shape[-1] - 1
     with torch.no_grad():
         net = WaveNet(256, 28, 16, 32, 10, 3, 2)
@@ -223,3 +223,34 @@ def test_assert_fast_generation():
         gen3_list = net.batch_fast_generate(batch_x, batch_h, [length] * batch, 1, "argmax")
         gen3 = np.stack(gen3_list)
         np.testing.assert_array_equal(gen3, gen2)
+
+
+def test_assert_different_length_batch_generation():
+    # prepare batch
+    batch = 4
+    length = 100
+    x = np.random.randint(0, 256, size=(batch, 1))
+    h = np.random.randn(batch, 28, length)
+    length_list = sorted(list(np.random.randint(length // 2, length - 1, batch)))
+
+    with torch.no_grad():
+        net = WaveNet(256, 28, 16, 32, 10, 3, 2)
+        net.apply(initialize)
+        net.eval()
+
+        # sample-by-sample generation
+        gen1_list = []
+        for x_, h_, length in zip(x, h, length_list):
+            batch_x = torch.from_numpy(np.expand_dims(x_, 0)).long()
+            batch_h = torch.from_numpy(np.expand_dims(h_, 0)).float()
+            gen1 = net.fast_generate(batch_x, batch_h, length, 1, "argmax")
+            gen1_list += [gen1]
+
+        # batch generation
+        batch_x = torch.from_numpy(x).long()
+        batch_h = torch.from_numpy(h).float()
+        gen2_list = net.batch_fast_generate(batch_x, batch_h, length_list, 1, "argmax")
+
+        # assertion
+        for gen1, gen2 in zip(gen1_list, gen2_list):
+            np.testing.assert_array_equal(gen1, gen2)
