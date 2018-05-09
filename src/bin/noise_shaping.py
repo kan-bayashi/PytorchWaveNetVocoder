@@ -66,7 +66,7 @@ def world_noise_shaping(wav_list, args):
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
-def mcep_noise_shaping(wav_list, args):
+def melcepstrum_noise_shaping(wav_list, args):
     """APPLY NOISE SHAPING USING STFT-BASED MCEP"""
     # define synthesizer
     synthesizer = Synthesizer(
@@ -194,7 +194,7 @@ def main():
     if args.feature_type == "world":
         target_fn = world_noise_shaping
     elif args.feature_type == "mcep":
-        target_fn = mcep_noise_shaping
+        target_fn = melcepstrum_noise_shaping
     else:
         # TODO(kan-bayashi): implement noise shaping using melspectrogram
         NotImplementedError("currently, support only world and mcep.")
