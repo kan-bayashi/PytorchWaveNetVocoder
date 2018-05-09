@@ -66,6 +66,46 @@ def world_noise_shaping(wav_list, args):
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
+def melcepstrum_noise_shaping(wav_list, args):
+    """APPLY NOISE SHAPING USING STFT-BASED MCEP"""
+    # define synthesizer
+    synthesizer = Synthesizer(
+        fs=args.fs,
+        shiftms=args.shiftms,
+        fftl=args.fftl)
+
+    for i, wav_name in enumerate(wav_list):
+        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+
+        # load wavfile and apply low cut filter
+        fs, x = wavfile.read(wav_name)
+        if x.dtype != np.int16:
+            logging.warn("wav file format is not 16 bit PCM.")
+        x = np.float64(x)
+
+        # check sampling frequency
+        if not fs == args.fs:
+            logging.error("sampling frequency is not matched.")
+            sys.exit(1)
+
+        # get frame number
+        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
+
+        # load average mcep
+        mlsa_coef = read_hdf5(args.stats, "/mcep/mean") * args.mag
+        mlsa_coef[0] = 0.0
+        if args.inv:
+            mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
+        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
+
+        # synthesis and write
+        x_ns = synthesizer.synthesis_diff(
+            x, mlsa_coef, alpha=args.mcep_alpha)
+        x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
+        write_name = args.writedir + "/" + os.path.basename(wav_name)
+        wavfile.write(write_name, args.fs, np.int16(x_ns))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="making feature file argsurations.")
@@ -89,7 +129,7 @@ def main():
         "--fftl", default=1024,
         type=int, help="FFT length")
     parser.add_argument(
-        "--feature_type", default="world", choices=["world", "melspc"],
+        "--feature_type", default="world", choices=["world", "mcep", "melspc"],
         type=str, help="feature type")
     parser.add_argument(
         "--mcep_dim_start", default=2,
@@ -153,9 +193,11 @@ def main():
     processes = []
     if args.feature_type == "world":
         target_fn = world_noise_shaping
+    elif args.feature_type == "mcep":
+        target_fn = melcepstrum_noise_shaping
     else:
         # TODO(kan-bayashi): implement noise shaping using melspectrogram
-        NotImplementedError("currently, support only world.")
+        NotImplementedError("currently, support only world and mcep.")
     for f in file_lists:
         p = mp.Process(target=target_fn, args=(f, args,))
         p.start()

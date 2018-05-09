@@ -15,32 +15,29 @@ This is the outline of recipes.
 - build speaker dependent model
 - the speaker of training data is the same as that of evaluation data
 - auxiliary features are based on World analysis
-- noise shaping is applied
+- noise shaping with world mel-cepstrum is applied
 
 `si-open`: speaker-independent model in open condition
 
 - build speaker independent model in spekaer-open condition
 - the speakers of evaluation data does not include those of training data
 - auxiliary features are based on World analysis
-- noise shaping is applied
+- noise shaping with world mel-cepstrum is applied
 
 `si-close`: speaker-independent model in speaker-closed condition
 
 - build speaker independent model in open condition
 - the speakers of evaluation data includes those of training data
 - auxiliary features are based on World analysis
-- noise shaping is applied
+- noise shaping with world mel-cepstrum is applied
 
-`sd-melspc`: spekaer-denpendent model with mel-spectrogram
+`*-melspc`: model with mel-spectrogram
 
-- build speaker dependent model with mel-spectrogram
-- the speaker of training data is the same as that of evaluation data
+- build the model with mel-spectrogram
 - auxiliary features are mel-spectrogram
-- noise shaping is **not** applied
+- noise shaping with stft mel-cepstrum is applied
 
 ## Flow of recipe
-
-### Recipe with noise shaping (`sd/si-close/si-open`)
 
 0. data preparation (`stage 0`)
 1. auxiliary feature extraction (`stage 1`)
@@ -49,14 +46,6 @@ This is the outline of recipes.
 4. WaveNet training (`stage 4`)
 5. WaveNet decoding (`stage 5`)
 6. restoring noise shaping (`stage 6`)
-
-### Recipe without noise shaping (`sd-melspc`)
-
-0. data preparation (`stage 0`)
-1. auxiliary feature extraction (`stage 1`)
-2. statistics calculation (`stage 2`)
-4. WaveNet training (`stage 3`)
-5. WaveNet decoding (`stage 4`)
 
 ## How-to-run
 
