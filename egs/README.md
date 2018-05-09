@@ -35,7 +35,7 @@ This is the outline of recipes.
 
 - build the model with mel-spectrogram
 - auxiliary features are mel-spectrogram
-- noise shaping with stft mcep is applied
+- noise shaping with stft mel-cepstrum is applied
 
 ## Flow of recipe
 
