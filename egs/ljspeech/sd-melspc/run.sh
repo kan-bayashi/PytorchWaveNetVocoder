@@ -152,7 +152,7 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     for set in ${train} ${eval};do
         # training data feature extraction
-        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/${feature_type}_${set}.log \
+        ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${feature_type}_${set}.log \
             feature_extract.py \
                 --waveforms data/${set}/wav.scp \
                 --wavdir wav/${set} \
@@ -165,9 +165,9 @@ if echo ${stage} | grep -q 1; then
                 --fftl ${fftl} \
                 --n_jobs ${n_jobs}
 
-
+        # extract stft-baed mel-cepstrum for noise shaping
         if [ ${set} = ${train} ] && ${use_noise_shaping};then
-            ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/mcep_${set}.log \
+            ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_mcep_${set}.log \
                 feature_extract.py \
                     --waveforms data/${set}/wav.scp \
                     --wavdir wav/${set} \
@@ -206,13 +206,13 @@ if echo ${stage} | grep -q 2; then
     echo "###########################################################"
     echo "#              CALCULATE STATISTICS STEP                  #"
     echo "###########################################################"
-    ${train_cmd} exp/calculate_statistics/${feature_type}_${train}.log \
+    ${train_cmd} exp/calculate_statistics/calc_stats_${feature_type}_${train}.log \
         calc_stats.py \
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
             --feature_type ${feature_type}
     if ${noise_shaping};then
-        ${train_cmd} exp/calculate_statistics/mcep_${train}.log \
+        ${train_cmd} exp/calculate_statistics/calc_stats_mcep_${train}.log \
             calc_stats.py \
                 --feats data/${train}/feats.scp \
                 --stats data/${train}/stats.h5 \
@@ -228,7 +228,7 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#                   NOISE SHAPING STEP                    #"
     echo "###########################################################"
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/mcep_apply_${train}.log \
+    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_apply_mcep_${train}.log \
         noise_shaping.py \
             --waveforms data/${train}/wav_filtered.scp \
             --stats data/${train}/stats.h5 \
@@ -334,7 +334,7 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
     find "${outdir}" -name "*.wav" | sort > data/${eval}/wav_generated.scp
-    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/mcep_restore_${eval}.log \
+    ${train_cmd} --num-threads ${n_jobs} exp/noise_shaping/noise_shaping_mcep_${eval}.log \
         noise_shaping.py \
             --waveforms data/${eval}/wav_generated.scp \
             --stats data/${train}/stats.h5 \
