@@ -15,8 +15,10 @@ import numpy as np
 from scipy.io import wavfile
 
 from calc_stats import calc_stats
+from feature_extract import melcepstrum_extract
 from feature_extract import melspectrogram_extract
 from feature_extract import world_feature_extract
+from noise_shaping import melcepstrum_noise_shaping
 from noise_shaping import world_noise_shaping
 from utils import find_files
 
@@ -48,6 +50,7 @@ def make_args(**kwargs):
         mcep_dim_start=2,
         mcep_dim_end=25,
         mag=0.5,
+        save_wav=True,
         inv=False,
     )
     defaults.update(kwargs)
@@ -69,25 +72,31 @@ def test_preprocessing():
     wav_list = find_files(wavdir, "*.wav")
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
-    args.feature_type = "melspc"
-    melspectrogram_extract(wav_list, args)
     args.feature_type = "world"
     world_feature_extract(wav_list, args)
+    args.feature_type = "melspc"
+    melspectrogram_extract(wav_list, args)
+    args.feature_type = "mcep"
+    melcepstrum_extract(wav_list, args)
 
     # calc_stats
     file_list = find_files(args.hdf5dir, "*.h5")
+    args.feature_type = "world"
+    calc_stats(file_list, args)
     args.feature_type = "melspc"
     calc_stats(file_list, args)
-    args.feature_type = "world"
+    args.feature_type = "mcep"
     calc_stats(file_list, args)
 
     # noise shaping
     wav_list = find_files(args.wavdir, "*.wav")
+    args.feature_type = "world"
+    args.writedir = "data/wav_ns/world"
     if not os.path.exists(args.writedir):
         os.makedirs(args.writedir)
     world_noise_shaping(wav_list, args)
-
-    # assert list length
-    wav_ns_list = find_files(args.writedir, "*.wav")
-    assert len(wav_list) == len(file_list)
-    assert len(wav_list) == len(wav_ns_list)
+    args.feature_type = "mcep"
+    args.writedir = "data/wav_ns/mcep"
+    if not os.path.exists(args.writedir):
+        os.makedirs(args.writedir)
+    melcepstrum_noise_shaping(wav_list, args)
