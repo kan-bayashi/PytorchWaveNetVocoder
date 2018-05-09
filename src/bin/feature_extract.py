@@ -12,12 +12,16 @@ import multiprocessing as mp
 import os
 import sys
 
+from distutils.util import strtobool
+
 import librosa
 import numpy as np
+import pysptk
 
 from scipy.interpolate import interp1d
 from scipy.io import wavfile
 from scipy.signal import firwin
+from scipy.signal import get_window
 from scipy.signal import lfilter
 from sprocket.speech.feature_extractor import FeatureExtractor
 
@@ -110,6 +114,38 @@ def convert_continuos_f0(f0):
     return uv, cont_f0
 
 
+def stft_mcep(x, fftl=512, shiftl=256, dim=25, alpha=0.41, window="hamming", is_padding=False):
+    """FUNCTION TO EXTRACT STFT-BASED MEL-CEPSTRUM
+
+    Args:
+        x (ndarray): numpy double array with the size [T]
+        fftl (int): fft length in point (default=512)
+        shiftl (int): shift length in point (default=256)
+        dim (int): dimension of mel-cepstrum (default=25)
+        alpha (float): all pass filter coefficient (default=0.41)
+        window (str): analysis window type (default="hamming")
+        is_padding (bool): whether to pad the end of signal (default=False)
+
+    Return:
+        (ndarray): mel-cepstrum with the size [N, n_fft]
+    """
+    # perform padding
+    if is_padding:
+        n_pad = fftl - (len(x) - fftl) % shiftl
+        x = np.pad(x, (0, n_pad), 'reflect')
+
+    # get number of frames
+    n_frame = (len(x) - fftl) // shiftl + 1
+
+    # get window function
+    win = get_window(window, fftl)
+
+    # calculate spectrogram
+    mcep = [pysptk.mcep(x[shiftl * i: shiftl * i + fftl] * win, dim, alpha) for i in range(n_frame)]
+
+    return np.stack(mcep)
+
+
 def world_feature_extract(wav_list, args):
     """EXTRACT WORLD FEATURE VECTOR"""
     # define feature extractor
@@ -128,7 +164,7 @@ def world_feature_extract(wav_list, args):
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
             logging.warn("wav file format is not 16 bit PCM.")
-        x = np.array(x, dtype=np.float32)
+        x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
 
@@ -154,7 +190,7 @@ def world_feature_extract(wav_list, args):
         write_hdf5(hdf5name, "/world", feats)
 
         # overwrite wav file
-        if args.highpass_cutoff != 0:
+        if args.highpass_cutoff != 0 and args.save_wav:
             wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
 
 
@@ -168,7 +204,7 @@ def melspectrogram_extract(wav_list, args):
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
             logging.warn("wav file format is not 16 bit PCM.")
-        x = np.array(x, dtype=np.float32)
+        x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
 
@@ -189,7 +225,39 @@ def melspectrogram_extract(wav_list, args):
         write_hdf5(hdf5name, "/melspc", np.float32(mspc))
 
         # overwrite wav file
+        if args.highpass_cutoff != 0 and args.save_wav:
+            wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
+
+
+def melcepstrum_extract(wav_list, args):
+    """EXTRACT MEL CEPSTRUM"""
+    # define feature extractor
+    for i, wav_name in enumerate(wav_list):
+        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
+
+        # load wavfile and apply low cut filter
+        fs, x = wavfile.read(wav_name)
+        if x.dtype != np.int16:
+            logging.warn("wav file format is not 16 bit PCM.")
+        x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
+            x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
+
+        # check sampling frequency
+        if not fs == args.fs:
+            logging.error("sampling frequency is not matched.")
+            sys.exit(1)
+
+        # extract features
+        shiftl = int(args.shiftms * fs * 0.001)
+        mcep = stft_mcep(x, args.fftl, shiftl, args.mcep_dim, args.mcep_alpha)
+
+        # save to hdf5
+        hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
+        write_hdf5(hdf5name, "/mcep", np.float32(mcep))
+
+        # overwrite wav file
+        if args.highpass_cutoff != 0 and args.save_wav:
             wavfile.write(args.wavdir + "/" + os.path.basename(wav_name), fs, np.int16(x))
 
 
@@ -213,7 +281,7 @@ def main():
         "--shiftms", default=5,
         type=int, help="Frame shift in msec")
     parser.add_argument(
-        "--feature_type", default="world", choices=["world", "melspc"],
+        "--feature_type", default="world", choices=["world", "melspc", "mcep"],
         type=str, help="feature type")
     parser.add_argument(
         "--mspc_dim", default=80,
@@ -236,6 +304,9 @@ def main():
     parser.add_argument(
         "--highpass_cutoff", default=70,
         type=int, help="Cut off frequency in lowpass filter")
+    parser.add_argument(
+        "--save_wav", default=True,
+        type=strtobool, help="Whether to save filtered wav file")
     parser.add_argument(
         "--n_jobs", default=10,
         type=int, help="number of parallel jobs")
@@ -285,8 +356,10 @@ def main():
     processes = []
     if args.feature_type == "world":
         target_fn = world_feature_extract
-    else:
+    elif args.feature_type == "melspc":
         target_fn = melspectrogram_extract
+    else:
+        target_fn = melcepstrum_extract
     for f in file_lists:
         p = mp.Process(target=target_fn, args=(f, args,))
         p.start()
