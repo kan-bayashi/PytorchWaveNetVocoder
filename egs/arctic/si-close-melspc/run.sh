@@ -180,7 +180,19 @@ if echo ${stage} | grep -q 1 ;then
                     --fftl ${fftl} \
                     --n_jobs ${n_jobs} &
 
+            # update job counts
+            nj=$(( nj + 1  ))
+            if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
+                wait
+                nj=0
+            fi
+        done
+        wait
+
+        nj=0
+        for spk in "${spks[@]}";do
             # extract stft-baed mel-cepstrum for noise shaping
+            scp=exp/feature_extract/${set}/wav.${spk}.scp
             if [ "${set}" = "${train}" ] && ${use_noise_shaping};then
                 ${train_cmd} --num-threads ${n_jobs} \
                     "exp/feature_extract/feature_extract_mcep_${set}.${spk}.log" \
@@ -197,13 +209,13 @@ if echo ${stage} | grep -q 1 ;then
                         --save_wav false \
                         --fftl ${fftl} \
                         --n_jobs ${n_jobs} &
-            fi
 
-            # update job counts
-            nj=$(( nj + 1  ))
-            if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
-                wait
-                nj=0
+                # update job counts
+                nj=$(( nj + 1  ))
+                if [ ! "${max_jobs}" -eq -1 ] && [ "${max_jobs}" -eq ${nj} ];then
+                    wait
+                    nj=0
+                fi
             fi
         done
         wait
