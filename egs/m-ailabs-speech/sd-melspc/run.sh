@@ -233,7 +233,7 @@ if echo ${stage} | grep -q 2; then
             --feats data/${train}/feats.scp \
             --stats data/${train}/stats.h5 \
             --feature_type ${feature_type}
-    if ${noise_shaping};then
+    if ${use_noise_shaping};then
         ${train_cmd} exp/calculate_statistics/calc_stats_mcep_${train}.log \
             calc_stats.py \
                 --feats data/${train}/feats.scp \
