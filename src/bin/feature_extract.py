@@ -217,7 +217,7 @@ def melspectrogram_extract(wav_list, args):
         x_norm = x / (np.iinfo(np.int16).max + 1)
         shiftl = int(args.shiftms * fs * 0.001)
         mspc = librosa.feature.melspectrogram(
-            x_norm, fs, n_fft=args.fftl, hop_length=shiftl, n_mels=args.mspc_dim)
+            x_norm, fs, n_fft=args.fftl, hop_length=shiftl, n_mels=args.mspc_dim, power=1.0)
         mspc = np.log10(mspc.T + np.random.uniform(EPS, 2 * EPS, mspc.T.shape))
 
         # save to hdf5
@@ -279,7 +279,7 @@ def main():
         type=int, help="Sampling frequency")
     parser.add_argument(
         "--shiftms", default=5,
-        type=int, help="Frame shift in msec")
+        type=float, help="Frame shift in msec")
     parser.add_argument(
         "--feature_type", default="world", choices=["world", "melspc", "mcep"],
         type=str, help="feature type")
@@ -343,7 +343,7 @@ def main():
     logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
-    if not os.path.exists(args.wavdir):
+    if not os.path.exists(args.wavdir) and args.highpass_cutoff != 0:
         os.makedirs(args.wavdir)
     if not os.path.exists(args.hdf5dir):
         os.makedirs(args.hdf5dir)
