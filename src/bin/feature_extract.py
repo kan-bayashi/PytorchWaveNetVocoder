@@ -222,9 +222,7 @@ def melspectrogram_extract(wav_list, args):
             hop_length=shiftl,
             n_mels=args.mspc_dim,
             power=1.0)
-        clip_values = np.random.uniform(EPS, 2 * EPS, mspc.shape)
-        mspc = np.max(np.stack([mspc, clip_values]), axis=0)
-        mspc = np.log10(mspc).T
+        mspc = np.log10(np.maximum(EPS, mspc.T))
 
         # save to hdf5
         hdf5name = args.hdf5dir + "/" + os.path.basename(wav_name).replace(".wav", ".h5")
