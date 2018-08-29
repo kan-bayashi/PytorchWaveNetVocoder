@@ -520,8 +520,8 @@ class WaveNet(nn.Module):
         output_tanh = dil_tanh(x)
         aux_output_sigmoid = aux_1x1_sigmoid(h)
         aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
-            F.tanh(output_tanh + aux_output_tanh)
+        output = torch.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            torch.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
         output = output + x
@@ -533,8 +533,8 @@ class WaveNet(nn.Module):
         output_tanh = dil_tanh(x)[:, :, -1:]
         aux_output_sigmoid = aux_1x1_sigmoid(h)
         aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
-            F.tanh(output_tanh + aux_output_tanh)
+        output = torch.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            torch.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
         output = output + x[:, :, -1:]  # B x C x 1
