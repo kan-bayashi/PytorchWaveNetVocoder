@@ -344,7 +344,7 @@ class WaveNet(nn.Module):
         samples = x[0]
         start = time.time()
         for i in range(n_samples):
-            output = samples[-self.kernel_size * 2 - 1:].unsqueeze(0)
+            output = samples[-self.kernel_size * 2 + 1:].unsqueeze(0)
             output = self._preprocess(output)
             h_ = h[:, :, samples.size(0) - 1].contiguous().view(1, self.n_aux, 1)
             output_buffer_next = []
@@ -436,7 +436,7 @@ class WaveNet(nn.Module):
         end_samples = []
         start = time.time()
         for i in range(max_n_samples):
-            output = samples[:, -self.kernel_size * 2 - 1:]
+            output = samples[:, -self.kernel_size * 2 + 1:]
             output = self._preprocess(output)  # B x C x T
             h_ = h[:, :, samples.size(-1) - 1].contiguous().unsqueeze(-1)  # B x C x 1
             output_buffer_next = []
@@ -520,8 +520,8 @@ class WaveNet(nn.Module):
         output_tanh = dil_tanh(x)
         aux_output_sigmoid = aux_1x1_sigmoid(h)
         aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
-            F.tanh(output_tanh + aux_output_tanh)
+        output = torch.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            torch.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
         output = output + x
@@ -533,8 +533,8 @@ class WaveNet(nn.Module):
         output_tanh = dil_tanh(x)[:, :, -1:]
         aux_output_sigmoid = aux_1x1_sigmoid(h)
         aux_output_tanh = aux_1x1_tanh(h)
-        output = F.sigmoid(output_sigmoid + aux_output_sigmoid) * \
-            F.tanh(output_tanh + aux_output_tanh)
+        output = torch.sigmoid(output_sigmoid + aux_output_sigmoid) * \
+            torch.tanh(output_tanh + aux_output_tanh)
         skip = skip_1x1(output)
         output = res_1x1(output)
         output = output + x[:, :, -1:]  # B x C x 1
