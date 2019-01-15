@@ -106,8 +106,8 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
         # check dataset existence
         if hdf5_path in hdf5_file:
             if is_overwrite:
-                logging.warn("dataset in hdf5 file already exists.")
-                logging.warn("recreate dataset in hdf5.")
+                logging.warning("dataset in hdf5 file already exists.")
+                logging.warning("recreate dataset in hdf5.")
                 hdf5_file.__delitem__(hdf5_path)
             else:
                 logging.error("dataset in hdf5 file already exists.")
