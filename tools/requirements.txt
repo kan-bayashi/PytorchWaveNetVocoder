@@ -1,5 +1,8 @@
-numpy>=1.13.3
-h5py>=2.7.1
-scikit-learn>=0.19.1
-librosa>=0.6.0
-soundfile
+numpy==1.13.3
+h5py>=2.9.0
+scikit-learn>=0.20.2
+librosa>=0.6.2
+soundfile>=0.10.2
+torch>=1.0.0
+torchvision>=0.2.1
+sprocket-vc>=0.18.2
