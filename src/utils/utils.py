@@ -57,7 +57,7 @@ def read_hdf5(hdf5_name, hdf5_path):
         logging.error("there is no such a data in hdf5 file. (%s)" % hdf5_path)
         sys.exit(1)
 
-    hdf5_data = hdf5_file[hdf5_path].value
+    hdf5_data = hdf5_file[hdf5_path][()]
     hdf5_file.close()
 
     return hdf5_data
@@ -106,8 +106,8 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
         # check dataset existence
         if hdf5_path in hdf5_file:
             if is_overwrite:
-                logging.warn("dataset in hdf5 file already exists.")
-                logging.warn("recreate dataset in hdf5.")
+                logging.warning("dataset in hdf5 file already exists.")
+                logging.warning("recreate dataset in hdf5.")
                 hdf5_file.__delitem__(hdf5_path)
             else:
                 logging.error("dataset in hdf5 file already exists.")

@@ -77,10 +77,10 @@ def test_forward():
 def test_generate():
     batch = 2
     x = np.random.randint(0, 256, size=(batch, 1))
-    h = np.random.randn(batch, 28, 32)
+    h = np.random.randn(batch, 28, 10)
     length = h.shape[-1] - 1
     with torch.no_grad():
-        net = WaveNet(256, 28, 16, 32, 10, 3, 2)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 2)
         net.apply(initialize)
         net.eval()
         for x_, h_ in zip(x, h):
@@ -97,14 +97,14 @@ def test_assert_fast_generation():
     # get batch
     batch = 2
     x = np.random.randint(0, 256, size=(batch, 1))
-    h = np.random.randn(batch, 28, 100)
+    h = np.random.randn(batch, 28, 32)
     length = h.shape[-1] - 1
 
     with torch.no_grad():
         # --------------------------------------------------------
         # define model without upsampling and with kernel size = 2
         # --------------------------------------------------------
-        net = WaveNet(256, 28, 16, 32, 10, 3, 2)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 2)
         net.apply(initialize)
         net.eval()
 
@@ -133,7 +133,7 @@ def test_assert_fast_generation():
         # --------------------------------------------------------
         # define model without upsampling and with kernel size = 3
         # --------------------------------------------------------
-        net = WaveNet(256, 28, 16, 32, 10, 3, 3)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 3)
         net.apply(initialize)
         net.eval()
 
@@ -163,13 +163,13 @@ def test_assert_fast_generation():
         batch = 2
         upsampling_factor = 10
         x = np.random.randint(0, 256, size=(batch, 1))
-        h = np.random.randn(batch, 28, 10)
+        h = np.random.randn(batch, 28, 3)
         length = h.shape[-1] * upsampling_factor - 1
 
         # -----------------------------------------------------
         # define model with upsampling and with kernel size = 2
         # -----------------------------------------------------
-        net = WaveNet(256, 28, 16, 32, 10, 3, 2, upsampling_factor)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 2, upsampling_factor)
         net.apply(initialize)
         net.eval()
 
@@ -198,7 +198,7 @@ def test_assert_fast_generation():
         # -----------------------------------------------------
         # define model with upsampling and with kernel size = 3
         # -----------------------------------------------------
-        net = WaveNet(256, 28, 16, 32, 10, 3, 2, upsampling_factor)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 2, upsampling_factor)
         net.apply(initialize)
         net.eval()
 
@@ -228,13 +228,13 @@ def test_assert_fast_generation():
 def test_assert_different_length_batch_generation():
     # prepare batch
     batch = 4
-    length = 100
+    length = 32
     x = np.random.randint(0, 256, size=(batch, 1))
     h = np.random.randn(batch, 28, length)
     length_list = sorted(list(np.random.randint(length // 2, length - 1, batch)))
 
     with torch.no_grad():
-        net = WaveNet(256, 28, 16, 32, 10, 3, 2)
+        net = WaveNet(256, 28, 4, 4, 10, 3, 2)
         net.apply(initialize)
         net.eval()
 

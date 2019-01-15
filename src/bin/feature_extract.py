@@ -93,7 +93,7 @@ def convert_continuos_f0(f0):
 
     # get start and end of f0
     if (f0 == 0).all():
-        logging.warn("all of the f0 values are 0.")
+        logging.warning("all of the f0 values are 0.")
         return uv, f0
     start_f0 = f0[f0 != 0][0]
     end_f0 = f0[f0 != 0][-1]
@@ -163,7 +163,7 @@ def world_feature_extract(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
-            logging.warn("wav file format is not 16 bit PCM.")
+            logging.warning("wav file format is not 16 bit PCM.")
         x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
@@ -203,7 +203,7 @@ def melspectrogram_extract(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
-            logging.warn("wav file format is not 16 bit PCM.")
+            logging.warning("wav file format is not 16 bit PCM.")
         x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
@@ -242,7 +242,7 @@ def melcepstrum_extract(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
-            logging.warn("wav file format is not 16 bit PCM.")
+            logging.warning("wav file format is not 16 bit PCM.")
         x = np.array(x, dtype=np.float64)
         if args.highpass_cutoff != 0:
             x = low_cut_filter(x, fs, cutoff=args.highpass_cutoff)
@@ -330,10 +330,10 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
     else:
-        logging.basicConfig(level=logging.WARN,
+        logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
-        logging.warn("logging is disabled.")
+        logging.warning("logging is disabled.")
 
     # show argmument
     for key, value in vars(args).items():
