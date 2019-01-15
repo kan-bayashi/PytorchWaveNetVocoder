@@ -105,13 +105,13 @@ def train_generator(wav_list, feat_list, receptive_field,
     # check batch_length
     if batch_length is not None and use_upsampling_layer:
         batch_mod = (receptive_field + batch_length) % upsampling_factor
-        logging.warn("batch length is decreased due to upsampling (%d -> %d)" % (
+        logging.warning("batch length is decreased due to upsampling (%d -> %d)" % (
             batch_length, batch_length - batch_mod))
         batch_length -= batch_mod
 
     # show warning
     if batch_length is None and batch_size > 1:
-        logging.warn("in utterance batch mode, batchsize will be 1.")
+        logging.warning("in utterance batch mode, batchsize will be 1.")
 
     while True:
         batch_x, batch_h, batch_t = [], [], []
@@ -401,10 +401,10 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
     else:
-        logging.basicConfig(level=logging.WARN,
+        logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
-        logging.warn("logging is disabled.")
+        logging.warning("logging is disabled.")
 
     # show argmument
     for key, value in vars(args).items():
@@ -445,7 +445,7 @@ def main():
         model = torch.nn.DataParallel(model, device_ids)
         model.receptive_field = model.module.receptive_field
         if args.n_gpus > args.batch_size:
-            logging.warn("batch size is less than number of gpus.")
+            logging.warning("batch size is less than number of gpus.")
 
     # define optimizer and loss
     optimizer = torch.optim.Adam(

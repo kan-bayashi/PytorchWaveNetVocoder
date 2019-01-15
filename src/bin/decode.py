@@ -213,10 +213,10 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
     else:
-        logging.basicConfig(level=logging.WARN,
+        logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
-        logging.warn("logging is disabled.")
+        logging.warning("logging is disabled.")
 
     # show argmument
     for key, value in vars(args).items():

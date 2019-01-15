@@ -39,7 +39,7 @@ def world_noise_shaping(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
-            logging.warn("wav file format is not 16 bit PCM.")
+            logging.warning("wav file format is not 16 bit PCM.")
         x = np.float64(x)
 
         # check sampling frequency
@@ -80,7 +80,7 @@ def melcepstrum_noise_shaping(wav_list, args):
         # load wavfile and apply low cut filter
         fs, x = wavfile.read(wav_name)
         if x.dtype != np.int16:
-            logging.warn("wav file format is not 16 bit PCM.")
+            logging.warning("wav file format is not 16 bit PCM.")
         x = np.float64(x)
 
         # check sampling frequency
@@ -165,10 +165,10 @@ def main():
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
     else:
-        logging.basicConfig(level=logging.WARN,
+        logging.basicConfig(level=logging.WARNING,
                             format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S')
-        logging.warn("logging is disabled.")
+        logging.warning("logging is disabled.")
 
     # show argmument
     for key, value in vars(args).items():
