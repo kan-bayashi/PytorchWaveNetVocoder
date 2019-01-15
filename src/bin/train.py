@@ -418,11 +418,11 @@ def main():
     os.environ['PYTHONHASHSEED'] = str(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    
+
     # fix slow computation of dilated conv
     # https://github.com/pytorch/pytorch/issues/15054#issuecomment-450191923
     torch.backends.cudnn.benchmark = True
-    
+
     # save args as conf
     torch.save(args, args.expdir + "/model.conf")
 

@@ -234,7 +234,7 @@ def main():
     # fix slow computation of dilated conv
     # https://github.com/pytorch/pytorch/issues/15054#issuecomment-450191923
     torch.backends.cudnn.benchmark = True
-    
+
     # load config
     config = torch.load(args.config)
 
