@@ -57,7 +57,7 @@ def read_hdf5(hdf5_name, hdf5_path):
         logging.error("there is no such a data in hdf5 file. (%s)" % hdf5_path)
         sys.exit(1)
 
-    hdf5_data = hdf5_file[hdf5_path].value
+    hdf5_data = hdf5_file[hdf5_path][()]
     hdf5_file.close()
 
     return hdf5_data
