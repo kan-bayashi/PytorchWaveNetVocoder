@@ -7,11 +7,12 @@
 import argparse
 import os
 
-from decode import decode_generator
 from feature_extract import melspectrogram_extract
 from feature_extract import world_feature_extract
-from train import train_generator
 from utils import find_files
+
+from decode import decode_generator
+from train import train_generator
 
 from test_preprocessing import make_args as make_feature_args
 from test_preprocessing import make_dummy_wav
