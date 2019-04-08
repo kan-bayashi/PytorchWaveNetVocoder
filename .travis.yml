@@ -11,7 +11,7 @@ matrix:
 
 install:
   - pip3 install -U pip wheel
-    pip3 install numpy
+  - pip3 install numpy
   - grep -v torch ./tools/requirements.txt | pip3 install -r /dev/stdin
     # use pytorch cpu v0.4.1 (1.0.0 is super slow)
   - pip3 install https://download.pytorch.org/whl/cpu/torch-0.4.1-cp36-cp36m-linux_x86_64.whl
