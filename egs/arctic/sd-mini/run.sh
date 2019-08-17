@@ -267,7 +267,7 @@ if echo ${stage} | grep -q 4; then
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
-    cp data/${train}/stats.h5 ${expdir}
+    [ ! -e ${expdir}/stats.h5 ] && cp -v data/${train}/stats.h5 ${expdir}
     train.py \
         --n_gpus ${n_gpus} \
         --waveforms ${waveforms} \
