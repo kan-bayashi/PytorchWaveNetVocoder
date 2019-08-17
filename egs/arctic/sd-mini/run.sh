@@ -267,6 +267,7 @@ if echo ${stage} | grep -q 4; then
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
+    cp data/${train}/stats.h5 ${expdir}
     train.py \
         --n_gpus ${n_gpus} \
         --waveforms ${waveforms} \
@@ -296,20 +297,20 @@ fi
 
 
 # STAGE 5 {{{
+[ ! -n "${outdir}" ] && outdir=${expdir}/wav
+[ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
+[ ! -n "${config}" ] && config=$(dirname ${checkpoint})/model.conf
+[ ! -n "${stats}" ] && stats=$(dirname ${checkpoint})/stats.h5
+[ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
 if echo ${stage} | grep -q 5; then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
     echo "###########################################################"
-    [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
-    [ ! -n "${config}" ] && config=$(dirname ${checkpoint})/model.conf
-    [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
-    [ ! -n "${stats}" ] && stats=data/${train}/stats.h5
     [ ! -e ${outdir}/log ] && mkdir -p ${outdir}/log
     decode.py \
         --n_gpus ${n_gpus} \
         --feats ${feats} \
-        --stats ${stats} \
+        --stats "${stats}" \
         --outdir "${outdir}" \
         --checkpoint "${checkpoint}" \
         --config "${config}" \
@@ -324,13 +325,11 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
-    [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    [ ! -n "${stats}" ] && stats=data/${train}/stats.h5
     find "${outdir}" -name "*.wav" | sort > ${outdir}/wav.scp
     [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
     noise_shaping.py \
         --waveforms ${outdir}/wav.scp \
-        --stats ${stats} \
+        --stats "${stats}" \
         --writedir ${outdir}_restored \
         --feature_type ${feature_type} \
         --fs ${fs} \
