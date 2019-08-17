@@ -175,7 +175,7 @@ if echo ${stage} | grep -q 1; then
             --mcep_alpha ${mcep_alpha} \
             --highpass_cutoff ${highpass_cutoff} \
             --fftl ${fftl} \
-            --n_jobs ${n_jobs} | tee exp/feature_extract/feature_extract_${set}.log
+            --n_jobs ${n_jobs} 2>&1 | tee exp/feature_extract/feature_extract_${set}.log
 
         # check the number of feature files
         n_wavs=$(wc -l data/${set}/wav.scp)
@@ -228,7 +228,7 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
         --mcep_alpha ${mcep_alpha} \
         --mag ${mag} \
         --inv true \
-        --n_jobs ${n_jobs} | tee exp/noise_shaping/noise_shaping_apply_${train}.log
+        --n_jobs ${n_jobs} 2>&1 | tee exp/noise_shaping/noise_shaping_apply_${train}.log
 
     # check the number of feature files
     n_wavs=$(wc -l data/${train}/wav_filtered.scp)
@@ -287,7 +287,7 @@ if echo ${stage} | grep -q 4; then
         --upsampling_factor "${upsampling_factor}" \
         --use_upsampling_layer ${use_upsampling} \
         --use_speaker_code ${use_speaker_code} \
-        --resume "${resume}" | tee ${expdir}/log/${train}.log
+        --resume "${resume}" 2>&1 | tee -a ${expdir}/log/${train}.log
 fi
 # }}}
 
@@ -301,16 +301,17 @@ if echo ${stage} | grep -q 5; then
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
     [ ! -n "${config}" ] && config=${expdir}/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
+    [ ! -n "${stats}" ] && stats=data/${train}/stats.h5
     [ ! -e ${outdir}/log ] && mkdir -p ${outdir}/log
     decode.py \
         --n_gpus ${n_gpus} \
         --feats ${feats} \
-        --stats data/${train}/stats.h5 \
+        --stats ${stats} \
         --outdir "${outdir}" \
         --checkpoint "${checkpoint}" \
         --config "${config}" \
         --fs ${fs} \
-        --batch_size ${decode_batch_size} | tee ${outdir}/log/decode.log
+        --batch_size ${decode_batch_size} 2>&1 | tee ${outdir}/log/decode.log
 fi
 # }}}
 
@@ -321,11 +322,12 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
+    [ ! -n "${stats}" ] && stats=data/${train}/stats.h5
     find "${outdir}" -name "*.wav" | sort > ${outdir}/wav.scp
     [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
     noise_shaping.py \
         --waveforms ${outdir}/wav.scp \
-        --stats data/${train}/stats.h5 \
+        --stats ${stats} \
         --writedir ${outdir}_restored \
         --feature_type ${feature_type} \
         --fs ${fs} \
@@ -336,6 +338,6 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
         --mcep_alpha ${mcep_alpha} \
         --mag ${mag} \
         --n_jobs ${n_jobs} \
-        --inv false | tee exp/noise_shaping/noise_shaping_restore_${eval}.log
+        --inv false 2>&1 | tee exp/noise_shaping/noise_shaping_restore_${eval}.log
 fi
 # }}}
