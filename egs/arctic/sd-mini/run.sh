@@ -97,14 +97,16 @@ resume=
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
+# stats: statistics file (if not set, will automatically set)
 # feats: list or directory of feature files
 # n_gpus: number of gpus to decode
 # }}}
 outdir=
 checkpoint=
 config=
+stats=
 feats=
-decode_batch_size=8
+decode_batch_size=4
 
 #######################################
 #            OHTER SETTING            #
@@ -139,15 +141,16 @@ if echo ${stage} | grep -q 0; then
         cd ../
         echo "download dataset is successfully done."
     fi
-    # download dataset
+    # use first 32 utterances as training data
     [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 128 > data/${train}/wav.scp
+        | sort | head -n 32 > data/${train}/wav.scp
     echo "making wav list for training is successfully done. (#training = $(cat data/${train}/wav.scp | wc -l))"
 
+    # use next 4 utterances as evaluation data
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | tail -n 8 > data/${eval}/wav.scp
+       | sort | head 36 | tail -n 4 > data/${eval}/wav.scp
     echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${eval}/wav.scp | wc -l))"
 fi
 # }}}
@@ -299,7 +302,7 @@ if echo ${stage} | grep -q 5; then
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
     [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
-    [ ! -n "${config}" ] && config=${expdir}/model.conf
+    [ ! -n "${config}" ] && config=$(dirname ${checkpoint})/model.conf
     [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
     [ ! -n "${stats}" ] && stats=data/${train}/stats.h5
     [ ! -e ${outdir}/log ] && mkdir -p ${outdir}/log
