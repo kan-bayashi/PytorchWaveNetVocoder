@@ -17,6 +17,12 @@ This repository is the wavenet-vocoder implementation with pytorch.
     - [LJ Speech database](https://keithito.com/LJ-Speech-Dataset/): `egs/ljspeech`
     - [M-AILABS speech database](http://www.m-ailabs.bayern/en/the-mailabs-speech-dataset/): `egs/m-ailabs-speech`
 
+You can learn the basics of this repository within 15 minutes in Google colab!
+
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/c8c766056b6d6ecdd906cd4372b1e186)
+
+Please access the above URL and click the `Open in Colab` button. Enjoy!
+
 ## Requirements
 
 - python 3.6
