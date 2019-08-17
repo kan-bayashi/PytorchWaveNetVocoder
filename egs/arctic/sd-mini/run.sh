@@ -74,9 +74,9 @@ n_gpus=1
 spk=slt
 n_quantize=256
 n_aux=28
-n_resch=64
-n_skipch=32
-dilation_depth=10
+n_resch=32
+n_skipch=16
+dilation_depth=5
 dilation_repeat=1
 kernel_size=2
 lr=1e-4
@@ -142,13 +142,13 @@ if echo ${stage} | grep -q 0; then
     # download dataset
     [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-        | sort | head -n 64 > data/${train}/wav.scp
+        | sort | head -n 128 > data/${train}/wav.scp
     echo "making wav list for training is successfully done. (#training = $(cat data/${train}/wav.scp | wc -l))"
 
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
        | sort | tail -n 8 > data/${eval}/wav.scp
-    echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${train}/wav.scp | wc -l))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${eval}/wav.scp | wc -l))"
 fi
 # }}}
 
@@ -321,10 +321,10 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
     [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    find "${outdir}" -name "*.wav" | sort > ${outdir}/wav/wav.scp
+    find "${outdir}" -name "*.wav" | sort > ${outdir}/wav.scp
     [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
     noise_shaping.py \
-        --waveforms ${outdir}/wav/wav.scp \
+        --waveforms ${outdir}/wav.scp \
         --stats data/${train}/stats.h5 \
         --writedir ${outdir}_restored \
         --feature_type ${feature_type} \
