@@ -145,13 +145,13 @@ if echo ${stage} | grep -q 0; then
     [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
         | sort | head -n 32 > data/${train}/wav.scp
-    echo "making wav list for training is successfully done. (#training = $(cat data/${train}/wav.scp | wc -l))"
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
 
     # use next 4 utterances as evaluation data
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
        | sort | head -n 36 | tail -n 4 > data/${eval}/wav.scp
-    echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${eval}/wav.scp | wc -l))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 
