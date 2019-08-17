@@ -115,7 +115,7 @@ ARCTIC_DB_ROOT=downloads
 tag=
 
 # parse options
-. parse_options.sh
+. parse_options.sh || exit 1;
 
 # set params
 train=tr_${spk}

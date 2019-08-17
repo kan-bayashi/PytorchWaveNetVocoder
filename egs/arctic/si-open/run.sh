@@ -6,8 +6,8 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-. ./path.sh
-. ./cmd.sh
+. ./path.sh || exit 1;
+. ./cmd.sh || exit 1;
 
 # USER SETTINGS {{{
 #######################################
@@ -103,6 +103,7 @@ resume=
 outdir=
 checkpoint=
 config=
+stats=
 feats=
 decode_batch_size=32
 
@@ -113,7 +114,7 @@ ARCTIC_DB_ROOT=downloads
 tag=
 
 # parse options
-. parse_options.sh
+. parse_options.sh || exit 1;
 
 # set params
 train=tr_wo_"$(IFS=_; echo "${eval_spks[*]}")"
@@ -352,6 +353,7 @@ if echo ${stage} | grep -q 4 ; then
         waveforms=data/${train}/wav_filtered.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
+    cp data/${train}/stats.h5 ${expdir}
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \
             --n_gpus ${n_gpus} \
@@ -382,14 +384,15 @@ fi
 
 
 # STAGE 5 {{{
+[ ! -n "${outdir}" ] && outdir=${expdir}/wav
+[ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
+[ ! -n "${config}" ] && config=$(dirname ${checkpoint})/model.conf
+[ ! -n "${stats}" ] && stats=$(dirname ${checkpoint})/stats.h5
+[ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
 if echo ${stage} | grep -q 5 ; then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
     echo "###########################################################"
-    [ ! -n "${outdir}" ] && outdir=${expdir}/wav
-    [ ! -n "${checkpoint}" ] && checkpoint=${expdir}/checkpoint-final.pkl
-    [ ! -n "${config}" ] && config=${expdir}/model.conf
-    [ ! -n "${feats}" ] && feats=data/${eval}/feats.scp
     [ ! -e exp/decoding ] && mkdir -p exp/decoding
     nj=0
     for spk in "${eval_spks[@]}";do
@@ -402,7 +405,7 @@ if echo ${stage} | grep -q 5 ; then
             decode.py \
                 --n_gpus ${n_gpus} \
                 --feats ${scp} \
-                --stats "data/${train}/stats.h5" \
+                --stats ${stats} \
                 --outdir "${outdir}/${spk}" \
                 --checkpoint "${checkpoint}" \
                 --config "${config}" \
@@ -426,11 +429,10 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "###########################################################"
     echo "#             RESTORE NOISE SHAPING STEP                  #"
     echo "###########################################################"
-    [ ! -n "${outdir}" ] && outdir=${expdir}/wav
     nj=0
     for spk in "${eval_spks[@]}";do
         # make scp of each speaker
-        scp=exp/noise_shaping/wav_generated.${spk}.scp
+        scp=${outdir}/${spk}/wav.scp
         find "${outdir}/${spk}" -name "*.wav" | grep "\/${spk}\/" | sort > ${scp}
 
         # restore noise shaping
@@ -438,7 +440,7 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
             exp/noise_shaping/noise_shaping_restore.${spk}.log \
             noise_shaping.py \
                 --waveforms ${scp} \
-                --stats "data/${train}/stats.h5" \
+                --stats ${stats} \
                 --writedir "${outdir}_restored/${spk}" \
                 --feature_type ${feature_type} \
                 --fs ${fs} \
