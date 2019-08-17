@@ -74,17 +74,17 @@ n_gpus=1
 spk=slt
 n_quantize=256
 n_aux=28
-n_resch=128
-n_skipch=64
+n_resch=64
+n_skipch=32
 dilation_depth=10
 dilation_repeat=1
 kernel_size=2
 lr=1e-4
 weight_decay=0.0
-iters=100
+iters=1000
 batch_length=10000
 batch_size=1
-checkpoints=10
+checkpoints=100
 use_upsampling=true
 use_noise_shaping=true
 use_speaker_code=false
@@ -97,7 +97,7 @@ resume=
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files 
+# feats: list or directory of feature files
 # n_gpus: number of gpus to decode
 # }}}
 outdir=
@@ -129,6 +129,7 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
+    # download dataset
     if [ ! -e ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/.done ];then
         mkdir -p ${ARCTIC_DB_ROOT} && cd ${ARCTIC_DB_ROOT}
         wget http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_${spk}_arctic-0.95-release.tar.bz2
@@ -136,13 +137,18 @@ if echo ${stage} | grep -q 0; then
         rm ./*.tar.bz2
         touch cmu_us_${spk}_arctic/.done
         cd ../
+        echo "download dataset is successfully done."
     fi
+    # download dataset
     [ ! -e data/${train} ] && mkdir -p data/${train}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
         | sort | head -n 64 > data/${train}/wav.scp
+    echo "making wav list for training is successfully done. (#training = $(cat data/${train}/wav.scp | wc -l))"
+
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | tail -n 32 > data/${eval}/wav.scp
+       | sort | tail -n 8 > data/${eval}/wav.scp
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${train}/wav.scp | wc -l))"
 fi
 # }}}
 
@@ -156,7 +162,6 @@ if echo ${stage} | grep -q 1; then
     maxf0=$(awk '{print $2}' conf/${spk}.f0)
     [ ! -e exp/feature_extract ] && mkdir -p exp/feature_extract
     for set in ${train} ${eval};do
-        # training data feature extraction
         feature_extract.py \
             --waveforms data/${set}/wav.scp \
             --wavdir wav/${set} \
