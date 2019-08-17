@@ -19,7 +19,7 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 You can learn the basics of this repository within 15 minutes in Google colab!
 
-[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/c8c766056b6d6ecdd906cd4372b1e186)
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/9483b1a7b1fcd29fae211188bd4d2e0e)
 
 Please access the above URL and click the `Open in Colab` button. Enjoy!
 
