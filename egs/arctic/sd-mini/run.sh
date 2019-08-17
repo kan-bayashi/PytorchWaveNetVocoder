@@ -150,7 +150,7 @@ if echo ${stage} | grep -q 0; then
     # use next 4 utterances as evaluation data
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | head 36 | tail -n 4 > data/${eval}/wav.scp
+       | sort | head -n 36 | tail -n 4 > data/${eval}/wav.scp
     echo "making wav list for evaluation is successfully done. (#evaluation = $(cat data/${eval}/wav.scp | wc -l))"
 fi
 # }}}
