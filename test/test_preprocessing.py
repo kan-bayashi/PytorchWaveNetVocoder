@@ -9,8 +9,10 @@ from __future__ import print_function
 
 import argparse
 import os
+import shutil
 
 import numpy as np
+import pytest
 
 from scipy.io import wavfile
 
@@ -32,10 +34,10 @@ def make_dummy_wav(name, maxlen=32000, fs=16000):
 
 def make_args(**kwargs):
     defaults = dict(
-        hdf5dir="data/hdf5",
-        wavdir="data/wav_filtered",
-        writedir="data/wav_ns",
-        stats="data/stats.h5",
+        hdf5dir="tmp/hdf5",
+        wavdir="tmp/wav_filtered",
+        writedir="tmp/wav_ns",
+        stats="tmp/stats.h5",
         feature_type="world",
         fs=16000,
         shiftms=5,
@@ -56,12 +58,15 @@ def make_args(**kwargs):
     return argparse.Namespace(**defaults)
 
 
-def test_preprocessing():
+@pytest.mark.parametrize("feature_type", [
+    ("melspc"), ("world"), ("mcep"),
+])
+def test_preprocessing(feature_type):
     # make arguments
-    args = make_args()
+    args = make_args(feature_type=feature_type)
 
     # prepare dummy wav files
-    wavdir = "data/wav"
+    wavdir = "tmp/wav"
     if not os.path.exists(wavdir):
         os.makedirs(wavdir)
     for i in range(5):
@@ -71,31 +76,22 @@ def test_preprocessing():
     wav_list = find_files(wavdir, "*.wav")
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
-    args.feature_type = "world"
-    world_feature_extract(wav_list, args)
-    args.feature_type = "melspc"
-    melspectrogram_extract(wav_list, args)
-    args.feature_type = "mcep"
-    melcepstrum_extract(wav_list, args)
+    if args.feature_type == "world":
+        world_feature_extract(wav_list, args)
+    elif args.feature_type == "melspc":
+        melspectrogram_extract(wav_list, args)
+    else:
+        melcepstrum_extract(wav_list, args)
 
     # calc_stats
     file_list = find_files(args.hdf5dir, "*.h5")
-    args.feature_type = "world"
-    calc_stats(file_list, args)
-    args.feature_type = "melspc"
-    calc_stats(file_list, args)
-    args.feature_type = "mcep"
     calc_stats(file_list, args)
 
     # noise shaping
     wav_list = find_files(args.wavdir, "*.wav")
-    args.feature_type = "world"
-    args.writedir = "data/wav_ns/world"
     if not os.path.exists(args.writedir):
         os.makedirs(args.writedir)
     noise_shaping(wav_list, args)
-    args.feature_type = "mcep"
-    args.writedir = "data/wav_ns/mcep"
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
-    noise_shaping(wav_list, args)
+
+    # remove
+    shutil.rmtree("tmp")
