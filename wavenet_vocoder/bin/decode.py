@@ -224,9 +224,9 @@ def main():
 
     # check arguments
     if args.stats is None:
-        args.stats = os.path.dirname(args.checkpoint + "/stats.h5")
+        args.stats = os.path.dirname(args.checkpoint) + "/stats.h5"
     if args.config is None:
-        args.config = os.path.dirname(args.checkpoint + "/model.conf")
+        args.config = os.path.dirname(args.checkpoint) + "/model.conf"
     if not os.path.exists(args.stats):
         raise FileNotFoundError("statistics file is missing (%s)." % (args.stats))
     if not os.path.exists(args.config):
