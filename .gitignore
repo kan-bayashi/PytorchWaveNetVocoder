@@ -13,3 +13,5 @@ egs/*/*/hdf5/
 egs/*/*/downloads/
 egs/*/*/downloads
 .pytest_cache/
+.eggs/
+*.egg-info/
