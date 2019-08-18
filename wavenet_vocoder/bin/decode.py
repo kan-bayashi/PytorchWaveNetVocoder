@@ -180,14 +180,14 @@ def main():
     # decode setting
     parser.add_argument("--feats", required=True,
                         type=str, help="list or directory of aux feat files")
-    parser.add_argument("--stats", required=True,
-                        type=str, help="hdf5 file including statistics")
     parser.add_argument("--checkpoint", required=True,
                         type=str, help="model file")
-    parser.add_argument("--config", required=True,
-                        type=str, help="configure file")
     parser.add_argument("--outdir", required=True,
                         type=str, help="directory to save generated samples")
+    parser.add_argument("--stats", default=None,
+                        type=str, help="hdf5 file including statistics")
+    parser.add_argument("--config", default=None,
+                        type=str, help="configure file")
     parser.add_argument("--fs", default=16000,
                         type=int, help="sampling rate")
     parser.add_argument("--batch_size", default=32,
@@ -221,6 +221,16 @@ def main():
     # show argmument
     for key, value in vars(args).items():
         logging.info("%s = %s" % (key, str(value)))
+
+    # check arguments
+    if args.stats is None:
+        args.stats = os.path.dirname(args.checkpoint + "/stats.h5")
+    if args.config is None:
+        args.config = os.path.dirname(args.checkpoint + "/model.conf")
+    if not os.path.exists(args.stats):
+        raise FileNotFoundError("statistics file is missing (%s)." % (args.stats))
+    if not os.path.exists(args.config):
+        raise FileNotFoundError("config file is missing (%s)." % (args.config))
 
     # check directory existence
     if not os.path.exists(args.outdir):
