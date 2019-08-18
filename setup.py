@@ -26,9 +26,9 @@ requirements = {
         "librosa>=0.6.2",
         "soundfile>=0.10.2",
         "torch==1.0.1",
-        "torchvision>=0.2.1",
+        "torchvision==0.2.2",
         "sprocket-vc>=0.18.2",
-        "matplotlib>=3.1.0",
+        "matplotlib>=3.0.3",
     ],
     "setup": [
         "numpy",
