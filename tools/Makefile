@@ -4,10 +4,9 @@ all: venv/bin/activate
 
 venv/bin/activate:
 	test -d venv || virtualenv -p python3.6 venv
-	. venv/bin/activate; pip install --upgrade pip
-	. venv/bin/activate; pip install numpy
-	. venv/bin/activate; pip install -r requirements.txt
-	touch venv/bin/activate
+	. venv/bin/activate && pip install --upgrade pip
+	. venv/bin/activate && cd ../ &&  pip install -e .
+	. venv/bin/activate && cd ../ &&  pip install -e .[test]
 
 clean:
 	rm -fr venv
