@@ -48,6 +48,9 @@ $ make
 ```
 $ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
 $ cd PytorchWaveNetVocoder
+
+# recommend to use with pytorch 1.0.1 because only tested on 1.0.1
+$ pip install torch==1.0.1 torchvision==0.2.2
 $ pip install -e .
 
 # please make dummy activate file to suppress warning in the recipe
