@@ -217,7 +217,7 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
         noise_shaping.py \
             --waveforms data/${train}/wav_filtered.scp \
             --stats data/${train}/stats.h5 \
-            --writedir wav_ns/${train} \
+            --outdir wav_ns/${train} \
             --feature_type ${feature_type} \
             --fs ${fs} \
             --shiftms ${shiftms} \
@@ -325,7 +325,7 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
         noise_shaping.py \
             --waveforms ${outdir}/wav.scp \
             --stats ${stats} \
-            --writedir "${outdir}"_restored \
+            --outdir "${outdir}"_restored \
             --feature_type ${feature_type} \
             --fs ${fs} \
             --shiftms ${shiftms} \

@@ -36,7 +36,7 @@ def make_args(**kwargs):
     defaults = dict(
         hdf5dir="tmp/hdf5",
         wavdir="tmp/wav_filtered",
-        writedir="tmp/wav_ns",
+        outdir="tmp/wav_ns",
         stats="tmp/stats.h5",
         feature_type="world",
         fs=16000,
@@ -89,8 +89,8 @@ def test_preprocessing(feature_type):
 
     # noise shaping
     wav_list = find_files(args.wavdir, "*.wav")
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
     noise_shaping(wav_list, args)
 
     # remove

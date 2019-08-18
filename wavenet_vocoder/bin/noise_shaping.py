@@ -81,7 +81,7 @@ def noise_shaping(wav_list, args):
 
         # synthesis and write
         x_ns = synthesizer.synthesis(x, mlsa_coefs)
-        write_name = args.writedir + "/" + os.path.basename(wav_name)
+        write_name = args.outdir + "/" + os.path.basename(wav_name)
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
@@ -131,7 +131,7 @@ def melcepstrum_noise_shaping(wav_list, args):
 
         # synthesis and write
         x_ns = synthesizer.synthesis(x, mlsa_coefs)
-        write_name = args.writedir + "/" + os.path.basename(wav_name)
+        write_name = args.outdir + "/" + os.path.basename(wav_name)
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
@@ -146,7 +146,7 @@ def main():
         "--stats", default=None,
         help="filename of hdf5 format")
     parser.add_argument(
-        "--writedir", default=None,
+        "--outdir", default=None,
         help="directory to save preprocessed wav file")
     parser.add_argument(
         "--fs", default=16000,
@@ -208,8 +208,8 @@ def main():
     logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
 
     # divie list
     file_lists = np.array_split(file_list, args.n_jobs)
