@@ -155,9 +155,6 @@ def main():
         "--shiftms", default=5,
         type=float, help="Frame shift in msec")
     parser.add_argument(
-        "--fftl", default=1024,
-        type=int, help="FFT length")
-    parser.add_argument(
         "--feature_type", default="world", choices=["world", "mcep", "melspc"],
         type=str, help="feature type")
     parser.add_argument(
