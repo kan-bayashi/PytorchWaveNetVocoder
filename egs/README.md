@@ -167,11 +167,10 @@ $ find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
 $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
-    --writedir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
+    --outdir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
     --feature_type world \
     --fs 16000 \
     --shiftms 5 \
-    --fftl 1024 \
     --mcep_dim_start 2 \
     --mcep_dim_end 27 \
     --mcep_alpha 0.41 \
