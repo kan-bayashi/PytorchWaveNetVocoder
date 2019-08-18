@@ -18,8 +18,7 @@ from wavenet_vocoder.bin.calc_stats import calc_stats
 from wavenet_vocoder.bin.feature_extract import melcepstrum_extract
 from wavenet_vocoder.bin.feature_extract import melspectrogram_extract
 from wavenet_vocoder.bin.feature_extract import world_feature_extract
-from wavenet_vocoder.bin.noise_shaping import melcepstrum_noise_shaping
-from wavenet_vocoder.bin.noise_shaping import world_noise_shaping
+from wavenet_vocoder.bin.noise_shaping import noise_shaping
 from wavenet_vocoder.utils import find_files
 
 
@@ -94,9 +93,9 @@ def test_preprocessing():
     args.writedir = "data/wav_ns/world"
     if not os.path.exists(args.writedir):
         os.makedirs(args.writedir)
-    world_noise_shaping(wav_list, args)
+    noise_shaping(wav_list, args)
     args.feature_type = "mcep"
     args.writedir = "data/wav_ns/mcep"
     if not os.path.exists(args.writedir):
         os.makedirs(args.writedir)
-    melcepstrum_noise_shaping(wav_list, args)
+    noise_shaping(wav_list, args)
