@@ -6,6 +6,12 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
 
+You can learn the basics of this repository within 15 minutes in Google colab!
+
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/9483b1a7b1fcd29fae211188bd4d2e0e)
+
+Please access the above URL and click the `Open in Colab` button. Enjoy!
+
 ## Key features
 
 - Support kaldi-like recipe, easy to reproduce the results
@@ -16,12 +22,6 @@ This repository is the wavenet-vocoder implementation with pytorch.
     - [CMU Arctic database](http://www.festvox.org/cmu_arctic/): `egs/arctic`
     - [LJ Speech database](https://keithito.com/LJ-Speech-Dataset/): `egs/ljspeech`
     - [M-AILABS speech database](http://www.m-ailabs.bayern/en/the-mailabs-speech-dataset/): `egs/m-ailabs-speech`
-
-You can learn the basics of this repository within 15 minutes in Google colab!
-
-[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/9483b1a7b1fcd29fae211188bd4d2e0e)
-
-Please access the above URL and click the `Open in Colab` button. Enjoy!
 
 ## Requirements
 
@@ -35,10 +35,23 @@ Recommend to use the GPU with 10GB> memory.
 
 ## Setup
 
+### A. Make virtualenv
+
 ```bash
 $ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
 $ cd PytorchWaveNetVocoder/tools
 $ make
+```
+
+### B. Install with pip
+
+```
+$ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
+$ cd PytorchWaveNetVocoder
+$ pip install -e .
+
+# please make dummy activate file to suppress warning in the recipe
+$ mkdir -p tools/venv/bin && touch tools/venv/bin/activate
 ```
 
 ## How-to-run
