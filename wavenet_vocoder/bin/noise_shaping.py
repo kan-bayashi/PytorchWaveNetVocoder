@@ -15,23 +15,50 @@ import sys
 from distutils.util import strtobool
 
 import numpy as np
+import pysptk
 
 from scipy.io import wavfile
-from sprocket.speech.synthesizer import Synthesizer
 
-from wavenet_vocoder.bin.feature_extract import low_cut_filter
+from wavenet_vocoder.utils import check_hdf5
 from wavenet_vocoder.utils import find_files
 from wavenet_vocoder.utils import read_hdf5
 from wavenet_vocoder.utils import read_txt
+from wavenet_vocoder.utils import write_hdf5
+
+
+def _convert_mcep_to_mlsa_coef(avg_mcep, mag, alpha):
+    avg_mcep *= mag
+    avg_mcep[0] = 0.0
+    coef = pysptk.mc2b(avg_mcep.astype(np.float64), alpha)
+    assert np.isfinite(coef).all()
+    return coef
 
 
 def world_noise_shaping(wav_list, args):
     """APPLY NOISE SHAPING USING WORLD MCEP"""
+    # get or calculate MLSA coef
+    if check_hdf5(args.stats, "/mlsa/coef"):
+        mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
+        alpha = read_hdf5(args.stats, "/mlsa/alpha")
+    else:
+        avg_feat = read_hdf5(args.stats, "/world/mean")
+        avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
+        mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+        alpha = args.mcep_alpha
+        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
+
+    if args.inv:
+        mlsa_coef *= -1.0
+
     # define synthesizer
-    synthesizer = Synthesizer(
-        fs=args.fs,
-        shiftms=args.shiftms,
-        fftl=args.fftl)
+    shiftl = int(args.fs / 1000 * args.shiftms)
+    synthesizer = pysptk.synthesis.Synthesizer(
+        pysptk.synthesis.MLSADF(
+            order=mlsa_coef.shape[0] - 1,
+            alpha=alpha),
+        hopsize=shiftl
+    )
 
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
@@ -47,32 +74,41 @@ def world_noise_shaping(wav_list, args):
             logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
-        # get frame number
-        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
-
-        # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/world/mean")
-        mlsa_coef = mlsa_coef[args.mcep_dim_start:args.mcep_dim_end] * args.mag
-        mlsa_coef[0] = 0.0
-        if args.inv:
-            mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
-        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
+        # replicate coef for time-invariant filtering
+        num_frames = int(len(x) / shiftl) + 1
+        mlsa_coefs = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
 
         # synthesis and write
-        x_ns = synthesizer.synthesis_diff(
-            x, mlsa_coef, alpha=args.mcep_alpha)
-        x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
+        x_ns = synthesizer.synthesis(x, mlsa_coefs)
         write_name = args.writedir + "/" + os.path.basename(wav_name)
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
 def melcepstrum_noise_shaping(wav_list, args):
     """APPLY NOISE SHAPING USING STFT-BASED MCEP"""
+    # get or calculate MLSA coef
+    if check_hdf5(args.stats, "/mlsa/coef"):
+        mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
+        alpha = read_hdf5(args.stats, "/mlsa/alpha")
+    else:
+        avg_feat = read_hdf5(args.stats, "/mcep/mean")
+        avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
+        mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+        alpha = args.mcep_alpha
+        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
+
+    if args.inv:
+        mlsa_coef *= -1.0
+
     # define synthesizer
-    synthesizer = Synthesizer(
-        fs=args.fs,
-        shiftms=args.shiftms,
-        fftl=args.fftl)
+    shiftl = int(args.fs / 1000 * args.shiftms)
+    synthesizer = pysptk.synthesis.Synthesizer(
+        pysptk.synthesis.MLSADF(
+            order=mlsa_coef.shape[0] - 1,
+            alpha=alpha),
+        hopsize=shiftl
+    )
 
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
@@ -88,20 +124,12 @@ def melcepstrum_noise_shaping(wav_list, args):
             logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
-        # get frame number
-        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
-
-        # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/mcep/mean") * args.mag
-        mlsa_coef[0] = 0.0
-        if args.inv:
-            mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
-        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
+        # replicate coef for time-invariant filtering
+        num_frames = int(len(x) / shiftl) + 1
+        mlsa_coefs = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
 
         # synthesis and write
-        x_ns = synthesizer.synthesis_diff(
-            x, mlsa_coef, alpha=args.mcep_alpha)
-        x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
+        x_ns = synthesizer.synthesis(x, mlsa_coefs)
         write_name = args.writedir + "/" + os.path.basename(wav_name)
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
@@ -132,16 +160,16 @@ def main():
         "--feature_type", default="world", choices=["world", "mcep", "melspc"],
         type=str, help="feature type")
     parser.add_argument(
-        "--mcep_dim_start", default=2,
+        "--mcep_dim_start", default=None,
         type=int, help="Start index of mel cepstrum")
     parser.add_argument(
-        "--mcep_dim_end", default=27,
+        "--mcep_dim_end", default=None,
         type=int, help="End index of mel cepstrum")
     parser.add_argument(
-        "--mcep_alpha", default=0.41,
+        "--mcep_alpha", default=None,
         type=float, help="Alpha of mel cepstrum")
     parser.add_argument(
-        "--mag", default=0.5,
+        "--mag", default=None,
         type=float, help="magnification of noise shaping")
     parser.add_argument(
         "--verbose", default=1,
