@@ -41,9 +41,9 @@ def noise_shaping(wav_list, args):
         mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
         alpha = read_hdf5(args.stats, "/mlsa/alpha")
     else:
-        avg_feat = read_hdf5(args.stats, args.feature_type + "/mean")
+        avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
         if args.feature_type == "world":
-            avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
+            avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
         mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
         alpha = args.mcep_alpha
         write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
