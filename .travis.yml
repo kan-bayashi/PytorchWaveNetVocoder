@@ -17,8 +17,8 @@ install:
   - pip3 install -e .[test]
 
 script:
-  - flake8 src test
-  - autopep8 -r src test --exclude src/utils --global-config .pep8 --diff --max-line-length 120 | tee check_autopep8
+  - flake8 wavenet_vocoder test
+  - autopep8 -r src test --exclude wavenet_vocoder/utils --global-config .pep8 --diff --max-line-length 120 | tee check_autopep8
   - test ! -s check_autopep8
   - pytest
 
