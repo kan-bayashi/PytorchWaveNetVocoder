@@ -14,13 +14,13 @@ import numpy as np
 
 from scipy.io import wavfile
 
-from calc_stats import calc_stats
-from feature_extract import melcepstrum_extract
-from feature_extract import melspectrogram_extract
-from feature_extract import world_feature_extract
-from noise_shaping import melcepstrum_noise_shaping
-from noise_shaping import world_noise_shaping
-from utils import find_files
+from wavenet_vocoder.bin.calc_stats import calc_stats
+from wavenet_vocoder.bin.feature_extract import melcepstrum_extract
+from wavenet_vocoder.bin.feature_extract import melspectrogram_extract
+from wavenet_vocoder.bin.feature_extract import world_feature_extract
+from wavenet_vocoder.bin.noise_shaping import melcepstrum_noise_shaping
+from wavenet_vocoder.bin.noise_shaping import world_noise_shaping
+from wavenet_vocoder.utils import find_files
 
 
 def make_dummy_wav(name, maxlen=32000, fs=16000):

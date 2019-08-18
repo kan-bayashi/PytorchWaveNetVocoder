@@ -11,9 +11,9 @@ import numpy as np
 
 from sklearn.preprocessing import StandardScaler
 
-from utils import read_hdf5
-from utils import read_txt
-from utils import write_hdf5
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import read_txt
+from wavenet_vocoder.utils import write_hdf5
 
 
 def calc_stats(file_list, args):

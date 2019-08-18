@@ -7,8 +7,8 @@
 import numpy as np
 import torch
 
-from wavenet import initialize
-from wavenet import UpSampling
+from wavenet_vocoder.nets import initialize
+from wavenet_vocoder.nets import UpSampling
 
 
 def test_upsampling():

@@ -19,10 +19,10 @@ import numpy as np
 from scipy.io import wavfile
 from sprocket.speech.synthesizer import Synthesizer
 
-from feature_extract import low_cut_filter
-from utils import find_files
-from utils import read_hdf5
-from utils import read_txt
+from wavenet_vocoder.bin.feature_extract import low_cut_filter
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import read_txt
 
 
 def world_noise_shaping(wav_list, args):

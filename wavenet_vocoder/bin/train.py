@@ -24,14 +24,14 @@ from sklearn.preprocessing import StandardScaler
 from torch import nn
 from torchvision import transforms
 
-from utils import background
-from utils import extend_time
-from utils import find_files
-from utils import read_hdf5
-from utils import read_txt
-from wavenet import encode_mu_law
-from wavenet import initialize
-from wavenet import WaveNet
+from wavenet_vocoder.nets import encode_mu_law
+from wavenet_vocoder.nets import initialize
+from wavenet_vocoder.nets import WaveNet
+from wavenet_vocoder.utils import background
+from wavenet_vocoder.utils import extend_time
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import read_txt
 
 
 def validate_length(x, y, upsampling_factor=None):

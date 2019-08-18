@@ -25,9 +25,9 @@ from scipy.signal import get_window
 from scipy.signal import lfilter
 from sprocket.speech.feature_extractor import FeatureExtractor
 
-from utils import find_files
-from utils import read_txt
-from utils import write_hdf5
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_txt
+from wavenet_vocoder.utils import write_hdf5
 
 EPS = 1e-10
 

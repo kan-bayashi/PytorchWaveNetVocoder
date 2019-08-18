@@ -11,9 +11,9 @@ import logging
 import numpy as np
 import torch
 
-from wavenet import encode_mu_law
-from wavenet import initialize
-from wavenet import WaveNet
+from wavenet_vocoder.nets import encode_mu_law
+from wavenet_vocoder.nets import initialize
+from wavenet_vocoder.nets import WaveNet
 
 # set log level
 logging.basicConfig(level=logging.DEBUG,

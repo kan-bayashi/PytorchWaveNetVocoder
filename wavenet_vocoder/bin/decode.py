@@ -20,14 +20,14 @@ import torch.multiprocessing as mp
 from sklearn.preprocessing import StandardScaler
 from torchvision import transforms
 
-from utils import extend_time
-from utils import find_files
-from utils import read_hdf5
-from utils import read_txt
-from utils import shape_hdf5
-from wavenet import decode_mu_law
-from wavenet import encode_mu_law
-from wavenet import WaveNet
+from wavenet_vocoder.utils import extend_time
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import read_txt
+from wavenet_vocoder.utils import shape_hdf5
+from wavenet_vocoder.nets import decode_mu_law
+from wavenet_vocoder.nets import encode_mu_law
+from wavenet_vocoder.nets import WaveNet
 
 
 def pad_list(batch_list, pad_value=0.0):
