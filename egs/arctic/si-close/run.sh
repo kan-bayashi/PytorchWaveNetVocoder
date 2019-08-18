@@ -251,7 +251,6 @@ if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
                 --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --fftl ${fftl} \
                 --mcep_dim_start 2 \
                 --mcep_dim_end $(( 2 + mcep_dim +1 )) \
                 --mcep_alpha ${mcep_alpha} \
@@ -394,7 +393,6 @@ if echo ${stage} | grep -q 6  && ${use_noise_shaping};then
                 --feature_type ${feature_type} \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
-                --fftl ${fftl} \
                 --mcep_dim_start 2 \
                 --mcep_dim_end $(( 2 + mcep_dim +1 )) \
                 --mcep_alpha ${mcep_alpha} \

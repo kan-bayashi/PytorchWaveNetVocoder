@@ -241,7 +241,6 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
             --feature_type mcep \
             --fs ${fs} \
             --shiftms ${shiftms} \
-            --fftl ${fftl} \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --inv true \
@@ -334,7 +333,6 @@ fi
 # }}}
 
 
-
 # STAGE 6 {{{
 if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
     echo "###########################################################"
@@ -349,7 +347,6 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
             --feature_type mcep \
             --fs ${fs} \
             --shiftms ${shiftms} \
-            --fftl ${fftl} \
             --mcep_alpha ${mcep_alpha} \
             --mag ${mag} \
             --n_jobs ${n_jobs} \

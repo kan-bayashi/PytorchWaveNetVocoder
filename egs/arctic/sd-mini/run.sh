@@ -225,7 +225,6 @@ if echo ${stage} | grep -q 3 && ${use_noise_shaping}; then
         --feature_type ${feature_type} \
         --fs ${fs} \
         --shiftms ${shiftms} \
-        --fftl ${fftl} \
         --mcep_dim_start 2 \
         --mcep_dim_end $(( 2 + mcep_dim +1 )) \
         --mcep_alpha ${mcep_alpha} \
@@ -331,14 +330,8 @@ if echo ${stage} | grep -q 6 && ${use_noise_shaping}; then
         --waveforms ${outdir}/wav.scp \
         --stats "${stats}" \
         --writedir ${outdir}_restored \
-        --feature_type ${feature_type} \
         --fs ${fs} \
         --shiftms ${shiftms} \
-        --fftl ${fftl} \
-        --mcep_dim_start 2 \
-        --mcep_dim_end $(( 2 + mcep_dim +1 )) \
-        --mcep_alpha ${mcep_alpha} \
-        --mag ${mag} \
         --n_jobs ${n_jobs} \
         --inv false 2>&1 | tee exp/noise_shaping/noise_shaping_restore_${eval}.log
 fi
