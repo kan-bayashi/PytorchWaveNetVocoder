@@ -36,19 +36,9 @@ def _convert_mcep_to_mlsa_coef(avg_mcep, mag, alpha):
 
 def noise_shaping(wav_list, args):
     """APPLY NOISE SHAPING BASED ON MLSA FILTER"""
-    # get or calculate MLSA coef
-    if check_hdf5(args.stats, "/mlsa/coef"):
-        mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
-        alpha = read_hdf5(args.stats, "/mlsa/alpha")
-    else:
-        avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
-        if args.feature_type == "world":
-            avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
-        mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
-        alpha = args.mcep_alpha
-        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
-        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
-
+    # load coefficient of filter
+    mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
+    alpha = read_hdf5(args.stats, "/mlsa/alpha")
     if args.inv:
         mlsa_coef *= -1.0
 
@@ -214,6 +204,15 @@ def main():
     # divie list
     file_lists = np.array_split(file_list, args.n_jobs)
     file_lists = [f_list.tolist() for f_list in file_lists]
+
+    # calculate MLSA coef ans save it
+    if not check_hdf5(args.stats, "/mlsa/coef"):
+        avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
+        if args.feature_type == "world":
+            avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
+        mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
 
     # multi processing
     processes = []
