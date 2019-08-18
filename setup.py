@@ -25,8 +25,8 @@ requirements = {
         "scikit-learn>=0.20.2",
         "librosa>=0.6.2",
         "soundfile>=0.10.2",
-        "torch==1.0.1",
-        "torchvision==0.2.2",
+        "torch>=1.0.1",
+        "torchvision>=0.2.2",
         "sprocket-vc>=0.18.2",
         "matplotlib>=3.0.3",
     ],
@@ -36,10 +36,8 @@ requirements = {
     ],
     "test": [
         "pytest>=3.3.0",
-        "pytest-pythonpath>=0.7.1",
-        "hacking>=1.0.0",
-        "mock>=2.0.0",
-        "autopep8>=1.3.3",
+        "hacking==1.1.0",
+        "autopep8==1.2.4",
     ]}
 install_requires = requirements["install"]
 setup_requires = requirements["setup"]
