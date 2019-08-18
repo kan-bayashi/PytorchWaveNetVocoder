@@ -34,15 +34,16 @@ def _convert_mcep_to_mlsa_coef(avg_mcep, mag, alpha):
     return coef
 
 
-def world_noise_shaping(wav_list, args):
-    """APPLY NOISE SHAPING USING WORLD MCEP"""
+def noise_shaping(wav_list, args):
+    """APPLY NOISE SHAPING BASED ON MLSA FILTER"""
     # get or calculate MLSA coef
     if check_hdf5(args.stats, "/mlsa/coef"):
         mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
         alpha = read_hdf5(args.stats, "/mlsa/alpha")
     else:
-        avg_feat = read_hdf5(args.stats, "/world/mean")
-        avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
+        avg_feat = read_hdf5(args.stats, args.feature_type + "/mean")
+        if args.feature_type == "world":
+            avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
         mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
         alpha = args.mcep_alpha
         write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
@@ -160,16 +161,16 @@ def main():
         "--feature_type", default="world", choices=["world", "mcep", "melspc"],
         type=str, help="feature type")
     parser.add_argument(
-        "--mcep_dim_start", default=None,
+        "--mcep_dim_start", default=2,
         type=int, help="Start index of mel cepstrum")
     parser.add_argument(
-        "--mcep_dim_end", default=None,
+        "--mcep_dim_end", default=27,
         type=int, help="End index of mel cepstrum")
     parser.add_argument(
-        "--mcep_alpha", default=None,
+        "--mcep_alpha", default=0.41,
         type=float, help="Alpha of mel cepstrum")
     parser.add_argument(
-        "--mag", default=None,
+        "--mag", default=0.5,
         type=float, help="magnification of noise shaping")
     parser.add_argument(
         "--verbose", default=1,
@@ -219,15 +220,11 @@ def main():
 
     # multi processing
     processes = []
-    if args.feature_type == "world":
-        target_fn = world_noise_shaping
-    elif args.feature_type == "mcep":
-        target_fn = melcepstrum_noise_shaping
-    else:
+    if args.feature_type == "melspc":
         # TODO(kan-bayashi): implement noise shaping using melspectrogram
         NotImplementedError("currently, support only world and mcep.")
     for f in file_lists:
-        p = mp.Process(target=target_fn, args=(f, args,))
+        p = mp.Process(target=noise_shaping, args=(f, args,))
         p.start()
         processes.append(p)
 
