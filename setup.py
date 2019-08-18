@@ -25,7 +25,7 @@ requirements = {
         "scikit-learn>=0.20.2",
         "librosa>=0.6.2",
         "soundfile>=0.10.2",
-        "torch>=1.0.1",
+        "torch==1.0.1",
         "torchvision>=0.2.1",
         "sprocket-vc>=0.18.2",
         "matplotlib>=3.1.0",
