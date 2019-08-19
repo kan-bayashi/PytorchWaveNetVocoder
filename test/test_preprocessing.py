@@ -4,15 +4,11 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import os
 import shutil
 
 import numpy as np
-import pysptk
 import pytest
 
 from scipy.io import wavfile
