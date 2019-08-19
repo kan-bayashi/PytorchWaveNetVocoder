@@ -12,7 +12,7 @@ from setuptools import setup
 
 if LooseVersion(sys.version) < LooseVersion("3.6"):
     raise RuntimeError(
-        "ESPnet requires Python>=3.6, "
+        "Python>=3.6 is required, "
         "but your Python is {}".format(sys.version))
 if LooseVersion(pip.__version__) < LooseVersion("19"):
     raise RuntimeError(
@@ -56,15 +56,14 @@ setup(name="wavenet_vocoder",
                             encoding="utf-8").read(),
       license="Apache Software License",
       packages=find_packages(include=["wavenet_vocoder*"], exclude=["*.pl", "*.sh"]),
-      # #448: "scripts" is inconvenient for developping because they are copied
-      # scripts=get_all_scripts("espnet/bin"),
+      # "scripts" is inconvenient for developping because they are copied
+      # scripts=get_all_scripts("wavenet_vocoder/bin"),
       install_requires=install_requires,
       setup_requires=setup_requires,
       tests_require=tests_require,
       extras_require=extras_require,
       classifiers=[
           "Programming Language :: Python",
-          "Programming Language :: Python :: 2.7",
           "Programming Language :: Python :: 3.6",
           "Intended Audience :: Science/Research",
           "Operating System :: POSIX :: Linux",
