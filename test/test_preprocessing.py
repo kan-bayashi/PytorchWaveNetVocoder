@@ -12,6 +12,7 @@ import os
 import shutil
 
 import numpy as np
+import pysptk
 import pytest
 
 from scipy.io import wavfile
@@ -20,8 +21,12 @@ from wavenet_vocoder.bin.calc_stats import calc_stats
 from wavenet_vocoder.bin.feature_extract import melcepstrum_extract
 from wavenet_vocoder.bin.feature_extract import melspectrogram_extract
 from wavenet_vocoder.bin.feature_extract import world_feature_extract
+from wavenet_vocoder.bin.noise_shaping import convert_mcep_to_mlsa_coef
 from wavenet_vocoder.bin.noise_shaping import noise_shaping
+from wavenet_vocoder.utils import check_hdf5
 from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import write_hdf5
 
 
 def make_dummy_wav(name, maxlen=32000, fs=16000):
@@ -88,10 +93,18 @@ def test_preprocessing(feature_type):
     calc_stats(file_list, args)
 
     # noise shaping
-    wav_list = find_files(args.wavdir, "*.wav")
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
-    noise_shaping(wav_list, args)
+    if feature_type != "melspc":
+        wav_list = find_files(args.wavdir, "*.wav")
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        if not check_hdf5(args.stats, "/mlsa/coef"):
+            avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
+            if args.feature_type == "world":
+                avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
+            mlsa_coef = convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+            write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+            write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
+        noise_shaping(wav_list, args)
 
     # remove
     shutil.rmtree("tmp")
