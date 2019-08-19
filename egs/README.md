@@ -2,6 +2,13 @@
 
 This is the outline of recipes.
 
+If you want to try it ASAP, you can learn the basics of this repository within 15 minutes in Google colab!
+
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
+
+Please access the above URL and click the `Open in Colab` button. Enjoy!
+
+
 ## Supported database
 
 - [CMU Arctic database](http://www.festvox.org/cmu_arctic/): `egs/arctic`
@@ -167,11 +174,10 @@ $ find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
 $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
-    --writedir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
+    --outdir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
     --feature_type world \
     --fs 16000 \
     --shiftms 5 \
-    --fftl 1024 \
     --mcep_dim_start 2 \
     --mcep_dim_end 27 \
     --mcep_alpha 0.41 \

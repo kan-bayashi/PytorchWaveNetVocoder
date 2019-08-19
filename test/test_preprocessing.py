@@ -4,23 +4,25 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import os
+import shutil
 
 import numpy as np
+import pytest
 
 from scipy.io import wavfile
 
-from calc_stats import calc_stats
-from feature_extract import melcepstrum_extract
-from feature_extract import melspectrogram_extract
-from feature_extract import world_feature_extract
-from noise_shaping import melcepstrum_noise_shaping
-from noise_shaping import world_noise_shaping
-from utils import find_files
+from wavenet_vocoder.bin.calc_stats import calc_stats
+from wavenet_vocoder.bin.feature_extract import melcepstrum_extract
+from wavenet_vocoder.bin.feature_extract import melspectrogram_extract
+from wavenet_vocoder.bin.feature_extract import world_feature_extract
+from wavenet_vocoder.bin.noise_shaping import convert_mcep_to_mlsa_coef
+from wavenet_vocoder.bin.noise_shaping import noise_shaping
+from wavenet_vocoder.utils import check_hdf5
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import write_hdf5
 
 
 def make_dummy_wav(name, maxlen=32000, fs=16000):
@@ -33,10 +35,10 @@ def make_dummy_wav(name, maxlen=32000, fs=16000):
 
 def make_args(**kwargs):
     defaults = dict(
-        hdf5dir="data/hdf5",
-        wavdir="data/wav_filtered",
-        writedir="data/wav_ns",
-        stats="data/stats.h5",
+        hdf5dir="tmp/hdf5",
+        wavdir="tmp/wav_filtered",
+        outdir="tmp/wav_ns",
+        stats="tmp/stats.h5",
         feature_type="world",
         fs=16000,
         shiftms=5,
@@ -57,12 +59,15 @@ def make_args(**kwargs):
     return argparse.Namespace(**defaults)
 
 
-def test_preprocessing():
+@pytest.mark.parametrize("feature_type", [
+    ("melspc"), ("world"), ("mcep"),
+])
+def test_preprocessing(feature_type):
     # make arguments
-    args = make_args()
+    args = make_args(feature_type=feature_type)
 
     # prepare dummy wav files
-    wavdir = "data/wav"
+    wavdir = "tmp/wav"
     if not os.path.exists(wavdir):
         os.makedirs(wavdir)
     for i in range(5):
@@ -72,31 +77,30 @@ def test_preprocessing():
     wav_list = find_files(wavdir, "*.wav")
     if not os.path.exists(args.wavdir):
         os.makedirs(args.wavdir)
-    args.feature_type = "world"
-    world_feature_extract(wav_list, args)
-    args.feature_type = "melspc"
-    melspectrogram_extract(wav_list, args)
-    args.feature_type = "mcep"
-    melcepstrum_extract(wav_list, args)
+    if args.feature_type == "world":
+        world_feature_extract(wav_list, args)
+    elif args.feature_type == "melspc":
+        melspectrogram_extract(wav_list, args)
+    else:
+        melcepstrum_extract(wav_list, args)
 
     # calc_stats
     file_list = find_files(args.hdf5dir, "*.h5")
-    args.feature_type = "world"
-    calc_stats(file_list, args)
-    args.feature_type = "melspc"
-    calc_stats(file_list, args)
-    args.feature_type = "mcep"
     calc_stats(file_list, args)
 
     # noise shaping
-    wav_list = find_files(args.wavdir, "*.wav")
-    args.feature_type = "world"
-    args.writedir = "data/wav_ns/world"
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
-    world_noise_shaping(wav_list, args)
-    args.feature_type = "mcep"
-    args.writedir = "data/wav_ns/mcep"
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
-    melcepstrum_noise_shaping(wav_list, args)
+    if feature_type != "melspc":
+        wav_list = find_files(args.wavdir, "*.wav")
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+        if not check_hdf5(args.stats, "/mlsa/coef"):
+            avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
+            if args.feature_type == "world":
+                avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
+            mlsa_coef = convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+            write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+            write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
+        noise_shaping(wav_list, args)
+
+    # remove
+    shutil.rmtree("tmp")

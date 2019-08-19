@@ -4,8 +4,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import argparse
 import logging
 import multiprocessing as mp
@@ -15,23 +13,55 @@ import sys
 from distutils.util import strtobool
 
 import numpy as np
+import pysptk
 
 from scipy.io import wavfile
-from sprocket.speech.synthesizer import Synthesizer
 
-from feature_extract import low_cut_filter
-from utils import find_files
-from utils import read_hdf5
-from utils import read_txt
+from wavenet_vocoder.utils import check_hdf5
+from wavenet_vocoder.utils import find_files
+from wavenet_vocoder.utils import read_hdf5
+from wavenet_vocoder.utils import read_txt
+from wavenet_vocoder.utils import write_hdf5
 
 
-def world_noise_shaping(wav_list, args):
-    """APPLY NOISE SHAPING USING WORLD MCEP"""
+def convert_mcep_to_mlsa_coef(avg_mcep, mag, alpha):
+    """CONVERT AVERAGE MEL-CEPTSRUM TO MLSA FILTER COEFFICIENT.
+
+    Args:
+        avg_mcep (ndarray): Averaged Mel-cepstrum (D,).
+        mag (float): Magnification of noise shaping.
+        alpha (float): All pass constant value.
+
+    Return:
+        ndarray: MLSA filter coefficient (D,).
+
+    """
+    avg_mcep *= mag
+    avg_mcep[0] = 0.0
+    coef = pysptk.mc2b(avg_mcep.astype(np.float64), alpha)
+    assert np.isfinite(coef).all()
+    return coef
+
+
+def noise_shaping(wav_list, args):
+    """APPLY NOISE SHAPING BASED ON MLSA FILTER."""
+    # load coefficient of filter
+    if check_hdf5(args.stats, "/mlsa/coef"):
+        mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
+        alpha = read_hdf5(args.stats, "/mlsa/alpha")
+    else:
+        raise KeyError("\"/mlsa/coef\" is not found in %s." % (args.stats))
+    if args.inv:
+        mlsa_coef *= -1.0
+
     # define synthesizer
-    synthesizer = Synthesizer(
-        fs=args.fs,
-        shiftms=args.shiftms,
-        fftl=args.fftl)
+    shiftl = int(args.fs / 1000 * args.shiftms)
+    synthesizer = pysptk.synthesis.Synthesizer(
+        pysptk.synthesis.MLSADF(
+            order=mlsa_coef.shape[0] - 1,
+            alpha=alpha),
+        hopsize=shiftl
+    )
 
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
@@ -47,66 +77,18 @@ def world_noise_shaping(wav_list, args):
             logging.error("sampling frequency is not matched.")
             sys.exit(1)
 
-        # get frame number
-        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
-
-        # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/world/mean")
-        mlsa_coef = mlsa_coef[args.mcep_dim_start:args.mcep_dim_end] * args.mag
-        mlsa_coef[0] = 0.0
-        if args.inv:
-            mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
-        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
+        # replicate coef for time-invariant filtering
+        num_frames = int(len(x) / shiftl) + 1
+        mlsa_coefs = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
 
         # synthesis and write
-        x_ns = synthesizer.synthesis_diff(
-            x, mlsa_coef, alpha=args.mcep_alpha)
-        x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
-        write_name = args.writedir + "/" + os.path.basename(wav_name)
-        wavfile.write(write_name, args.fs, np.int16(x_ns))
-
-
-def melcepstrum_noise_shaping(wav_list, args):
-    """APPLY NOISE SHAPING USING STFT-BASED MCEP"""
-    # define synthesizer
-    synthesizer = Synthesizer(
-        fs=args.fs,
-        shiftms=args.shiftms,
-        fftl=args.fftl)
-
-    for i, wav_name in enumerate(wav_list):
-        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
-
-        # load wavfile and apply low cut filter
-        fs, x = wavfile.read(wav_name)
-        if x.dtype != np.int16:
-            logging.warning("wav file format is not 16 bit PCM.")
-        x = np.float64(x)
-
-        # check sampling frequency
-        if not fs == args.fs:
-            logging.error("sampling frequency is not matched.")
-            sys.exit(1)
-
-        # get frame number
-        num_frames = int(1000 * len(x) / fs / args.shiftms) + 1
-
-        # load average mcep
-        mlsa_coef = read_hdf5(args.stats, "/mcep/mean") * args.mag
-        mlsa_coef[0] = 0.0
-        if args.inv:
-            mlsa_coef[1:] = -1.0 * mlsa_coef[1:]
-        mlsa_coef = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
-
-        # synthesis and write
-        x_ns = synthesizer.synthesis_diff(
-            x, mlsa_coef, alpha=args.mcep_alpha)
-        x_ns = low_cut_filter(x_ns, args.fs, cutoff=70)
-        write_name = args.writedir + "/" + os.path.basename(wav_name)
+        x_ns = synthesizer.synthesis(x, mlsa_coefs)
+        write_name = args.outdir + "/" + os.path.basename(wav_name)
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
 def main():
+    """RUN NOISE SHAPING IN PARALLEL."""
     parser = argparse.ArgumentParser(
         description="making feature file argsurations.")
 
@@ -117,7 +99,7 @@ def main():
         "--stats", default=None,
         help="filename of hdf5 format")
     parser.add_argument(
-        "--writedir", default=None,
+        "--outdir", default=None,
         help="directory to save preprocessed wav file")
     parser.add_argument(
         "--fs", default=16000,
@@ -125,9 +107,6 @@ def main():
     parser.add_argument(
         "--shiftms", default=5,
         type=float, help="Frame shift in msec")
-    parser.add_argument(
-        "--fftl", default=1024,
-        type=int, help="FFT length")
     parser.add_argument(
         "--feature_type", default="world", choices=["world", "mcep", "melspc"],
         type=str, help="feature type")
@@ -182,24 +161,29 @@ def main():
     logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
-    if not os.path.exists(args.writedir):
-        os.makedirs(args.writedir)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
 
     # divie list
     file_lists = np.array_split(file_list, args.n_jobs)
     file_lists = [f_list.tolist() for f_list in file_lists]
 
+    # calculate MLSA coef ans save it
+    if not check_hdf5(args.stats, "/mlsa/coef"):
+        avg_mcep = read_hdf5(args.stats, args.feature_type + "/mean")
+        if args.feature_type == "world":
+            avg_mcep = avg_mcep[args.mcep_dim_start:args.mcep_dim_end]
+        mlsa_coef = convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
+        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
+        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
+
     # multi processing
     processes = []
-    if args.feature_type == "world":
-        target_fn = world_noise_shaping
-    elif args.feature_type == "mcep":
-        target_fn = melcepstrum_noise_shaping
-    else:
+    if args.feature_type == "melspc":
         # TODO(kan-bayashi): implement noise shaping using melspectrogram
-        NotImplementedError("currently, support only world and mcep.")
+        raise NotImplementedError("currently, support only world and mcep.")
     for f in file_lists:
-        p = mp.Process(target=target_fn, args=(f, args,))
+        p = mp.Process(target=noise_shaping, args=(f, args,))
         p.start()
         processes.append(p)
 

@@ -4,16 +4,14 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import absolute_import
-
 import logging
 
 import numpy as np
 import torch
 
-from wavenet import encode_mu_law
-from wavenet import initialize
-from wavenet import WaveNet
+from wavenet_vocoder.nets import encode_mu_law
+from wavenet_vocoder.nets import initialize
+from wavenet_vocoder.nets import WaveNet
 
 # set log level
 logging.basicConfig(level=logging.DEBUG,

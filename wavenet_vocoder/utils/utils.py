@@ -3,8 +3,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import fnmatch
 import logging
 import os
@@ -18,14 +16,15 @@ from numpy.matlib import repmat
 
 
 def check_hdf5(hdf5_name, hdf5_path):
-    """FUNCTION TO CHECK HDF5 EXISTENCE
+    """CHECK HDF5 EXISTENCE.
 
     Args:
-        hdf5_name (str): filename of hdf5 file
-        hdf5_path (str): dataset name in hdf5 file
+        hdf5_name (str): Filename of hdf5 file.
+        hdf5_path (str): Dataset name in hdf5 file.
 
-    Return:
-        (bool): dataset exists then return true
+    Returns:
+        bool: Dataset exists then return True.
+
     """
     if not os.path.exists(hdf5_name):
         return False
@@ -38,14 +37,15 @@ def check_hdf5(hdf5_name, hdf5_path):
 
 
 def read_hdf5(hdf5_name, hdf5_path):
-    """FUNCTION TO READ HDF5 DATASET
+    """READ HDF5 DATASET.
 
     Args:
-        hdf5_name (str): filename of hdf5 file
-        hdf5_path (str): dataset name in hdf5 file
+        hdf5_name (str): Filename of hdf5 file.
+        hdf5_path (str): Dataset name in hdf5 file.
 
     Return:
-        dataset values
+        any: Dataset values.
+
     """
     if not os.path.exists(hdf5_name):
         logging.error("there is no such a hdf5 file (%s)." % hdf5_name)
@@ -64,14 +64,15 @@ def read_hdf5(hdf5_name, hdf5_path):
 
 
 def shape_hdf5(hdf5_name, hdf5_path):
-    """FUNCTION TO GET HDF5 DATASET SHAPE
+    """GET HDF5 DATASET SHAPE.
 
     Args:
-        hdf5_name (str): filename of hdf5 file
-        hdf5_path (str): dataset name in hdf5 file
+        hdf5_name (str): Filename of hdf5 file.
+        hdf5_path (str): Dataset name in hdf5 file.
 
-    Return:
-        (tuple): shape of dataset
+    Returns:
+        (tuple): Shape of dataset.
+
     """
     if check_hdf5(hdf5_name, hdf5_path):
         with h5py.File(hdf5_name, "r") as f:
@@ -83,13 +84,14 @@ def shape_hdf5(hdf5_name, hdf5_path):
 
 
 def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
-    """FUNCTION TO WRITE DATASET TO HDF5
+    """WRITE DATASET TO HDF5.
 
-    Args :
-        hdf5_name (str): hdf5 dataset filename
-        hdf5_path (str): dataset path in hdf5
-        write_data (ndarray): data to write
-        is_overwrite (bool): flag to decide whether to overwrite dataset
+    Args:
+        hdf5_name (str): Hdf5 dataset filename.
+        hdf5_path (str): Dataset path in hdf5.
+        write_data (ndarray): Data to write.
+        is_overwrite (bool): Whether to overwrite dataset.
+
     """
     # convert to numpy array
     write_data = np.array(write_data)
@@ -125,15 +127,16 @@ def write_hdf5(hdf5_name, hdf5_path, write_data, is_overwrite=True):
 
 
 def find_files(directory, pattern="*.wav", use_dir_name=True):
-    """FUNCTION TO FIND FILES RECURSIVELY
+    """FIND FILES RECURSIVELY.
 
     Args:
-        directory (str): root directory to find
-        pattern (str): query to find
-        use_dir_name (bool): if False, directory name is not included
+        directory (str): Root directory to find.
+        pattern (str): Query to find.
+        use_dir_name (bool): If False, directory name is not included.
 
-    Return:
-        (list): list of found filenames
+    Returns:
+        list: List of found filenames.
+
     """
     files = []
     for root, dirnames, filenames in os.walk(directory, followlinks=True):
@@ -145,13 +148,14 @@ def find_files(directory, pattern="*.wav", use_dir_name=True):
 
 
 def read_txt(file_list):
-    """FUNCTION TO READ TXT FILE
+    """READ TXT FILE.
 
-    Arg:
-        file_list (str): txt file filename
+    Args:
+        file_list (str): TXT file filename.
 
-    Return:
-        (list): list of read lines
+    Returns:
+        list: List of read lines.
+
     """
     with open(file_list, "r") as f:
         filenames = f.readlines()
@@ -159,14 +163,15 @@ def read_txt(file_list):
 
 
 class BackgroundGenerator(threading.Thread):
-    """BACKGROUND GENERATOR
-
-    reference:
-        https://stackoverflow.com/questions/7323664/python-generator-pre-fetch
+    """BACKGROUND GENERATOR.
 
     Args:
-        generator (object): generator instance
-        max_prefetch (int): max number of prefetch
+        generator (object): Generator instance.
+        max_prefetch (int): Max number of prefetch.
+
+    References:
+        https://stackoverflow.com/questions/7323664/python-generator-pre-fetch
+
     """
 
     def __init__(self, generator, max_prefetch=1):
@@ -181,11 +186,13 @@ class BackgroundGenerator(threading.Thread):
         self.start()
 
     def run(self):
+        """STORE ITEMS IN QUEUE."""
         for item in self.generator:
             self.queue.put(item)
         self.queue.put(None)
 
     def next(self):
+        """GET ITEM IN THE QUEUE."""
         next_item = self.queue.get()
         if next_item is None:
             raise StopIteration
@@ -199,7 +206,7 @@ class BackgroundGenerator(threading.Thread):
 
 
 class background(object):
-    """BACKGROUND GENERATOR DECORATOR"""
+    """BACKGROUND GENERATOR DECORATOR."""
 
     def __init__(self, max_prefetch=1):
         self.max_prefetch = max_prefetch
@@ -211,14 +218,15 @@ class background(object):
 
 
 def extend_time(feats, upsampling_factor):
-    """FUNCTION TO EXTEND TIME RESOLUTION
+    """EXTEND TIME RESOLUTION.
 
     Args:
-        feats (ndarray): feature vector with the shape (T x D)
-        upsampling_factor (int): upsampling_factor
+        feats (ndarray): Feature vector with the shape (T, D).
+        upsampling_factor (int): Upsampling_factor.
 
-    Return:
-        (ndarray): extend feats with the shape (upsampling_factor*T x D)
+    Returns:
+        (ndarray): Extended feats with the shape (upsampling_factor * T, D).
+
     """
     # get number
     n_frames = feats.shape[0]

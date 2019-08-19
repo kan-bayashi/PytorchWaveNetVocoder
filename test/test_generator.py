@@ -7,12 +7,11 @@
 import argparse
 import os
 
-from feature_extract import melspectrogram_extract
-from feature_extract import world_feature_extract
-from utils import find_files
-
-from decode import decode_generator
-from train import train_generator
+from wavenet_vocoder.bin.decode import decode_generator
+from wavenet_vocoder.bin.feature_extract import melspectrogram_extract
+from wavenet_vocoder.bin.feature_extract import world_feature_extract
+from wavenet_vocoder.bin.train import train_generator
+from wavenet_vocoder.utils import find_files
 
 from test_preprocessing import make_args as make_feature_args
 from test_preprocessing import make_dummy_wav

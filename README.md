@@ -6,6 +6,12 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
 
+You can learn the basics of this repository within 15 minutes in Google colab!
+
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
+
+Please access the above URL and click the `Open in Colab` button. Enjoy!
+
 ## Key features
 
 - Support kaldi-like recipe, easy to reproduce the results
@@ -29,10 +35,26 @@ Recommend to use the GPU with 10GB> memory.
 
 ## Setup
 
+### A. Make virtualenv
+
 ```bash
 $ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
 $ cd PytorchWaveNetVocoder/tools
 $ make
+```
+
+### B. Install with pip
+
+```
+$ git clone https://github.com/kan-bayashi/PytorchWaveNetVocoder.git
+$ cd PytorchWaveNetVocoder
+
+# recommend to use with pytorch 1.0.1 because only tested on 1.0.1
+$ pip install torch==1.0.1 torchvision==0.2.2
+$ pip install -e .
+
+# please make dummy activate file to suppress warning in the recipe
+$ mkdir -p tools/venv/bin && touch tools/venv/bin/activate
 ```
 
 ## How-to-run
