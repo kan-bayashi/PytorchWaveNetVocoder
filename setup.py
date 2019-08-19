@@ -21,7 +21,7 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 
 requirements = {
     "install": [
-        "h5py>=2.9.0",
+        "h5py>=2.8.0",
         "scikit-learn>=0.20.2",
         "librosa>=0.6.2",
         "soundfile>=0.10.2",
