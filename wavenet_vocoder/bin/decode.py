@@ -4,8 +4,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import argparse
 import logging
 import math
@@ -31,14 +29,14 @@ from wavenet_vocoder.utils import shape_hdf5
 
 
 def pad_list(batch_list, pad_value=0.0):
-    """FUNCTION TO PAD VALUE
+    """PAD VALUE.
 
     Args:
-        batch_list (list): list of batch, where the shape of i-th batch (T_i, C)
-        pad_value (float): value to pad
+        batch_list (list): List of batch, where the shape of i-th batch (T_i, C).
+        pad_value (float): Value to pad.
 
-    Return:
-        (ndarray): padded batch with the shape (B, T_max, C)
+    Returns:
+        ndarray: Padded batch with the shape (B, T_max, C).
 
     """
     batch_size = len(batch_list)
@@ -59,20 +57,21 @@ def decode_generator(feat_list,
                      upsampling_factor=80,
                      use_upsampling_layer=True,
                      use_speaker_code=False):
-    """DECODE BATCH GENERATOR
+    """GENERATE DECODING BATCH.
 
     Args:
-        featdir (str): directory including feat files
-        batch_size (int): batch size in decoding
-        feature_type (str): feature type
-        wav_transform (func): preprocessing function for waveform
-        feat_transform (func): preprocessing function for aux feats
-        upsampling_factor (int): upsampling factor
-        use_upsampling_layer (bool): whether to use upsampling layer
-        use_speaker_code (bool): whether to use speaker code
+        feat_list (list): List of feature files.
+        batch_size (int): Batch size in decoding.
+        feature_type (str): Feature type.
+        wav_transform (func): Preprocessing function for waveform.
+        feat_transform (func): Preprocessing function for aux feats.
+        upsampling_factor (int): Upsampling factor.
+        use_upsampling_layer (bool): Whether to use upsampling layer.
+        use_speaker_code (bool): Whether to use speaker code>
 
-    Return:
-        (object): generator instance
+    Returns:
+        generator: Generator instance.
+
     """
     # ---------------------------
     # sample-by-sample generation
@@ -176,6 +175,7 @@ def decode_generator(feat_list,
 
 
 def main():
+    """RUN DECODING."""
     parser = argparse.ArgumentParser()
     # decode setting
     parser.add_argument("--feats", required=True,

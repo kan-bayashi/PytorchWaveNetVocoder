@@ -4,8 +4,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import argparse
 import logging
 import multiprocessing as mp
@@ -33,17 +31,17 @@ EPS = 1e-10
 
 
 def low_cut_filter(x, fs, cutoff=70):
-    """FUNCTION TO APPLY LOW CUT FILTER
+    """APPLY LOW CUT FILTER.
 
     Args:
-        x (ndarray): Waveform sequence
-        fs (int): Sampling frequency
-        cutoff (float): Cutoff frequency of low cut filter
+        x (ndarray): Waveform sequence.
+        fs (int): Sampling frequency.
+        cutoff (float): Cutoff frequency of low cut filter.
 
     Return:
-        (ndarray): Low cut filtered waveform sequence
-    """
+        ndarray: Low cut filtered waveform sequence.
 
+    """
     nyquist = fs // 2
     norm_cutoff = cutoff / nyquist
 
@@ -55,17 +53,17 @@ def low_cut_filter(x, fs, cutoff=70):
 
 
 def low_pass_filter(x, fs, cutoff=70, padding=True):
-    """FUNCTION TO APPLY LOW PASS FILTER
+    """APPLY LOW PASS FILTER.
 
     Args:
-        x (ndarray): Waveform sequence
-        fs (int): Sampling frequency
-        cutoff (float): Cutoff frequency of low pass filter
+        x (ndarray): Waveform sequence.
+        fs (int): Sampling frequency.
+        cutoff (float): Cutoff frequency of low pass filter.
 
-    Return:
-        (ndarray): Low pass filtered waveform sequence
+    Returns:
+        ndarray: Low pass filtered waveform sequence
+
     """
-
     nyquist = fs // 2
     norm_cutoff = cutoff / nyquist
 
@@ -80,13 +78,14 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
 
 
 def convert_continuos_f0(f0):
-    """CONVERT F0 TO CONTINUOUS F0
+    """CONVERT F0 TO CONTINUOUS F0.
 
     Args:
-        f0 (ndarray): original f0 sequence with the shape (T)
+        f0 (ndarray): original f0 sequence with the shape (T,).
 
-    Return:
-        (ndarray): continuous f0 with the shape (T)
+    Returns:
+        ndarray: continuous f0 with the shape (T,).
+
     """
     # get uv information as binary
     uv = np.float32(f0 != 0)
@@ -115,19 +114,20 @@ def convert_continuos_f0(f0):
 
 
 def stft_mcep(x, fftl=512, shiftl=256, dim=25, alpha=0.41, window="hamming", is_padding=False):
-    """FUNCTION TO EXTRACT STFT-BASED MEL-CEPSTRUM
+    """EXTRACT STFT-BASED MEL-CEPSTRUM.
 
     Args:
-        x (ndarray): numpy double array with the size [T]
-        fftl (int): fft length in point (default=512)
-        shiftl (int): shift length in point (default=256)
-        dim (int): dimension of mel-cepstrum (default=25)
-        alpha (float): all pass filter coefficient (default=0.41)
-        window (str): analysis window type (default="hamming")
-        is_padding (bool): whether to pad the end of signal (default=False)
+        x (ndarray): Numpy double array with the size (T,).
+        fftl (int): FFT length in point (default=512).
+        shiftl (int): Shift length in point (default=256).
+        dim (int): Dimension of mel-cepstrum (default=25).
+        alpha (float): All pass filter coefficient (default=0.41).
+        window (str): Analysis window type (default="hamming").
+        is_padding (bool): Whether to pad the end of signal (default=False).
 
-    Return:
-        (ndarray): mel-cepstrum with the size [N, n_fft]
+    Returns:
+        ndarray: Mel-cepstrum with the size (N, n_fft).
+
     """
     # perform padding
     if is_padding:
@@ -141,13 +141,15 @@ def stft_mcep(x, fftl=512, shiftl=256, dim=25, alpha=0.41, window="hamming", is_
     win = get_window(window, fftl)
 
     # calculate spectrogram
-    mcep = [pysptk.mcep(x[shiftl * i: shiftl * i + fftl] * win, dim, alpha) for i in range(n_frame)]
+    mcep = [pysptk.mcep(x[shiftl * i: shiftl * i + fftl] * win,
+                        dim, alpha, eps=EPS, etype=1)
+            for i in range(n_frame)]
 
     return np.stack(mcep)
 
 
 def world_feature_extract(wav_list, args):
-    """EXTRACT WORLD FEATURE VECTOR"""
+    """EXTRACT WORLD FEATURE VECTOR."""
     # define feature extractor
     feature_extractor = FeatureExtractor(
         analyzer="world",
@@ -195,7 +197,7 @@ def world_feature_extract(wav_list, args):
 
 
 def melspectrogram_extract(wav_list, args):
-    """EXTRACT MEL SPECTROGRAM"""
+    """EXTRACT MEL SPECTROGRAM."""
     # define feature extractor
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
@@ -234,7 +236,7 @@ def melspectrogram_extract(wav_list, args):
 
 
 def melcepstrum_extract(wav_list, args):
-    """EXTRACT MEL CEPSTRUM"""
+    """EXTRACT MEL CEPSTRUM."""
     # define feature extractor
     for i, wav_name in enumerate(wav_list):
         logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
@@ -266,6 +268,7 @@ def melcepstrum_extract(wav_list, args):
 
 
 def main():
+    """RUN FEATURE EXTRACTION IN PARALLEL."""
     parser = argparse.ArgumentParser(
         description="making feature file argsurations.")
 

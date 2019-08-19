@@ -4,8 +4,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import argparse
 import logging
 import os
@@ -35,16 +33,17 @@ from wavenet_vocoder.utils import read_txt
 
 
 def validate_length(x, y, upsampling_factor=None):
-    """FUNCTION TO VALIDATE LENGTH
+    """VALIDATE LENGTH.
 
     Args:
-        x (ndarray): numpy.ndarray with x.shape[0] = len_x
-        y (ndarray): numpy.ndarray with y.shape[0] = len_y
-        upsampling_factor (int): upsampling factor
+        x (ndarray): ndarray with x.shape[0] = len_x.
+        y (ndarray): ndarray with y.shape[0] = len_y.
+        upsampling_factor (int): Upsampling factor.
 
     Returns:
-        (ndarray): length adjusted x with same length y
-        (ndarray): length adjusted y with same length x
+        ndarray: Length adjusted x with same length y.
+        ndarray: Length adjusted y with same length x.
+
     """
     if upsampling_factor is None:
         if x.shape[0] < y.shape[0]:
@@ -76,24 +75,25 @@ def train_generator(wav_list, feat_list, receptive_field,
                     upsampling_factor=80,
                     use_upsampling_layer=True,
                     use_speaker_code=False):
-    """TRAINING BATCH GENERATOR
+    """GENERATE TRAINING BATCH.
 
     Args:
-        wav_list (str): list of wav files
-        feat_list (str): list of feat files
-        receptive_field (int): size of receptive filed
-        batch_length (int): batch length (if set None, utterance batch will be used.)
-        batch_size (int): batch size (if batch_length = None, batch_size will be 1.)
-        feature_type (str): auxiliary feature type
-        wav_transform (func): preprocessing function for waveform
-        feat_transform (func): preprocessing function for aux feats
-        shuffle (bool): whether to shuffle the file list
-        upsampling_factor (int): upsampling factor
-        use_upsampling_layer (bool): whether to use upsampling layer
-        use_speaker_code (bool): whether to use speaker code
+        wav_list (list): List of wav files.
+        feat_list (list): List of feat files.
+        receptive_field (int): Size of receptive filed.
+        batch_length (int): Batch length (if set None, utterance batch will be used.).
+        batch_size (int): Batch size (if batch_length = None, batch_size will be 1.).
+        feature_type (str): Auxiliary feature type.
+        wav_transform (func): Preprocessing function for waveform.
+        feat_transform (func): Preprocessing function for aux feats.
+        shuffle (bool): Whether to shuffle the file list.
+        upsampling_factor (int): Upsampling factor.
+        use_upsampling_layer (bool): Whether to use upsampling layer.
+        use_speaker_code (bool): Whether to use speaker code.
 
-    Return:
-        (object): generator instance
+    Returns:
+        generator: Generator instance.
+
     """
     # shuffle list
     if shuffle:
@@ -313,13 +313,14 @@ def train_generator(wav_list, feat_list, receptive_field,
 
 
 def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
-    """FUNCTION TO SAVE CHECKPOINT
+    """SAVE CHECKPOINT.
 
     Args:
-        checkpoint_dir (str): directory to save checkpoint
-        model (torch.nn.Module): pytorch model instance
-        optimizer (Optimizer): pytorch optimizer instance
-        iterations (int): number of current iterations
+        checkpoint_dir (str): Directory to save checkpoint.
+        model (torch.nn.Module): Pytorch model instance.
+        optimizer (torch.optim.optimizer): Pytorch optimizer instance.
+        iterations (int): Number of current iterations.
+
     """
     checkpoint = {
         "model": model.state_dict(),
@@ -332,6 +333,7 @@ def save_checkpoint(checkpoint_dir, model, optimizer, iterations):
 
 
 def main():
+    """RUN TRAINING."""
     parser = argparse.ArgumentParser()
     # path setting
     parser.add_argument("--waveforms", required=True,

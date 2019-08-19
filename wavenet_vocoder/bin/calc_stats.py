@@ -17,7 +17,7 @@ from wavenet_vocoder.utils import write_hdf5
 
 
 def calc_stats(file_list, args):
-    """CALCULATE STATISTICS"""
+    """CALCULATE STATISTICS."""
     scaler = StandardScaler()
 
     # process over all of data
@@ -39,6 +39,7 @@ def calc_stats(file_list, args):
 
 
 def main():
+    """RUN CALCULATION OF STATISTICS."""
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

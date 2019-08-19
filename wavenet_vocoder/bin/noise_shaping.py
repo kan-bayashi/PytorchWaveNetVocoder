@@ -4,8 +4,6 @@
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
-from __future__ import division
-
 import argparse
 import logging
 import multiprocessing as mp
@@ -89,57 +87,8 @@ def noise_shaping(wav_list, args):
         wavfile.write(write_name, args.fs, np.int16(x_ns))
 
 
-def melcepstrum_noise_shaping(wav_list, args):
-    """APPLY NOISE SHAPING USING STFT-BASED MCEP"""
-    # get or calculate MLSA coef
-    if check_hdf5(args.stats, "/mlsa/coef"):
-        mlsa_coef = read_hdf5(args.stats, "/mlsa/coef")
-        alpha = read_hdf5(args.stats, "/mlsa/alpha")
-    else:
-        avg_feat = read_hdf5(args.stats, "/mcep/mean")
-        avg_mcep = avg_feat[args.mcep_dim_start:args.mcep_dim_end]
-        mlsa_coef = _convert_mcep_to_mlsa_coef(avg_mcep, args.mag, args.mcep_alpha)
-        alpha = args.mcep_alpha
-        write_hdf5(args.stats, "/mlsa/coef", mlsa_coef)
-        write_hdf5(args.stats, "/mlsa/alpha", args.mcep_alpha)
-
-    if args.inv:
-        mlsa_coef *= -1.0
-
-    # define synthesizer
-    shiftl = int(args.fs / 1000 * args.shiftms)
-    synthesizer = pysptk.synthesis.Synthesizer(
-        pysptk.synthesis.MLSADF(
-            order=mlsa_coef.shape[0] - 1,
-            alpha=alpha),
-        hopsize=shiftl
-    )
-
-    for i, wav_name in enumerate(wav_list):
-        logging.info("now processing %s (%d/%d)" % (wav_name, i + 1, len(wav_list)))
-
-        # load wavfile and apply low cut filter
-        fs, x = wavfile.read(wav_name)
-        if x.dtype != np.int16:
-            logging.warning("wav file format is not 16 bit PCM.")
-        x = np.float64(x)
-
-        # check sampling frequency
-        if not fs == args.fs:
-            logging.error("sampling frequency is not matched.")
-            sys.exit(1)
-
-        # replicate coef for time-invariant filtering
-        num_frames = int(len(x) / shiftl) + 1
-        mlsa_coefs = np.float64(np.tile(mlsa_coef, [num_frames, 1]))
-
-        # synthesis and write
-        x_ns = synthesizer.synthesis(x, mlsa_coefs)
-        write_name = args.outdir + "/" + os.path.basename(wav_name)
-        wavfile.write(write_name, args.fs, np.int16(x_ns))
-
-
 def main():
+    """RUN NOISE SHAPING IN PARALLEL."""
     parser = argparse.ArgumentParser(
         description="making feature file argsurations.")
 
