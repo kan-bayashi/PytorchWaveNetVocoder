@@ -2,6 +2,13 @@
 
 This is the outline of recipes.
 
+If you want to try it ASAP, you can learn the basics of this repository within 15 minutes in Google colab!
+
+[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
+
+Please access the above URL and click the `Open in Colab` button. Enjoy!
+
+
 ## Supported database
 
 - [CMU Arctic database](http://www.festvox.org/cmu_arctic/): `egs/arctic`
