@@ -64,8 +64,8 @@ resume=""               # checkpoint paht to resume (Optional)
 outdir=""           # directory to save decoded wav dir (Optional)
 checkpoint=""       # checkpoint path to be used for decoding (Optional)
 config=""           # model configuration path (Optional)
-stats=""            # statistics path (Optional
-feats=""            # list or directory of feature files
+stats=""            # statistics path (Optional)
+feats=""            # list or directory of feature files (Optional)
 decode_batch_size=4 # batch size in decoding
 
 #######################################
