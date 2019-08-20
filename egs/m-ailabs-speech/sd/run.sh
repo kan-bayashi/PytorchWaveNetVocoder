@@ -13,7 +13,7 @@
 #######################################
 #           STAGE SETTING             #
 #######################################
-# {{{
+stage=0123456
 # 0: data preparation step
 # 1: feature extraction step
 # 2: statistics calculation step
@@ -21,110 +21,76 @@
 # 4: training step
 # 5: decoding step
 # 6: restore noise shaping step
-# }}}
-stage=0123456
 
 #######################################
 #          FEATURE SETTING            #
 #######################################
-# {{{
-# shiftms: shift length in msec (default=5)
-# fftl: fft length (default=1024)
-# highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
-# minf0: minimum f0 value
-# maxf0: maximum f0 value
-# mcep_dim: dimension of mel-cepstrum
-# mcep_alpha: alpha value of mel-cepstrum
-# mag: coefficient of noise shaping (default=0.5)
-# n_jobs: number of parallel jobs
-# }}}
-feature_type=world
-spk=elizabeth # judy (F) or mary (F) or elliot (M) or elizabeth (F)
-shiftms=5
-fftl=1024
-highpass_cutoff=70
-minf0=40
-maxf0=400
-fs=16000
-mcep_dim=24
-mcep_alpha=0.41
-mag=0.5
-n_jobs=10
+feature_type=world     # world or melspc (in this recipe fixed to "world")
+spk=elizabeth          # judy (F) or mary (F) or elliot (M) or elizabeth (F)
+minf0=40               # minimum f0
+maxf0=400              # maximum f0
+shiftms=5              # shift length in msec
+fftl=1024              # fft length
+highpass_cutoff=70     # highpass filter cutoff frequency (if 0, will not apply)
+fs=16000               # sampling rate
+mcep_dim=24            # dimension of mel-cepstrum
+mcep_alpha=0.410       # alpha value of mel-cepstrum
+use_noise_shaping=true # whether to use noise shaping
+mag=0.5                # strength of noise shaping (0.0 < mag <= 1.0)
+n_jobs=10              # number of parallel jobs
 
 #######################################
 #          TRAINING SETTING           #
 #######################################
-# {{{
-# n_gpus: number of gpus
-# n_quantize: number of quantization
-# n_aux: number of aux features
-# n_resch: number of residual channels
-# n_skipch: number of skip channels
-# dilation_depth: dilation depth (e.g. if set 10, max dilation = 2^(10-1))
-# dilation_repeat: number of dilation repeats
-# kernel_size: kernel size of dilated convolution
-# lr: learning rate
-# weight_decay: weight decay coef
-# iters: number of iterations
-# batch_length: batch length
-# batch_size: batch size
-# checkpoints: save model per this number
-# use_upsampling: true or false
-# use_noise_shaping: true or false
-# use_speaker_code: true or false
-# resume: checkpoint to resume
-# }}}
-n_gpus=1
-n_quantize=256
-n_aux=28
-n_resch=512
-n_skipch=256
-dilation_depth=10
-dilation_repeat=3
-kernel_size=2
-lr=1e-4
-weight_decay=0.0
-iters=200000
-batch_length=20000
-batch_size=1
-checkpoints=10000
-use_upsampling=true
-use_noise_shaping=true
-use_speaker_code=false
-resume=
+n_gpus=1                  # number of gpus (default=1)
+n_quantize=256            # number of quantization of waveform
+n_aux=28                  # number of auxliary features
+n_resch=512               # number of residual channels
+n_skipch=256              # number of skip channels
+dilation_depth=10         # dilation depth (e.g. if set 10, max dilation = 2^(10-1))
+dilation_repeat=3         # number of dilation repeats
+kernel_size=2             # kernel size of dilated convolution
+lr=1e-4                   # learning rate
+weight_decay=0.0          # weight decay coef
+iters=200000              # number of iterations
+batch_length=20000        # batch length
+batch_size=1              # batch size
+checkpoint_interval=10000 # save model per this number
+use_upsampling=true       # whether to use upsampling layer
+resume=""                 # checkpoint paht to resume (Optional)
 
 #######################################
 #          DECODING SETTING           #
 #######################################
-# {{{
-# outdir: directory to save decoded wav dir (if not set, will automatically set)
-# checkpoint: full path of model to be used to decode (if not set, final model will be used)
-# config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files
-# n_gpus: number of gpus to decode
-# }}}
-outdir=
-checkpoint=
-config=
-stats=
-feats=
-decode_batch_size=32
+outdir=""            # directory to save decoded wav dir (Optional)
+checkpoint=""        # checkpoint path to be used for decoding (Optional)
+config=""            # model configuration path (Optional)
+stats=""             # statistics path (Optional)
+feats=""             # list or directory of feature files (Optional)
+decode_batch_size=32 # batch size in decoding
 
 #######################################
 #            OHTER SETTING            #
 #######################################
-DB_ROOT=downloads
-tag=
+DB_ROOT=downloads # directory including DB (if DB not exists, it will be downloaded)
+tag=""            # tag for network directory naming (Optional)
 
 # parse options
 . parse_options.sh || exit 1;
+
+# check feature type
+if [ ${feature_type} != "world" ]; then
+    echo "This recipe does not support feature_type=\"melspc\"." 2>&1
+    echo "Please try the egs/m-ailabs-speech/sd-melspc." 2>&1
+    exit 1;
+fi
 
 # set params
 train=tr_${spk}
 eval=ev_${spk}
 
 # stop when error occured
-set -e
+set -euo pipfail
 # }}}
 
 
@@ -301,10 +267,9 @@ if echo ${stage} | grep -q 4; then
             --iters ${iters} \
             --batch_length ${batch_length} \
             --batch_size ${batch_size} \
-            --checkpoints ${checkpoints} \
+            --checkpoint_interval ${checkpoint_interval} \
             --upsampling_factor "${upsampling_factor}" \
             --use_upsampling_layer ${use_upsampling} \
-            --use_speaker_code ${use_speaker_code} \
             --resume "${resume}"
 fi
 # }}}
