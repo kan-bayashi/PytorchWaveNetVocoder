@@ -66,7 +66,7 @@ n_jobs=10
 # iters: number of iterations
 # batch_length: batch length
 # batch_size: batch size
-# checkpoints: save model per this number
+# checkpoint_interval: save model per this number
 # use_upsampling: true or false
 # use_noise_shaping: true or false
 # use_speaker_code: true or false
@@ -86,7 +86,7 @@ weight_decay=0.0
 iters=200000
 batch_length=20000
 batch_size=1
-checkpoints=10000
+checkpoint_interval=10000
 use_upsampling=true
 use_noise_shaping=true
 resume=
@@ -301,7 +301,7 @@ if echo ${stage} | grep -q 4; then
             --iters ${iters} \
             --batch_length ${batch_length} \
             --batch_size ${batch_size} \
-            --checkpoints ${checkpoints} \
+            --checkpoint_interval ${checkpoint_interval} \
             --upsampling_factor "${upsampling_factor}" \
             --use_upsampling_layer ${use_upsampling} \
             --resume "${resume}"

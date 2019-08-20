@@ -379,7 +379,7 @@ def main():
     parser.add_argument("--iters", default=200000,
                         type=int, help="number of iterations")
     # other setting
-    parser.add_argument("--checkpoints", default=10000,
+    parser.add_argument("--checkpoint_interval", default=10000,
                         type=int, help="how frequent saving model")
     parser.add_argument("--intervals", default=100,
                         type=int, help="log interval")
@@ -554,7 +554,7 @@ def main():
             total = 0
 
         # save intermidiate model
-        if (i + 1) % args.checkpoints == 0:
+        if (i + 1) % args.checkpoint_interval == 0:
             if args.n_gpus > 1:
                 save_checkpoint(args.expdir, model.module, optimizer, i + 1)
             else:
