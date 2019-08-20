@@ -24,17 +24,29 @@
 stage=0123456
 
 #######################################
+#          GENERAL SETTING            #
+#######################################
+# {{{
+# spk: target spekaer in arctic (default="slt")
+# n_jobs: number of parallel jobs (default=10)
+# n_gpus: number of gpus (default=1)
+# }}}
+spk=slt
+n_jobs=10
+n_gpus=1
+
+#######################################
 #          FEATURE SETTING            #
 #######################################
 # {{{
-# feature_type: world or melspc
+# feature_type: world or melspc (in this recipe fixed to "world")
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
-# highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
-# mcep_dim: dimension of mel-cepstrum
-# mcep_alpha: alpha value of mel-cepstrum
+# highpass_cutoff: highpass filter cutoff frequency, if 0, will not apply (default=70)
+# mcep_dim: dimension of mel-cepstrum (default=24)
+# mcep_alpha: alpha value of mel-cepstrum (default=0.41)
+# use_noise_shaping: true or false (default=true)
 # mag: coefficient of noise shaping (default=0.5)
-# n_jobs: number of parallel jobs
 # }}}
 feature_type=world
 shiftms=5
@@ -43,15 +55,13 @@ highpass_cutoff=70
 fs=16000
 mcep_dim=24
 mcep_alpha=0.410
+use_noise_shaping=true
 mag=0.5
-n_jobs=10
 
 #######################################
 #          TRAINING SETTING           #
 #######################################
 # {{{
-# n_gpus: number of gpus
-# spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -64,14 +74,10 @@ n_jobs=10
 # iters: number of iterations
 # batch_length: batch length
 # batch_size: batch size
-# checkpoints: save model per this number
+# checkpoint_interval: save model per this number
 # use_upsampling: true or false
-# use_noise_shaping: true or false
-# use_speaker_code: true or false
 # resume: checkpoint to resume
 # }}}
-n_gpus=1
-spk=slt
 n_quantize=256
 n_aux=28
 n_resch=32
@@ -84,10 +90,8 @@ weight_decay=0.0
 iters=1000
 batch_length=10000
 batch_size=1
-checkpoints=100
+checkpoint_interval=100
 use_upsampling=true
-use_noise_shaping=true
-use_speaker_code=false
 resume=
 
 #######################################
@@ -112,11 +116,18 @@ decode_batch_size=4
 #            OHTER SETTING            #
 #######################################
 download_dir=downloads
-download_url="https://drive.google.com/open?id=135WzE_4TkKC9iVz-_KQ4T6rW7B_KqOZi"
-tag=
+download_url="https://drive.google.com/open?id=1NIia89CL2qqqDzNNc718wycRmI_jkLxR"
+tag=""
 
 # parse options
 . parse_options.sh || exit 1;
+
+# check feature type
+if [ ${feature_type} != "world" ]; then
+    echo "This recipe does not support feature_type=\"melspc\"." 2>&1
+    echo "Please try the egs/arctic/sd-melspc." 2>&1
+    exit 1;
+fi
 
 # set params
 train=tr_${spk}
@@ -161,6 +172,7 @@ if echo ${stage} | grep -q 1; then
     maxf0=$(awk '{print $2}' conf/${spk}.f0)
     [ ! -e exp/feature_extract ] && mkdir -p exp/feature_extract
     for set in ${train} ${eval};do
+        [ "${set}" = "${train}" ] && save_wav=true || save_wav=false
         feature_extract.py \
             --waveforms data/${set}/wav.scp \
             --wavdir wav/${set} \
@@ -174,6 +186,7 @@ if echo ${stage} | grep -q 1; then
             --mcep_alpha ${mcep_alpha} \
             --highpass_cutoff ${highpass_cutoff} \
             --fftl ${fftl} \
+            --save_wav ${save_wav} \
             --n_jobs ${n_jobs} 2>&1 | tee exp/feature_extract/feature_extract_${set}.log
 
         # check the number of feature files
@@ -282,10 +295,9 @@ if echo ${stage} | grep -q 4; then
         --iters ${iters} \
         --batch_length ${batch_length} \
         --batch_size ${batch_size} \
-        --checkpoints ${checkpoints} \
+        --checkpoint_interval ${checkpoint_interval} \
         --upsampling_factor "${upsampling_factor}" \
         --use_upsampling_layer ${use_upsampling} \
-        --use_speaker_code ${use_speaker_code} \
         --resume "${resume}" 2>&1 | tee -a ${expdir}/log/${train}.log
 fi
 # }}}
