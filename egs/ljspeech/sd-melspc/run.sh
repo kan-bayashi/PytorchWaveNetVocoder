@@ -114,12 +114,19 @@ tag=
 # parse options
 . parse_options.sh || exit 1;
 
+# check feature type
+if [ ${feature_type} != "melspc" ]; then
+    echo "This recipe does not support feature_type=\"world\"." 2>&1
+    echo "Please try the egs/ljspeech/sd." 2>&1
+    exit 1;
+fi
+
 # set params
 train=tr
 eval=ev
 
 # stop when error occured
-set -e
+set -euo pipfail
 # }}}
 
 

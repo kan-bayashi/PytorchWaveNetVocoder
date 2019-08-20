@@ -115,12 +115,19 @@ tag=
 # parse options
 . parse_options.sh || exit 1;
 
+# check feature type
+if [ ${feature_type} != "melspc" ]; then
+    echo "This recipe does not support feature_type=\"world\"." 2>&1
+    echo "Please try the egs/arctic/si-open." 2>&1
+    exit 1;
+fi
+
 # set params
 train=tr_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 eval=ev_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 
 # stop when error occured
-set -e
+set -euo pipfail
 # }}}
 
 

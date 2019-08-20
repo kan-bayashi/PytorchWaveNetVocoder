@@ -24,22 +24,11 @@
 stage=0123456
 
 #######################################
-#          GENERAL SETTING            #
-#######################################
-# {{{
-# spk: target spekaer in arctic (default="slt")
-# n_jobs: number of parallel jobs (default=10)
-# n_gpus: number of gpus (default=1)
-# }}}
-spk=slt
-n_jobs=10
-n_gpus=1
-
-#######################################
 #          FEATURE SETTING            #
 #######################################
 # {{{
 # feature_type: world or melspc (in this recipe fixed to "world")
+# spk: target spekaer in arctic (default="slt")
 # minf0: minimum f0 (if not set, conf/*.f0 will be used)
 # maxf0: maximum f0 (if not set, conf/*.f0 will be used)
 # shiftms: shift length in msec (default=5)
@@ -49,8 +38,10 @@ n_gpus=1
 # mcep_alpha: alpha value of mel-cepstrum (default=0.41)
 # use_noise_shaping: true or false (default=true)
 # mag: coefficient of noise shaping (default=0.5)
+# n_jobs: number of parallel jobs (default=10)
 # }}}
 feature_type=world
+spk=slt
 minf0=
 maxf0=
 shiftms=5
@@ -61,11 +52,13 @@ mcep_dim=24
 mcep_alpha=0.410
 use_noise_shaping=true
 mag=0.5
+n_jobs=10
 
 #######################################
 #          TRAINING SETTING           #
 #######################################
 # {{{
+# n_gpus: number of gpus (default=1)
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -82,6 +75,7 @@ mag=0.5
 # use_upsampling: true or false
 # resume: checkpoint to resume
 # }}}
+n_gpus=1
 n_quantize=256
 n_aux=28
 n_resch=32
@@ -129,7 +123,7 @@ tag=""
 # check feature type
 if [ ${feature_type} != "world" ]; then
     echo "This recipe does not support feature_type=\"melspc\"." 2>&1
-    echo "Please try the egs/arctic/sd-melspc." 2>&1
+    echo "Please try the egs/*/*-melspc." 2>&1
     exit 1;
 fi
 

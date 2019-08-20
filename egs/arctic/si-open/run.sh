@@ -28,6 +28,8 @@ stage=0123456
 #          FEATURE SETTING            #
 #######################################
 # {{{
+# train_spks: training spekaers in arctic
+# eval_spks: evaluation spekaers in arctic
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
@@ -37,6 +39,8 @@ stage=0123456
 # n_jobs: number of parallel jobs
 # }}}
 feature_type=world
+train_spks=(bdl rms clb ksp jmk)
+eval_spks=(slt)
 shiftms=5
 fftl=1024
 highpass_cutoff=70
@@ -50,8 +54,6 @@ n_jobs=10
 #          TRAINING SETTING           #
 #######################################
 # {{{
-# training_spks: training spekaers in arctic
-# eval_spks: evaluation spekaers in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -71,8 +73,6 @@ n_jobs=10
 # resume: checkpoint to resume
 # }}}
 n_gpus=1
-train_spks=(bdl rms clb ksp jmk)
-eval_spks=(slt)
 n_quantize=256
 n_aux=28
 n_resch=512
@@ -116,12 +116,19 @@ tag=
 # parse options
 . parse_options.sh || exit 1;
 
+# check feature type
+if [ ${feature_type} != "world" ]; then
+    echo "This recipe does not support feature_type=\"melspc\"." 2>&1
+    echo "Please try the egs/arctic/si-close-melspc." 2>&1
+    exit 1;
+fi
+
 # set params
 train=tr_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 eval=ev_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 
 # stop when error occured
-set -e
+set -euo pipfail
 # }}}
 
 

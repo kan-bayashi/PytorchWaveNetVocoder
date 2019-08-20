@@ -29,6 +29,7 @@ stage=0123456
 #######################################
 # {{{
 # feature_type: world or melspc
+# spk: target spekaer in arctic
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
@@ -38,6 +39,7 @@ stage=0123456
 # n_jobs: number of parallel jobs
 # }}}
 feature_type=world
+spk=slt
 shiftms=5
 fftl=1024
 highpass_cutoff=70
@@ -52,7 +54,6 @@ n_jobs=10
 #######################################
 # {{{
 # n_gpus: number of gpus
-# spk: target spekaer in arctic
 # n_quantize: number of quantization
 # n_aux: number of aux features
 # n_resch: number of residual channels
@@ -72,7 +73,6 @@ n_jobs=10
 # resume: checkpoint to resume
 # }}}
 n_gpus=1
-spk=slt
 n_quantize=256
 n_aux=28
 n_resch=512
@@ -117,12 +117,19 @@ tag=
 # parse options
 . parse_options.sh || exit 1;
 
+# check feature type
+if [ ${feature_type} != "world" ]; then
+    echo "This recipe does not support feature_type=\"melspc\"." 2>&1
+    echo "Please try the egs/arctic/sd-melspc." 2>&1
+    exit 1;
+fi
+
 # set params
 train=tr_${spk}
 eval=ev_${spk}
 
 # stop when error occured
-set -e
+set -euo pipfail
 # }}}
 
 
