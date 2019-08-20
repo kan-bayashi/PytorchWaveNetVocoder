@@ -40,6 +40,8 @@ n_gpus=1
 #######################################
 # {{{
 # feature_type: world or melspc (in this recipe fixed to "world")
+# minf0: minimum f0 (if not set, conf/*.f0 will be used)
+# maxf0: maximum f0 (if not set, conf/*.f0 will be used)
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency, if 0, will not apply (default=70)
@@ -49,6 +51,8 @@ n_gpus=1
 # mag: coefficient of noise shaping (default=0.5)
 # }}}
 feature_type=world
+minf0=
+maxf0=
 shiftms=5
 fftl=1024
 highpass_cutoff=70
@@ -134,7 +138,7 @@ train=tr_${spk}
 eval=ev_${spk}
 
 # stop when error occured
-set -e
+set -euo pipefail
 # }}}
 
 
@@ -168,8 +172,8 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
-    minf0=$(awk '{print $1}' conf/${spk}.f0)
-    maxf0=$(awk '{print $2}' conf/${spk}.f0)
+    [ ! -n "${minf0}" ] && minf0=$(awk '{print $1}' ../si-close/conf/${spk}.f0)
+    [ ! -n "${maxf0}" ] && maxf0=$(awk '{print $2}' ../si-close/conf/${spk}.f0)
     [ ! -e exp/feature_extract ] && mkdir -p exp/feature_extract
     for set in ${train} ${eval};do
         [ "${set}" = "${train}" ] && save_wav=true || save_wav=false
