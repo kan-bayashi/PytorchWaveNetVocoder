@@ -30,6 +30,8 @@ stage=0123456
 # {{{
 # feature_type: world or melspc
 # spk: target spekaer in arctic
+# minf0: minimum f0 (if not set, conf/*.f0 will be used)
+# maxf0: maximum f0 (if not set, conf/*.f0 will be used)
 # shiftms: shift length in msec (default=5)
 # fftl: fft length (default=1024)
 # highpass_cutoff: highpass filter cutoff frequency (if 0, will not apply)
@@ -40,6 +42,8 @@ stage=0123456
 # }}}
 feature_type=world
 spk=slt
+minf0=
+maxf0=
 shiftms=5
 fftl=1024
 highpass_cutoff=70
@@ -98,7 +102,7 @@ resume=
 # outdir: directory to save decoded wav dir (if not set, will automatically set)
 # checkpoint: full path of model to be used to decode (if not set, final model will be used)
 # config: model configuration file (if not set, will automatically set)
-# feats: list or directory of feature files 
+# feats: list or directory of feature files
 # n_gpus: number of gpus to decode
 # }}}
 outdir=
@@ -163,8 +167,8 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
-    minf0=$(awk '{print $1}' conf/${spk}.f0)
-    maxf0=$(awk '{print $2}' conf/${spk}.f0)
+    [ ! -n "${minf0}" ] && minf0=$(awk '{print $1}' conf/${spk}.f0)
+    [ ! -n "${maxf0}" ] && maxf0=$(awk '{print $2}' conf/${spk}.f0)
     for set in ${train} ${eval};do
         # training data feature extraction
         ${train_cmd} --num-threads ${n_jobs} exp/feature_extract/feature_extract_${set}.log \

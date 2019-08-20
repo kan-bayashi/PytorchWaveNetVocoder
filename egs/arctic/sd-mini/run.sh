@@ -1,6 +1,6 @@
 #!/bin/bash
 ############################################################
-#           SCRIPT TO BUILD SD WAVENET VOCODER             #
+#         DEMO SCRIPT TO BUILD SD WAVENET VOCODER          #
 ############################################################
 
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
@@ -166,8 +166,8 @@ if echo ${stage} | grep -q 1; then
     echo "###########################################################"
     echo "#               FEATURE EXTRACTION STEP                   #"
     echo "###########################################################"
-    [ ! -n "${minf0}" ] && minf0=$(awk '{print $1}' ../si-close/conf/${spk}.f0)
-    [ ! -n "${maxf0}" ] && maxf0=$(awk '{print $2}' ../si-close/conf/${spk}.f0)
+    [ ! -n "${minf0}" ] && minf0=$(awk '{print $1}' conf/${spk}.f0)
+    [ ! -n "${maxf0}" ] && maxf0=$(awk '{print $2}' conf/${spk}.f0)
     [ ! -e exp/feature_extract ] && mkdir -p exp/feature_extract
     for set in ${train} ${eval};do
         [ "${set}" = "${train}" ] && save_wav=true || save_wav=false
