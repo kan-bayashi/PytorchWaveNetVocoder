@@ -25,7 +25,7 @@ stage=0123456
 #######################################
 #          FEATURE SETTING            #
 #######################################
-feature_type=melspc     # world or melspc (in this recipe fixed to "melspc")
+feature_type=melspc    # world or melspc (in this recipe fixed to "melspc")
 spk=slt                # target spekaer in arctic
 shiftms=5              # shift length in msec
 fftl=1024              # fft length
