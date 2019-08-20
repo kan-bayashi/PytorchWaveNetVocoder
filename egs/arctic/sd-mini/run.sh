@@ -12,7 +12,7 @@
 #######################################
 #           STAGE SETTING             #
 #######################################
-# {{{
+stage=0123456
 # 0: data preparation step
 # 1: feature extraction step
 # 2: statistics calculation step
@@ -20,104 +20,62 @@
 # 4: training step
 # 5: decoding step
 # 6: restore noise shaping step
-# }}}
-stage=0123456
 
 #######################################
 #          FEATURE SETTING            #
 #######################################
-# {{{
-# feature_type: world or melspc (in this recipe fixed to "world")
-# spk: target spekaer in arctic (default="slt")
-# minf0: minimum f0 (if not set, conf/*.f0 will be used)
-# maxf0: maximum f0 (if not set, conf/*.f0 will be used)
-# shiftms: shift length in msec (default=5)
-# fftl: fft length (default=1024)
-# highpass_cutoff: highpass filter cutoff frequency, if 0, will not apply (default=70)
-# mcep_dim: dimension of mel-cepstrum (default=24)
-# mcep_alpha: alpha value of mel-cepstrum (default=0.41)
-# use_noise_shaping: true or false (default=true)
-# mag: coefficient of noise shaping (default=0.5)
-# n_jobs: number of parallel jobs (default=10)
-# }}}
-feature_type=world
-spk=slt
-minf0=
-maxf0=
-shiftms=5
-fftl=1024
-highpass_cutoff=70
-fs=16000
-mcep_dim=24
-mcep_alpha=0.410
-use_noise_shaping=true
-mag=0.5
-n_jobs=10
+feature_type=world     # world or melspc (in this recipe fixed to "world")
+spk=slt                # target spekaer in arctic
+minf0=""               # minimum f0 (if not set, conf/*.f0 will be used)
+maxf0=""               # maximum f0 (if not set, conf/*.f0 will be used)
+shiftms=5              # shift length in msec
+fftl=1024              # fft length
+highpass_cutoff=70     # highpass filter cutoff frequency (if 0, will not apply)
+fs=16000               # sampling rate
+mcep_dim=24            # dimension of mel-cepstrum
+mcep_alpha=0.410       # alpha value of mel-cepstrum
+use_noise_shaping=true # whether to use noise shaping
+mag=0.5                # strength of noise shaping (0.0 < mag <= 1.0)
+n_jobs=10              # number of parallel jobs
 
 #######################################
 #          TRAINING SETTING           #
 #######################################
-# {{{
-# n_gpus: number of gpus (default=1)
-# n_quantize: number of quantization
-# n_aux: number of aux features
-# n_resch: number of residual channels
-# n_skipch: number of skip channels
-# dilation_depth: dilation depth (e.g. if set 10, max dilation = 2^(10-1))
-# dilation_repeat: number of dilation repeats
-# kernel_size: kernel size of dilated convolution
-# lr: learning rate
-# weight_decay: weight decay coef
-# iters: number of iterations
-# batch_length: batch length
-# batch_size: batch size
-# checkpoint_interval: save model per this number
-# use_upsampling: true or false
-# resume: checkpoint to resume
-# }}}
-n_gpus=1
-n_quantize=256
-n_aux=28
-n_resch=32
-n_skipch=16
-dilation_depth=5
-dilation_repeat=1
-kernel_size=2
-lr=1e-4
-weight_decay=0.0
-iters=1000
-batch_length=10000
-batch_size=1
-checkpoint_interval=100
-use_upsampling=true
-resume=
+n_gpus=1                # number of gpus (default=1)
+n_quantize=256          # number of quantization of waveform
+n_aux=28                # number of auxliary features
+n_resch=32              # number of residual channels
+n_skipch=16             # number of skip channels
+dilation_depth=5        # dilation depth (e.g. if set 10, max dilation = 2^(10-1))
+dilation_repeat=1       # number of dilation repeats
+kernel_size=2           # kernel size of dilated convolution
+lr=1e-4                 # learning rate
+weight_decay=0.0        # weight decay coef
+iters=1000              # number of iterations
+batch_length=10000      # batch length
+batch_size=1            # batch size
+checkpoint_interval=100 # save model per this number
+use_upsampling=true     # whether to use upsampling layer
+resume=""               # checkpoint paht to resume (Optional)
 
 #######################################
 #          DECODING SETTING           #
 #######################################
-# {{{
-# outdir: directory to save decoded wav dir (if not set, will automatically set)
-# checkpoint: full path of model to be used to decode (if not set, final model will be used)
-# config: model configuration file (if not set, will automatically set)
-# stats: statistics file (if not set, will automatically set)
-# feats: list or directory of feature files
-# n_gpus: number of gpus to decode
-# }}}
-outdir=
-checkpoint=
-config=
-stats=
-feats=
-decode_batch_size=4
+outdir=""           # directory to save decoded wav dir (Optional)
+checkpoint=""       # checkpoint path to be used for decoding (Optional)
+config=""           # model configuration path (Optional)
+stats=""            # statistics path (Optional
+feats=""            # list or directory of feature files
+decode_batch_size=4 # batch size in decoding
 
 #######################################
 #            OHTER SETTING            #
 #######################################
-download_dir=downloads
-download_url="https://drive.google.com/open?id=1NIia89CL2qqqDzNNc718wycRmI_jkLxR"
-tag=""
+download_dir=downloads # download directory to save corpus
+download_url="https://drive.google.com/open?id=1NIia89CL2qqqDzNNc718wycRmI_jkLxR" # download URL of gooogle drive
+tag="" # tag for network directory naming (Optional)
 
-# parse options
+# This enable argparse-like parsing of the above variables e.g. ./run.sh --stage 0
 . parse_options.sh || exit 1;
 
 # check feature type
@@ -127,7 +85,7 @@ if [ ${feature_type} != "world" ]; then
     exit 1;
 fi
 
-# set params
+# set directory names
 train=tr_${spk}
 eval=ev_${spk}
 
@@ -195,7 +153,7 @@ if echo ${stage} | grep -q 1; then
         # make scp files
         if [ ${highpass_cutoff} -eq 0 ];then
             cp data/${set}/wav.scp data/${set}/wav_filtered.scp
-        else
+        elif ${save_wav}; then
             find wav/${set} -name "*.wav" | sort > data/${set}/wav_filtered.scp
         fi
         find hdf5/${set} -name "*.h5" | sort > data/${set}/feats.scp
