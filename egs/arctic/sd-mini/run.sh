@@ -111,7 +111,8 @@ decode_batch_size=4
 #######################################
 #            OHTER SETTING            #
 #######################################
-ARCTIC_DB_ROOT=downloads
+download_dir=downloads
+download_url="https://drive.google.com/open?id=135WzE_4TkKC9iVz-_KQ4T6rW7B_KqOZi"
 tag=
 
 # parse options
@@ -132,25 +133,20 @@ if echo ${stage} | grep -q 0; then
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
     # download dataset
-    if [ ! -e ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/.done ];then
-        mkdir -p ${ARCTIC_DB_ROOT} && cd ${ARCTIC_DB_ROOT}
-        wget http://festvox.org/cmu_arctic/cmu_arctic/packed/cmu_us_${spk}_arctic-0.95-release.tar.bz2
-        tar xf cmu_us_${spk}*.tar.bz2
-        rm ./*.tar.bz2
-        touch cmu_us_${spk}_arctic/.done
-        cd ../
-        echo "download dataset is successfully done."
+    if [ ! -e ${download_dir}/.done ];then
+        download_from_google_drive.sh "${download_url}" ${download_dir} tar.gz
+        touch ${download_dir}/.done
     fi
     # use first 32 utterances as training data
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
+    find ${download_dir}/cmu_us_${spk}_arctic_mini/wav -name "*.wav" \
         | sort | head -n 32 > data/${train}/wav.scp
     echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
 
     # use next 4 utterances as evaluation data
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
-    find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-       | sort | head -n 36 | tail -n 4 > data/${eval}/wav.scp
+    find ${download_dir}/cmu_us_${spk}_arctic_mini/wav -name "*.wav" \
+       | sort | tail -n 4 > data/${eval}/wav.scp
     echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
