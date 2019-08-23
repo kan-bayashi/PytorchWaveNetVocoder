@@ -41,9 +41,9 @@ n_jobs=10              # number of parallel jobs
 #######################################
 #          TRAINING SETTING           #
 #######################################
-n_gpus=1                # number of gpus (default=1)
+n_gpus=1                # number of gpus
 n_quantize=256          # number of quantization of waveform
-n_aux=28                # number of auxliary features
+n_aux=28                # number of auxiliary features
 n_resch=32              # number of residual channels
 n_skipch=16             # number of skip channels
 dilation_depth=5        # dilation depth (e.g. if set 10, max dilation = 2^(10-1))
@@ -56,7 +56,7 @@ batch_length=10000      # batch length
 batch_size=1            # batch size
 checkpoint_interval=100 # save model per this number
 use_upsampling=true     # whether to use upsampling layer
-resume=""               # checkpoint paht to resume (Optional)
+resume=""               # checkpoint path to resume (Optional)
 
 #######################################
 #          DECODING SETTING           #
@@ -69,7 +69,7 @@ feats=""            # list or directory of feature files (Optional)
 decode_batch_size=4 # batch size in decoding
 
 #######################################
-#            OHTER SETTING            #
+#            OTHER SETTING            #
 #######################################
 download_dir=downloads # download directory to save corpus
 download_url="https://drive.google.com/open?id=1NIia89CL2qqqDzNNc718wycRmI_jkLxR" # download URL of gooogle drive
@@ -89,7 +89,7 @@ fi
 train=tr_${spk}
 eval=ev_${spk}
 
-# stop when error occured
+# stop when error occurred
 set -euo pipefail
 # }}}
 
