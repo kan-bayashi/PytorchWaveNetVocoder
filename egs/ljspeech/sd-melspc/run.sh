@@ -40,9 +40,9 @@ n_jobs=10              # number of parallel jobs
 #######################################
 #          TRAINING SETTING           #
 #######################################
-n_gpus=1                  # number of gpus (default=1)
+n_gpus=1                  # number of gpus
 n_quantize=256            # number of quantization of waveform
-n_aux=80                  # number of auxliary features
+n_aux=80                  # number of auxiliary features
 n_resch=512               # number of residual channels
 n_skipch=256              # number of skip channels
 dilation_depth=10         # dilation depth (e.g. if set 10, max dilation = 2^(10-1))
@@ -55,7 +55,7 @@ batch_length=15000        # batch length
 batch_size=1              # batch size
 checkpoint_interval=10000 # save model per this number
 use_upsampling=true       # whether to use upsampling layer
-resume=""                 # checkpoint paht to resume (Optional)
+resume=""                 # checkpoint path to resume (Optional)
 
 #######################################
 #          DECODING SETTING           #
@@ -68,9 +68,9 @@ feats=""             # list or directory of feature files (Optional)
 decode_batch_size=16 # batch size in decoding
 
 #######################################
-#            OHTER SETTING            #
+#            OTHER SETTING            #
 #######################################
-LJSPEECH_DB_ROOT=downloads # directory including DB (if DB not exists, it will be downloaded)
+LJSPEECH_DB_ROOT=downloads # directory including DB (if DB not exists, will be downloaded)
 tag=""                   # tag for network directory naming (Optional)
 
 # parse options
@@ -83,11 +83,11 @@ if [ ${feature_type} != "melspc" ]; then
     exit 1;
 fi
 
-# set params
+# set directory names
 train=tr
 eval=ev
 
-# stop when error occured
+# stop when error occurred
 set -euo pipfail
 # }}}
 

@@ -218,7 +218,7 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warning("logging is disabled.")
 
-    # show argmument
+    # show arguments
     for key, value in vars(args).items():
         logging.info("%s = %s" % (key, str(value)))
 

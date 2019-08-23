@@ -117,7 +117,7 @@ def train_generator(wav_list, feat_list, receptive_field,
         batch_x, batch_h, batch_t = [], [], []
         # process over all of files
         for wavfile, featfile in zip(wav_list, feat_list):
-            # load wavefrom and aux feature
+            # load waveform and aux feature
             x, fs = sf.read(wavfile, dtype=np.float32)
             h = read_hdf5(featfile, "/" + feature_type)
             if not use_upsampling_layer:
@@ -408,7 +408,7 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warning("logging is disabled.")
 
-    # show argmument
+    # show arguments
     for key, value in vars(args).items():
         logging.info("%s = %s" % (key, str(value)))
 
