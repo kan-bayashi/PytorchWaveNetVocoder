@@ -4,7 +4,7 @@
 
 This repository is the wavenet-vocoder implementation with pytorch.
 
-![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/overview.bmp)
+![](https://kan-bayashi.github.io/WaveNetVocoderSamples/images/overview.bmp)
 
 You can learn the basics of this repository within 15 minutes in Google colab!
 
@@ -73,7 +73,7 @@ You can listen to samples from [kan-bayashi/WaveNetVocoderSamples](https://kan-b
 This is the subjective evaluation results using `arctic` recipe.
 
 **Comparison between model type**
-![](https://github.com/kan-bayashi/WaveNetVocoderSamples/blob/master/figure/mos.bmp)
+![](https://kan-bayashi.github.io/WaveNetVocoderSamples/images/mos.bmp)
 
 **Effect of the amount of training data**
 ![](https://kan-bayashi.github.io/WaveNetVocoderSamples/images/mos_num_train.bmp)
