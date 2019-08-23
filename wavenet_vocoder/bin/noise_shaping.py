@@ -149,7 +149,7 @@ def main():
                             datefmt='%m/%d/%Y %I:%M:%S')
         logging.warning("logging is disabled.")
 
-    # show argmument
+    # show arguments
     for key, value in vars(args).items():
         logging.info("%s = %s" % (key, str(value)))
 
@@ -164,7 +164,7 @@ def main():
     if not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
 
-    # divie list
+    # divide list
     file_lists = np.array_split(file_list, args.n_jobs)
     file_lists = [f_list.tolist() for f_list in file_lists]
 
