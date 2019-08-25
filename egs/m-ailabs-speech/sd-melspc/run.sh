@@ -107,28 +107,29 @@ if echo ${stage} | grep -q 0; then
         rm ./*.tgz
         cd ../
     fi
+    [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     if [ ${spk} = "elizabeth" ]; then
         find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep -v "wives_and_daughters_60_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep "wives_and_daughters_60_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "wives_and_daughters_60_" data/local/wav.scp > data/${train}/wav.scp
+        grep "wives_and_daughters_60_" data/local/wav.scp > data/${eval}/wav.scp
     elif [ ${spk} = "judy" ]; then
         find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
-           | sort | grep -v "the_sea_faries_22_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
-           | sort | grep "the_sea_faries_22_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "the_sea_faries_22_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "the_sea_faries_22_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     elif [ ${spk} = "mary" ]; then
         find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
-           | sort | grep -v "northandsouth_52_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
-           | sort | grep "northandsouth_52_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "northandsouth_52_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "northandsouth_52_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     elif [ ${spk} = "elliot" ]; then
         find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
-           | sort | grep -v "silent_bullet_13_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
-           | sort | grep "silent_bullet_13_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "silent_bullet_13_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "silent_bullet_13_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     else
         echo "ERROR: spk should be selected from elizabeth, judy, mary, and elliot"
         exit 1

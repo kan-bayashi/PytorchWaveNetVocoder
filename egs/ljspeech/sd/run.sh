@@ -106,12 +106,13 @@ if echo ${stage} | grep -q 0; then
         rm ./*.tar.bz2
         cd ../
     fi
+    [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
-        | sort | grep -v LJ050 > data/${train}/wav.scp
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
-       | sort | grep LJ050 > data/${eval}/wav.scp
+        | sort > data/local/wav.scp
+    grep -v LJ050 data/local/wav.scp > data/${train}/wav.scp
+    grep LJ050 data/local/wav.scp > data/${eval}/wav.scp
 fi
 # }}}
 

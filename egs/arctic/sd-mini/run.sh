@@ -104,16 +104,22 @@ if echo ${stage} | grep -q 0; then
         download_from_google_drive.sh "${download_url}" ${download_dir} tar.gz
         touch ${download_dir}/.done
     fi
-    # use first 32 utterances as training data
+
+    # directory check
+    [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${download_dir}/cmu_us_${spk}_arctic_mini/wav -name "*.wav" \
-        | sort | head -n 32 > data/${train}/wav.scp
+    [ ! -e data/${eval} ] && mkdir -p data/${eval}
+
+    # make list of all of the utterances
+    find "${download_dir}/cmu_us_${spk}_arctic_mini/wav" -name "*.wav" \
+        | sort > "data/local/wav.${spk}.scp"
+
+    # use first 32 utterances as training data
+    head -n 32 "data/local/wav.${spk}.scp" > data/${train}/wav.scp
     echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
 
     # use next 4 utterances as evaluation data
-    [ ! -e data/${eval} ] && mkdir -p data/${eval}
-    find ${download_dir}/cmu_us_${spk}_arctic_mini/wav -name "*.wav" \
-       | sort | tail -n 4 > data/${eval}/wav.scp
+    tail -n 4 "data/local/wav.${spk}.scp" > data/${eval}/wav.scp
     echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
