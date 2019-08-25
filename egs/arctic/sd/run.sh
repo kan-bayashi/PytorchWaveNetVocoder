@@ -99,7 +99,7 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${ARCTIC_DB_ROOT} ];then
+    if [ ! -e ${ARCTIC_DB_ROOT}/.done ];then
         mkdir -p ${ARCTIC_DB_ROOT}
         cd ${ARCTIC_DB_ROOT}
         for id in bdl slt rms clb jmk ksp awb;do
@@ -108,6 +108,7 @@ if echo ${stage} | grep -q 0; then
         done
         rm ./*.tar.bz2
         cd ../
+        touch ${ARCTIC_DB_ROOT}/.done
         echo "database is successfully downloaded."
     fi
     [ ! -e data/local ] && mkdir -p data/local

@@ -98,13 +98,14 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${LJSPEECH_DB_ROOT} ];then
+    if [ ! -e ${LJSPEECH_DB_ROOT}/.done ];then
         mkdir -p ${LJSPEECH_DB_ROOT}
         cd ${LJSPEECH_DB_ROOT}
         wget http://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
         tar -vxf ./*.tar.bz2
         rm ./*.tar.bz2
         cd ../
+        touch ${LJSPEECH_DB_ROOT}/.done
         echo "database is successfully downloaded."
     fi
     [ ! -e data/local ] && mkdir -p data/local
