@@ -345,6 +345,7 @@ if echo ${stage} | grep -q 4 ; then
         waveforms=data/${train}/wav_filtered.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
+    [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
     [ ! -e ${expdir}/stats.h5 ] && cp -v data/${train}/stats.h5 ${expdir}
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \
@@ -383,6 +384,7 @@ fi
 if echo ${stage} | grep -q 5 ; then
     echo "###########################################################"
     echo "#               WAVENET DECODING STEP                     #"
+    echo "###########################################################"
     [ ! -e exp/decoding ] && mkdir -p exp/decoding
     nj=0
     for spk in "${eval_spks[@]}";do
