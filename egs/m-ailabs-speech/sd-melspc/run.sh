@@ -103,7 +103,8 @@ if echo ${stage} | grep -q 0; then
         cd ${DB_ROOT}
         wget http://www.caito.de/data/Training/stt_tts/en_US.tgz
         wget http://www.caito.de/data/Training/stt_tts/en_UK.tgz
-        tar xzvf ./*.tgz
+        tar xzvf en_US.tgz
+        tar xzvf en_UK.tgz
         rm ./*.tgz
         cd ../
         touch ${DB_ROOT}/.done
