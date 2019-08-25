@@ -89,7 +89,7 @@ train=tr_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 eval=ev_wo_"$(IFS=_; echo "${eval_spks[*]}")"
 
 # stop when error occurred
-set -euo pipfail
+set -euo pipefail
 # }}}
 
 
