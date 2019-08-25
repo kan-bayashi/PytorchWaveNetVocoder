@@ -2,7 +2,7 @@
 
 This is the outline of recipes.
 
-If you want to try it ASAP, you can learn the basics of this repository within 15 minutes in Google colab!
+If you want to try it in online, you can learn the basics of this repository within 15 minutes in Google colab!
 
 [Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
 
@@ -109,7 +109,7 @@ option gpu=* -p <your_partion_name> --gres=gpu:$0 --time 10-00:00:00
 $ ./run.sh
 ```
 
-Finally, you can get the generated wav files in `exp/train_*/wav_restored`.
+If you want to know more info about `run.pl` and `slurm.pl`, see [https://kaldi-asr.org/doc/queue.html](https://kaldi-asr.org/doc/queue.html).
 
 ## Use pre-trained model to decode your own data
 

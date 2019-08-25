@@ -117,8 +117,8 @@ if echo ${stage} | grep -q 0; then
     if [ ${spk} = "elizabeth" ]; then
         find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
            | sort > data/local/wav.${spk}.scp
-        grep -v "wives_and_daughters_60_" data/local/wav.scp > data/${train}/wav.scp
-        grep "wives_and_daughters_60_" data/local/wav.scp > data/${eval}/wav.scp
+        grep -v "wives_and_daughters_60_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "wives_and_daughters_60_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     elif [ ${spk} = "judy" ]; then
         find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
            | sort > data/local/wav.${spk}.scp
