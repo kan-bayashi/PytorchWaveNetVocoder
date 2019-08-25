@@ -25,18 +25,18 @@ stage=0123456
 #######################################
 #          FEATURE SETTING            #
 #######################################
-feature_type=melspc            # world or melspc (in this recipe fixed to "melspc")
-spk=elizabeth # judy (F) or mary (F) or elliot (M) or elizabeth (F)
-shiftms=5                      # shift length in msec
-fftl=1024                      # fft length
-highpass_cutoff=70             # highpass filter cutoff frequency (if 0, will not apply)
-fs=16000                       # sampling rate
-mspc_dim=80                    # dimension of mel-spectrogram
-mcep_dim=25                    # dimension of mel-cepstrum
-mcep_alpha=0.410               # alpha value of mel-cepstrum
-use_noise_shaping=true         # whether to use noise shaping
-mag=0.5                        # strength of noise shaping (0.0 < mag <= 1.0)
-n_jobs=10                      # number of parallel jobs
+feature_type=melspc    # world or melspc (in this recipe fixed to "melspc")
+spk=elizabeth          # judy (F) or mary (F) or elliot (M) or elizabeth (F)
+shiftms=5              # shift length in msec
+fftl=1024              # fft length
+highpass_cutoff=70     # highpass filter cutoff frequency (if 0, will not apply)
+fs=16000               # sampling rate
+mspc_dim=80            # dimension of mel-spectrogram
+mcep_dim=25            # dimension of mel-cepstrum
+mcep_alpha=0.410       # alpha value of mel-cepstrum
+use_noise_shaping=true # whether to use noise shaping
+mag=0.5                # strength of noise shaping (0.0 < mag <= 1.0)
+n_jobs=10              # number of parallel jobs
 
 #######################################
 #          TRAINING SETTING           #
