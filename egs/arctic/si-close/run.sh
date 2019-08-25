@@ -109,16 +109,18 @@ if echo ${stage} | grep -q 0 ;then
         rm ./*.tar.bz2
         cd ../
     fi
+    [ ! -e "data/local" ] && mkdir -p "data/local"
     [ ! -e "data/${train}" ] && mkdir -p "data/${train}"
     [ ! -e "data/${eval}" ] && mkdir -p "data/${eval}"
     [ -e "data/${train}/wav.scp" ] && rm "data/${train}/wav.scp"
     [ -e "data/${eval}/wav.scp" ] && rm "data/${eval}/wav.scp"
     for spk in "${spks[@]}";do
-        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-            | sort | head -n 1028 >> "data/${train}/wav.scp"
-        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-           | sort | tail -n 104 >> "data/${eval}/wav.scp"
+        find "${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav" -name "*.wav" \
+            | sort > "data/local/wav.${spk}.scp"
+        head -n 1028 "data/local/wav.${spk}.scp" >> "data/${train}/wav.scp"
+        tail -n 104 "data/local/wav.${spk}.scp" >> "data/${eval}/wav.scp"
     done
+    [ -e "data/local" ] && rm -r "data/local"
 fi
 # }}}
 
