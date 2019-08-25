@@ -109,6 +109,7 @@ if echo ${stage} | grep -q 0; then
         done
         rm ./*.tar.bz2
         cd ../
+        echo "database is successfully downloaded."
     fi
     [ ! -e "data/local" ] && mkdir -p "data/local"
     [ ! -e "data/${train}" ] && mkdir -p "data/${train}"
@@ -125,6 +126,8 @@ if echo ${stage} | grep -q 0; then
             | sort > "data/local/wav.${spk}.scp"
         tail -n 104 "data/local/wav.${spk}.scp" >> "data/${eval}/wav.scp"
     done
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 

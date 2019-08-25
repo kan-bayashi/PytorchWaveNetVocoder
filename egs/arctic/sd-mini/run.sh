@@ -103,6 +103,7 @@ if echo ${stage} | grep -q 0; then
     if [ ! -e ${download_dir}/.done ];then
         download_from_google_drive.sh "${download_url}" ${download_dir} tar.gz
         touch ${download_dir}/.done
+        echo "database is successfully downloaded."
     fi
 
     # directory check

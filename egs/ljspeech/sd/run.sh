@@ -105,6 +105,7 @@ if echo ${stage} | grep -q 0; then
         tar -vxf ./*.tar.bz2
         rm ./*.tar.bz2
         cd ../
+        echo "database is successfully downloaded."
     fi
     [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
@@ -113,6 +114,8 @@ if echo ${stage} | grep -q 0; then
         | sort > data/local/wav.scp
     grep -v LJ050 data/local/wav.scp > data/${train}/wav.scp
     grep LJ050 data/local/wav.scp > data/${eval}/wav.scp
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 
