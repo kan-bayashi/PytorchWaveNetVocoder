@@ -89,7 +89,7 @@ train=tr
 eval=ev
 
 # stop when error occurred
-set -euo pipfail
+set -euo pipefail
 # }}}
 
 
