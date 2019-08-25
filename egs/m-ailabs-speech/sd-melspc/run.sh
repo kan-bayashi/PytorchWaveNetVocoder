@@ -25,18 +25,18 @@ stage=0123456
 #######################################
 #          FEATURE SETTING            #
 #######################################
-feature_type=melspc            # world or melspc (in this recipe fixed to "melspc")
-spk=elizabeth # judy (F) or mary (F) or elliot (M) or elizabeth (F)
-shiftms=5                      # shift length in msec
-fftl=1024                      # fft length
-highpass_cutoff=70             # highpass filter cutoff frequency (if 0, will not apply)
-fs=16000                       # sampling rate
-mspc_dim=80                    # dimension of mel-spectrogram
-mcep_dim=25                    # dimension of mel-cepstrum
-mcep_alpha=0.410               # alpha value of mel-cepstrum
-use_noise_shaping=true         # whether to use noise shaping
-mag=0.5                        # strength of noise shaping (0.0 < mag <= 1.0)
-n_jobs=10                      # number of parallel jobs
+feature_type=melspc    # world or melspc (in this recipe fixed to "melspc")
+spk=elizabeth          # judy (F) or mary (F) or elliot (M) or elizabeth (F)
+shiftms=5              # shift length in msec
+fftl=1024              # fft length
+highpass_cutoff=70     # highpass filter cutoff frequency (if 0, will not apply)
+fs=16000               # sampling rate
+mspc_dim=80            # dimension of mel-spectrogram
+mcep_dim=25            # dimension of mel-cepstrum
+mcep_alpha=0.410       # alpha value of mel-cepstrum
+use_noise_shaping=true # whether to use noise shaping
+mag=0.5                # strength of noise shaping (0.0 < mag <= 1.0)
+n_jobs=10              # number of parallel jobs
 
 #######################################
 #          TRAINING SETTING           #
@@ -98,41 +98,46 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${DB_ROOT} ];then
+    if [ ! -e ${DB_ROOT}/.done ];then
         mkdir -p ${DB_ROOT}
         cd ${DB_ROOT}
-        wget -O en_US.tgz http://www.m-ailabs.bayern/?ddownload=411
-        wget -O en_UK.tgz http://www.m-ailabs.bayern/?ddownload=412
+        wget http://www.caito.de/data/Training/stt_tts/en_US.tgz
+        wget http://www.caito.de/data/Training/stt_tts/en_UK.tgz
         tar xzvf ./*.tgz
         rm ./*.tgz
         cd ../
+        touch ${DB_ROOT}/.done
+        echo "database is successfully downloaded."
     fi
+    [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     if [ ${spk} = "elizabeth" ]; then
         find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep -v "wives_and_daughters_60_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_UK/by_book/female/elizabeth_klett -name "*.wav" \
-           | sort | grep "wives_and_daughters_60_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "wives_and_daughters_60_" data/local/wav.scp > data/${train}/wav.scp
+        grep "wives_and_daughters_60_" data/local/wav.scp > data/${eval}/wav.scp
     elif [ ${spk} = "judy" ]; then
         find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
-           | sort | grep -v "the_sea_faries_22_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/female/judy_bieber -name "*.wav" \
-           | sort | grep "the_sea_faries_22_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "the_sea_faries_22_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "the_sea_faries_22_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     elif [ ${spk} = "mary" ]; then
         find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
-           | sort | grep -v "northandsouth_52_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/female/mary_ann -name "*.wav" \
-           | sort | grep "northandsouth_52_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "northandsouth_52_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "northandsouth_52_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     elif [ ${spk} = "elliot" ]; then
         find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
-           | sort | grep -v "silent_bullet_13_" > data/${train}/wav.scp
-        find ${DB_ROOT}/en_US/by_book/male/elliot_miller -name "*.wav" \
-           | sort | grep "silent_bullet_13_" > data/${eval}/wav.scp
+           | sort > data/local/wav.${spk}.scp
+        grep -v "silent_bullet_13_" data/local/wav.${spk}.scp > data/${train}/wav.scp
+        grep "silent_bullet_13_" data/local/wav.${spk}.scp > data/${eval}/wav.scp
     else
         echo "ERROR: spk should be selected from elizabeth, judy, mary, and elliot"
         exit 1
     fi
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 
@@ -266,6 +271,7 @@ if echo ${stage} | grep -q 4; then
         waveforms=data/${train}/wav_filtered.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
+    [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
     [ ! -e ${expdir}/stats.h5 ] && cp -v data/${train}/stats.h5 ${expdir}
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \

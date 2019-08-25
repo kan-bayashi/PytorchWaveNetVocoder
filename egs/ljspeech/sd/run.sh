@@ -98,20 +98,25 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${LJSPEECH_DB_ROOT} ];then
+    if [ ! -e ${LJSPEECH_DB_ROOT}/.done ];then
         mkdir -p ${LJSPEECH_DB_ROOT}
         cd ${LJSPEECH_DB_ROOT}
         wget http://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
         tar -vxf ./*.tar.bz2
         rm ./*.tar.bz2
         cd ../
+        touch ${LJSPEECH_DB_ROOT}/.done
+        echo "database is successfully downloaded."
     fi
+    [ ! -e data/local ] && mkdir -p data/local
     [ ! -e data/${train} ] && mkdir -p data/${train}
-    find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
-        | sort | grep -v LJ050 > data/${train}/wav.scp
     [ ! -e data/${eval} ] && mkdir -p data/${eval}
     find ${LJSPEECH_DB_ROOT}/LJSpeech-1.1/wavs -name "*.wav" \
-       | sort | grep LJ050 > data/${eval}/wav.scp
+        | sort > data/local/wav.scp
+    grep -v LJ050 data/local/wav.scp > data/${train}/wav.scp
+    grep LJ050 data/local/wav.scp > data/${eval}/wav.scp
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 
@@ -224,6 +229,7 @@ if echo ${stage} | grep -q 4; then
         waveforms=data/${train}/wav_filtered.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
+    [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
     [ ! -e ${expdir}/stats.h5 ] && cp -v data/${train}/stats.h5 ${expdir}
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/${train}.log" \
         train.py \

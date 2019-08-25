@@ -99,7 +99,7 @@ if echo ${stage} | grep -q 0 ;then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${ARCTIC_DB_ROOT} ];then
+    if [ ! -e ${ARCTIC_DB_ROOT}/.done ];then
         mkdir -p ${ARCTIC_DB_ROOT}
         cd ${ARCTIC_DB_ROOT}
         for id in bdl slt rms clb jmk ksp awb;do
@@ -108,17 +108,22 @@ if echo ${stage} | grep -q 0 ;then
         done
         rm ./*.tar.bz2
         cd ../
+        touch ${ARCTIC_DB_ROOT}/.done
+        echo "database is successfully downloaded."
     fi
+    [ ! -e "data/local" ] && mkdir -p "data/local"
     [ ! -e "data/${train}" ] && mkdir -p "data/${train}"
     [ ! -e "data/${eval}" ] && mkdir -p "data/${eval}"
     [ -e "data/${train}/wav.scp" ] && rm "data/${train}/wav.scp"
     [ -e "data/${eval}/wav.scp" ] && rm "data/${eval}/wav.scp"
     for spk in "${spks[@]}";do
-        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-            | sort | head -n 1028 >> "data/${train}/wav.scp"
-        find ${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav -name "*.wav" \
-           | sort | tail -n 104 >> "data/${eval}/wav.scp"
+        find "${ARCTIC_DB_ROOT}/cmu_us_${spk}_arctic/wav" -name "*.wav" \
+            | sort > "data/local/wav.${spk}.scp"
+        head -n 1028 "data/local/wav.${spk}.scp" >> "data/${train}/wav.scp"
+        tail -n 104 "data/local/wav.${spk}.scp" >> "data/${eval}/wav.scp"
     done
+    echo "making wav list for training is successfully done. (#training = $(wc -l < data/${train}/wav.scp))"
+    echo "making wav list for evaluation is successfully done. (#evaluation = $(wc -l < data/${eval}/wav.scp))"
 fi
 # }}}
 
@@ -271,6 +276,7 @@ if echo ${stage} | grep -q 4 ;then
         waveforms=data/${train}/wav_filtered.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
+    [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
     [ ! -e ${expdir}/stats.h5 ] && cp -v data/${train}/stats.h5 ${expdir}
     ${cuda_cmd} --gpu ${n_gpus} "${expdir}/log/train_${train}.log" \
         train.py \
