@@ -98,14 +98,15 @@ if echo ${stage} | grep -q 0; then
     echo "###########################################################"
     echo "#                 DATA PREPARATION STEP                   #"
     echo "###########################################################"
-    if [ ! -e ${DB_ROOT} ];then
+    if [ ! -e ${DB_ROOT}/.done ];then
         mkdir -p ${DB_ROOT}
         cd ${DB_ROOT}
-        wget -O en_US.tgz http://www.m-ailabs.bayern/?ddownload=411
-        wget -O en_UK.tgz http://www.m-ailabs.bayern/?ddownload=412
+        wget http://www.caito.de/data/Training/stt_tts/en_US.tgz
+        wget http://www.caito.de/data/Training/stt_tts/en_UK.tgz
         tar xzvf ./*.tgz
         rm ./*.tgz
         cd ../
+        touch ${DB_ROOT}/.done
         echo "database is successfully downloaded."
     fi
     [ ! -e data/local ] && mkdir -p data/local
