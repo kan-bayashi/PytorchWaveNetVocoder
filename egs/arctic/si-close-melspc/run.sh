@@ -119,7 +119,6 @@ if echo ${stage} | grep -q 0 ;then
         head -n 1028 "data/local/wav.${spk}.scp" >> "data/${train}/wav.scp"
         tail -n 104 "data/local/wav.${spk}.scp" >> "data/${eval}/wav.scp"
     done
-    [ -e "data/local" ] && rm -r "data/local"
 fi
 # }}}
 

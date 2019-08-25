@@ -125,7 +125,6 @@ if echo ${stage} | grep -q 0; then
             | sort > "data/local/wav.${spk}.scp"
         tail -n 104 "data/local/wav.${spk}.scp" >> "data/${eval}/wav.scp"
     done
-    [ -e "data/local" ] && rm -r "data/local"
 fi
 # }}}
 
