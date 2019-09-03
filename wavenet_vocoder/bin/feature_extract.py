@@ -350,7 +350,7 @@ def main():
     logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
-    if not os.path.exists(args.wavdir) and args.highpass_cutoff != 0:
+    if not os.path.exists(args.wavdir) and args.highpass_cutoff != 0 and args.save_wav:
         os.makedirs(args.wavdir)
     if not os.path.exists(args.hdf5dir):
         os.makedirs(args.hdf5dir)
