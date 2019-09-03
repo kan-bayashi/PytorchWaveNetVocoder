@@ -17,10 +17,10 @@ stage=0123456
 # 0: data preparation step
 # 1: feature extraction step
 # 2: statistics calculation step
-# 3: noise shaping step
+# 3: noise weighting step
 # 4: training step
 # 5: decoding step
-# 6: restoring noise shaping step
+# 6: noise shaping step
 
 #######################################
 #          FEATURE SETTING            #
@@ -145,7 +145,7 @@ if echo ${stage} | grep -q 1 ;then
                 "exp/feature_extract/feature_extract_${feature_type}_${set}.${spk}.log" \
                 feature_extract.py \
                     --waveforms "${scp}" \
-                    --wavdir "wav/${set}/${spk}" \
+                    --wavdir "wav_hpf/${set}/${spk}" \
                     --hdf5dir "hdf5/${set}/${spk}" \
                     --feature_type ${feature_type} \
                     --fs ${fs} \
@@ -173,7 +173,7 @@ if echo ${stage} | grep -q 1 ;then
                     "exp/feature_extract/feature_extract_mcep_${set}.${spk}.log" \
                     feature_extract.py \
                         --waveforms "${scp}" \
-                        --wavdir "wav/${set}/${spk}" \
+                        --wavdir "wav_hpf/${set}/${spk}" \
                         --hdf5dir "hdf5/${set}/${spk}" \
                         --feature_type mcep \
                         --fs ${fs} \
@@ -202,9 +202,9 @@ if echo ${stage} | grep -q 1 ;then
 
         # make scp files
         if [ ${highpass_cutoff} -eq 0 ];then
-            cp "data/${set}/wav.scp" "data/${set}/wav_filtered.scp"
+            cp "data/${set}/wav.scp" "data/${set}/wav_hpf.scp"
         else
-            find "wav/${set}" -name "*.wav" | sort > "data/${set}/wav_filtered.scp"
+            find "wav_hpf/${set}" -name "*.wav" | sort > "data/${set}/wav_hpf.scp"
         fi
         find "hdf5/${set}" -name "*.h5" | sort > "data/${set}/feats.scp"
     done
@@ -237,14 +237,14 @@ fi
 # STAGE 3 {{{
 if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
     echo "###########################################################"
-    echo "#                   NOISE SHAPING STEP                    #"
+    echo "#                  NOISE WEIGHTING STEP                   #"
     echo "###########################################################"
     nj=0
     [ ! -e exp/noise_shaping ] && mkdir -p exp/noise_shaping
     for spk in "${spks[@]}";do
         # make scp of each speaker
-        scp=exp/noise_shaping/wav_filtered.${spk}.scp
-        grep "\/${spk}\/" "data/${train}/wav_filtered.scp" > ${scp}
+        scp=exp/noise_shaping/wav_hpf.${spk}.scp
+        grep "\/${spk}\/" "data/${train}/wav_hpf.scp" > ${scp}
 
         # apply noise shaping
         ${train_cmd} --num-threads ${n_jobs} \
@@ -252,7 +252,7 @@ if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
             noise_shaping.py \
                 --waveforms ${scp} \
                 --stats "data/${train}/stats.h5" \
-                --outdir "wav_ns/${train}/${spk}" \
+                --outdir "wav_nwf/${train}/${spk}" \
                 --feature_type mcep \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
@@ -273,12 +273,12 @@ if echo ${stage} | grep -q 3  && ${use_noise_shaping};then
     wait
 
     # check the number of feature files
-    n_wavs=$(wc -l "data/${train}/wav_filtered.scp")
-    n_ns=$(find "wav_ns/${train}" -name "*.wav" | wc -l)
+    n_wavs=$(wc -l "data/${train}/wav_hpf.scp")
+    n_ns=$(find "wav_nwf/${train}" -name "*.wav" | wc -l)
     echo "${n_ns}/${n_wavs} files are successfully processed."
 
     # make scp files
-    find "wav_ns/${train}" -name "*.wav" | sort > "data/${train}/wav_ns.scp"
+    find "wav_nwf/${train}" -name "*.wav" | sort > "data/${train}/wav_nwf.scp"
 fi
 # }}}
 
@@ -301,9 +301,9 @@ if echo ${stage} | grep -q 4 ;then
     echo "#               WAVENET TRAINING STEP                     #"
     echo "###########################################################"
     if ${use_noise_shaping};then
-        waveforms=data/${train}/wav_ns.scp
+        waveforms=data/${train}/wav_nwf.scp
     else
-        waveforms=data/${train}/wav_filtered.scp
+        waveforms=data/${train}/wav_hpf.scp
     fi
     upsampling_factor=$(echo "${shiftms} * ${fs} / 1000" | bc)
     [ ! -e ${expdir}/log ] && mkdir -p ${expdir}/log
@@ -380,7 +380,7 @@ fi
 # STAGE 6 {{{
 if echo ${stage} | grep -q 6  && ${use_noise_shaping};then
     echo "###########################################################"
-    echo "#             RESTORE NOISE SHAPING STEP                  #"
+    echo "#                  NOISE SHAPING STEP                     #"
     echo "###########################################################"
     nj=0
     for spk in "${spks[@]}";do
@@ -394,7 +394,7 @@ if echo ${stage} | grep -q 6  && ${use_noise_shaping};then
             noise_shaping.py \
                 --waveforms ${scp} \
                 --stats ${stats} \
-                --outdir "${outdir}_restored/${spk}" \
+                --outdir "${outdir}_nsf/${spk}" \
                 --feature_type mcep \
                 --fs ${fs} \
                 --shiftms ${shiftms} \
