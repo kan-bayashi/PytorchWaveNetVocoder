@@ -77,7 +77,7 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
     return lpf_x
 
 
-def convert_continuos_f0(f0):
+def convert_to_continuos_f0(f0):
     """CONVERT F0 TO CONTINUOUS F0.
 
     Args:
@@ -177,7 +177,7 @@ def world_feature_extract(wav_list, args):
 
         # extract features
         f0, _, _ = feature_extractor.analyze(x)
-        uv, cont_f0 = convert_continuos_f0(f0)
+        uv, cont_f0 = convert_to_continuos_f0(f0)
         cont_f0_lpf = low_pass_filter(cont_f0, int(1.0 / (args.shiftms * 0.001)), cutoff=20)
         codeap = feature_extractor.codeap()
         mcep = feature_extractor.mcep(dim=args.mcep_dim, alpha=args.mcep_alpha)
@@ -350,7 +350,7 @@ def main():
     logging.info("number of utterances = %d" % len(file_list))
 
     # check directory existence
-    if not os.path.exists(args.wavdir) and args.highpass_cutoff != 0:
+    if not os.path.exists(args.wavdir) and args.highpass_cutoff != 0 and args.save_wav:
         os.makedirs(args.wavdir)
     if not os.path.exists(args.hdf5dir):
         os.makedirs(args.hdf5dir)
