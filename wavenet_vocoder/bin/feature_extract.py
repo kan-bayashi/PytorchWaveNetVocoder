@@ -77,7 +77,7 @@ def low_pass_filter(x, fs, cutoff=70, padding=True):
     return lpf_x
 
 
-def convert_continuos_f0(f0):
+def convert_to_continuos_f0(f0):
     """CONVERT F0 TO CONTINUOUS F0.
 
     Args:
@@ -177,7 +177,7 @@ def world_feature_extract(wav_list, args):
 
         # extract features
         f0, _, _ = feature_extractor.analyze(x)
-        uv, cont_f0 = convert_continuos_f0(f0)
+        uv, cont_f0 = convert_to_continuos_f0(f0)
         cont_f0_lpf = low_pass_filter(cont_f0, int(1.0 / (args.shiftms * 0.001)), cutoff=20)
         codeap = feature_extractor.codeap()
         mcep = feature_extractor.mcep(dim=args.mcep_dim, alpha=args.mcep_alpha)
