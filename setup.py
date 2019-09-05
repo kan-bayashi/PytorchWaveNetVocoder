@@ -55,7 +55,7 @@ setup(name="wavenet_vocoder",
       long_description=open(os.path.join(dirname, "README.md"),
                             encoding="utf-8").read(),
       license="Apache Software License",
-      packages=find_packages(include=["wavenet_vocoder/*.py"], exclude=["*.pl", "*.sh"]),
+      packages=find_packages(exclude=["*.pl", "*.sh", "egs", "test", "tools"]),
       # "scripts" is inconvenient for developping because they are copied
       # scripts=get_all_scripts("wavenet_vocoder/bin"),
       install_requires=install_requires,
