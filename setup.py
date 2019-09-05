@@ -47,7 +47,7 @@ extras_require = {k: v for k, v in requirements.items()
 
 dirname = os.path.dirname(__file__)
 setup(name="wavenet_vocoder",
-      version="0.1.0",
+      version="0.1.1",
       url="http://github.com/kan-bayashi/PytorchWaveNetVocoder",
       author="Tomoki Hayashi",
       author_email="hayashi.tomoki@g.sp.m.is.nagoya-u.ac.jp",
@@ -55,9 +55,7 @@ setup(name="wavenet_vocoder",
       long_description=open(os.path.join(dirname, "README.md"),
                             encoding="utf-8").read(),
       license="Apache Software License",
-      packages=find_packages(include=["wavenet_vocoder*"], exclude=["*.pl", "*.sh"]),
-      # "scripts" is inconvenient for developping because they are copied
-      # scripts=get_all_scripts("wavenet_vocoder/bin"),
+      packages=find_packages(include="wavenet_vocoder*"),
       install_requires=install_requires,
       setup_requires=setup_requires,
       tests_require=tests_require,
