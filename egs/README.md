@@ -3,6 +3,7 @@
 Here we introcude the outline of recipes.
 
 If you want to learn step-by-step, you can try the demo recipe in Google colab!
+
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kan-bayashi/INTERSPEECH19_TUTORIAL/blob/master/notebooks/wavenet_vocoder/wavenet_vocoder.ipynb)
 
 ## Supported database
