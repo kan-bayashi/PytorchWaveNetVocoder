@@ -1,13 +1,9 @@
 # Outline of recipes
 
-This is the outline of recipes.
+Here we introcude the outline of recipes.
 
-If you want to try it in online, you can learn the basics of this repository within 15 minutes in Google colab!
-
-[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
-
-Please access the above URL and click the `Open in Colab` button. Enjoy!
-
+If you want to learn step-by-step, you can try the demo recipe in Google colab!
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kan-bayashi/INTERSPEECH19_TUTORIAL/blob/master/notebooks/wavenet_vocoder/wavenet_vocoder.ipynb)
 
 ## Supported database
 
