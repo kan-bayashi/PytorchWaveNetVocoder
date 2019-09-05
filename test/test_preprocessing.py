@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Copyright 2017 Tomoki Hayashi (Nagoya University)
@@ -37,7 +36,7 @@ def make_args(**kwargs):
     defaults = dict(
         hdf5dir="tmp/hdf5",
         wavdir="tmp/wav_filtered",
-        outdir="tmp/wav_ns",
+        outdir="tmp/wav_nwf",
         stats="tmp/stats.h5",
         feature_type="world",
         fs=16000,
