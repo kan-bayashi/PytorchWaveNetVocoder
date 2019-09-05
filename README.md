@@ -6,11 +6,9 @@ This repository is the wavenet-vocoder implementation with pytorch.
 
 ![](https://kan-bayashi.github.io/WaveNetVocoderSamples/images/overview.bmp)
 
-You can learn the basics of this repository within 15 minutes in Google colab!
+You can try the demo recipe in Google colab from now!
 
-[Demonstration of WaveNet vocoder recipe](https://gist.github.com/kan-bayashi/a248c257a3b0c623fb6da783f25646ba)
-
-Please access the above URL and click the `Open in Colab` button. Enjoy!
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kan-bayashi/INTERSPEECH19_TUTORIAL/blob/master/notebooks/wavenet_vocoder/wavenet_vocoder.ipynb)
 
 ## Key features
 
