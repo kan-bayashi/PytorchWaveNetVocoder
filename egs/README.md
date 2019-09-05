@@ -167,7 +167,7 @@ $ decode.py \
 # make filelist of generated wav file
 $ find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
 
-# perfrom noise shaping
+# perform noise shaping
 $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
