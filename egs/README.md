@@ -49,10 +49,10 @@ Please access the above URL and click the `Open in Colab` button. Enjoy!
 0. data preparation (`stage 0`)
 1. auxiliary feature extraction (`stage 1`)
 2. statistics calculation (`stage 2`)
-3. noise shaping (`stage 3`)
+3. noise weighting (`stage 3`)
 4. WaveNet training (`stage 4`)
 5. WaveNet decoding (`stage 5`)
-6. restoring noise shaping (`stage 6`)
+6. noise shaping (`stage 6`)
 
 ## How-to-run
 
@@ -170,11 +170,11 @@ $ decode.py \
 # make filelist of generated wav file
 $ find si-close_lr1e-4_wd0_bs20k_ns_up/wav -name "*.wav" > wav_generated.scp
 
-# restore noise shaping
+# perfrom noise shaping
 $ noise_shaping.py \
     --waveforms wav_generated.scp \
     --stats si-close_lr1e-4_wd0_bs20k_ns_up/stats.h5 \
-    --outdir si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored \
+    --outdir si-close_lr1e-4_wd0_bs20k_ns_up/wav_nsf \
     --feature_type world \
     --fs 16000 \
     --shiftms 5 \
@@ -186,7 +186,7 @@ $ noise_shaping.py \
     --n_jobs 1
 ```
 
-Finally, you can hear the generated wav files in `si-close_lr1e-4_wd0_bs20k_ns_up/wav_restored`.
+Finally, you can hear the generated wav files in `si-close_lr1e-4_wd0_bs20k_ns_up/wav_nsf`.
 
 ## Author
 
