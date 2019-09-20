@@ -209,7 +209,7 @@ if echo ${stage} | grep -q 1; then
     if [ ${highpass_cutoff} -eq 0 ];then
         cp "data/${train}/wav.scp" "data/${train}/wav_hpf.scp"
     else
-        find "wav/${train}" -name "*.wav" | sort > "data/${train}/wav_hpf.scp"
+        find "wav_hpf/${train}" -name "*.wav" | sort > "data/${train}/wav_hpf.scp"
     fi
     find "hdf5/${train}" -name "*.h5" | sort > "data/${train}/feats.scp"
 
@@ -253,7 +253,7 @@ if echo ${stage} | grep -q 1; then
     if [ ${highpass_cutoff} -eq 0 ];then
         cp "data/${eval}/wav.scp" "data/${eval}/wav_hpf.scp"
     else
-        find "wav/${eval}" -name "*.wav" | sort > "data/${eval}/wav_hpf.scp"
+        find "wav_hpf/${eval}" -name "*.wav" | sort > "data/${eval}/wav_hpf.scp"
     fi
     find "hdf5/${eval}" -name "*.h5" | sort > "data/${eval}/feats.scp"
 fi
