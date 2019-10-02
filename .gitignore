@@ -9,6 +9,8 @@ egs/*/*/data/
 egs/*/*/exp/
 egs/*/*/wav/
 egs/*/*/wav_ns/
+egs/*/*/wav_hpf/
+egs/*/*/wav_nwf/
 egs/*/*/hdf5/
 egs/*/*/downloads/
 egs/*/*/downloads

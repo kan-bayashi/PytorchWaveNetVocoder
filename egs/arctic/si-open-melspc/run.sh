@@ -36,6 +36,8 @@ fs=16000                         # sampling rate
 mspc_dim=80                      # dimension of mel-spectrogram
 mcep_dim=25                      # dimension of mel-cepstrum
 mcep_alpha=0.410                 # alpha value of mel-cepstrum
+fmin=""                          # minimum frequency in melspc calculation
+fmax=""                          # maximum frequency in melspc calculation
 use_noise_shaping=true           # whether to use noise shaping
 mag=0.5                          # strength of noise shaping (0.0 < mag <= 1.0)
 n_jobs=10                        # number of parallel jobs
@@ -158,6 +160,8 @@ if echo ${stage} | grep -q 1; then
                 --mspc_dim ${mspc_dim} \
                 --highpass_cutoff ${highpass_cutoff} \
                 --fftl ${fftl} \
+                --fmin "${fmin}" \
+                --fmax "${fmax}" \
                 --n_jobs ${n_jobs} &
 
         # update job counts

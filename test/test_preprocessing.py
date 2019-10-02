@@ -50,6 +50,8 @@ def make_args(**kwargs):
         highpass_cutoff=70,
         mcep_dim_start=2,
         mcep_dim_end=25,
+        fmin=None,
+        fmax=None,
         mag=0.5,
         save_wav=True,
         inv=False,
