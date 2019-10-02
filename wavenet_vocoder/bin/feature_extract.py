@@ -223,6 +223,8 @@ def melspectrogram_extract(wav_list, args):
             n_fft=args.fftl,
             hop_length=shiftl,
             n_mels=args.mspc_dim,
+            fmin=args.fmin,
+            fmax=args.fmax,
             power=1.0)
         mspc = np.log10(np.maximum(EPS, mspc.T))
 
@@ -295,10 +297,16 @@ def main():
         type=int, help="Dimension of mel spectrogram")
     parser.add_argument(
         "--minf0", default=40,
-        type=int, help="minimum f0")
+        type=int, help="minimum f0 for world analysis")
     parser.add_argument(
         "--maxf0", default=400,
-        type=int, help="maximum f0")
+        type=int, help="maximum f0 for world analysis")
+    parser.add_argument(
+        "--fmin", default=None,
+        type=int, help="minimum frequency for melspc")
+    parser.add_argument(
+        "--fmax", default=None,
+        type=int, help="maximum frequency for melspc")
     parser.add_argument(
         "--mcep_dim", default=24,
         type=int, help="Dimension of mel cepstrum")
