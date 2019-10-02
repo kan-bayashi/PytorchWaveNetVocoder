@@ -302,10 +302,10 @@ def main():
         "--maxf0", default=400,
         type=int, help="maximum f0 for world analysis")
     parser.add_argument(
-        "--fmin", default=None,
+        "--fmin", default=None, nargs="?",
         type=int, help="minimum frequency for melspc")
     parser.add_argument(
-        "--fmax", default=None,
+        "--fmax", default=None, nargs="?",
         type=int, help="maximum frequency for melspc")
     parser.add_argument(
         "--mcep_dim", default=24,
