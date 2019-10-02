@@ -223,8 +223,8 @@ def melspectrogram_extract(wav_list, args):
             n_fft=args.fftl,
             hop_length=shiftl,
             n_mels=args.mspc_dim,
-            fmin=args.fmin,
-            fmax=args.fmax,
+            fmin=args.fmin if args.fmin is not None else 0,
+            fmax=args.fmax if args.fmax is not None else fs // 2,
             power=1.0)
         mspc = np.log10(np.maximum(EPS, mspc.T))
 
