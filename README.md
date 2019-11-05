@@ -1,3 +1,7 @@
+ 
+
+### I releaseed new implementation [kan-bayashi/ParallelWaveGAN](https://github.com/kan-bayashi/ParallelWaveGAN). Please enjoy your hacking!
+
 # PYTORCH-WAVENET-VOCODER
 
 [![Build Status](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder.svg?branch=master)](https://travis-ci.org/kan-bayashi/PytorchWaveNetVocoder)
