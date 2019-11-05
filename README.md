@@ -1,6 +1,6 @@
  
 
-### I releaseed new implementation [kan-bayashi/ParallelWaveGAN](https://github.com/kan-bayashi/ParallelWaveGAN). Please enjoy your hacking!
+### I released new implementation [kan-bayashi/ParallelWaveGAN](https://github.com/kan-bayashi/ParallelWaveGAN). Please enjoy your hacking!
 
 # PYTORCH-WAVENET-VOCODER
 
