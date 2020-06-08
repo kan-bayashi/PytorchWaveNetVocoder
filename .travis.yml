@@ -14,6 +14,7 @@ install:
   - pip3 install numpy
     # NOTE: use 1.0.1 for travis check because 1.1.0 > argmax behavior is strange
   - pip3 install https://download.pytorch.org/whl/cpu/torch-1.0.1.post2-cp36-cp36m-linux_x86_64.whl
+  - pip3 install torchvision==0.2.2
   - pip3 install -e .
   - pip3 install -e .[test]
 
